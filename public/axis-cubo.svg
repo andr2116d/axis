@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 74"><title>Axis</title>
+<g stroke="#302D2A" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round">
+<polygon fill="#FE6F2D" points="36,3 68,20 36,37 4,20"/>
+<path d="M68,20L4,20" fill="none"/>
+<path d="M52,28.5L20,28.5" fill="none"/>
+<path d="M36,3L52,28.5" fill="none"/>
+<path d="M36,3L20,28.5" fill="none"/>
+<polygon fill="#FFE5D0" points="4,20 36,37 36,71 4,54"/>
+<path d="M20,28.5L4,54" fill="none"/>
+<path d="M36,54L4,54" fill="none"/>
+<path d="M4,20L36,71" fill="none"/>
+<path d="M20,28.5L36,54" fill="none"/>
+<polygon fill="#FFAA7D" points="36,37 68,20 68,54 36,71"/>
+<path d="M52,28.5L68,54" fill="none"/>
+<path d="M68,20L36,71" fill="none"/>
+<path d="M52,28.5L36,54" fill="none"/>
+<path d="M68,54L36,54" fill="none"/>
+</g>
+</svg>
