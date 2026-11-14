@@ -1,0 +1,8 @@
+# Solo se sube lo necesario para compilar la web
+scripts
+docs
+.next-preview
+.next-release
+DESIGN.md
+PRODUCT.md
+*.tsbuildinfo
