@@ -1,0 +1,82 @@
+S10                                                                                                                                                                                               Página           1
+
+
+                                                                                            Presupuesto
+Presupuesto      0201044       REPARACION DE CALZADA O PISTA; EN EL(LA) CALLE MIGUEL BARRETO DEL SECTOR VICTOR RAUL I ETAPA - DISTRITO DE EL PORVENIR, PROVINCIA TRUJILLO, DEPARTAMENTO LA LIBERTAD
+                               CUI:2721555
+Subpresupuesto   001        REPARACION DE CALZADA O PISTA; EN EL (LA) CALLE MIGUEL BARRETO DEL SECTOR VICTOR RAUL I ETAPA - DISTRITO DE EL PORVENIR, ROVINCIA TRUJILLO, DEPARTAMENTO LA LIBERTAD
+                            CUI:2127555
+Cliente          MUNICIPALIDAD DISTRITAL DE EL PORVENIR
+Lugar            LA LIBERTAD - TRUJILLO - EL PORVENIR
+
+Item             Descripción                                                   Und.       Metrado           Precio S/           Mano de Obra     Material       Equipo           Subcontrato         Parcial S/
+
+01               INFRAESTRUCTURA VIAL                                                                                                46,754.25     187,255.02      53,897.37           6,970.00            294,892.90
+01.01             OBRAS PROVISIONALES                                                                                                   576.96       1,514.63            17.31         3,000.00              5,108.90
+01.01.01           CARTEL DE IDENTIFICACION DE OBRA 4.80X3.60M                 und                   1.00         2,108.90              576.96       1,514.63            17.31                               2,108.90
+01.01.02           OFICINA, ALMACEN Y CASETA DE GUARDANIA                      glb                   1.00         1,000.00                                                             1,000.00              1,000.00
+01.01.03           ALQUILER DE SERVICIOS HIGIENICOS PORTATILES                 glb                   1.00         2,000.00                                                             2,000.00              2,000.00
+01.02             TRABAJOS PRELIMINARES                                                                                               3,772.92       5,418.11       1,046.62           3,970.00             14,251.20
+01.02.01           MOVILIZACION Y DESMOVILIZACION DE EQUIPOS Y HERRAMIENTAS    glb                   1.00         3,970.00                                                             3,970.00              3,970.00
+                 MANUALES
+01.02.02           DESVIO Y MANTENIMIENTO DE TRAFICO                           glb                   1.00         4,358.26              328.32       4,029.94                                                4,358.26
+01.02.03           TRAZO Y REPLANTEO EN PAVIMENTACIÓN                          m2              3,546.67                  1.67         3,444.60       1,388.17       1,046.62                                 5,922.94
+01.03             MOVIMIENTO DE TIERRAS                                                                                               5,060.07         253.33       4,376.72                                 9,692.75
+01.03.01           CORTE Y ROTURA DE PAVIMENTO FLEXIBLE 2"                     m                337.60                   6.59         1,335.81         253.33        634.29                                  2,224.78
+01.03.02           EXTRACCION DE AFIRMADO Y PERFILADO DE BORDES DE AREAS A     m2               603.40                   4.83         2,830.47                           84.90                               2,914.42
+                 PARCHAR
+01.03.03           BARRIDO DE MATERIAL RESULTANTE DEL PARCHE                   m2               603.40                   0.68           396.22                           11.95                                410.31
+01.03.04           DEMOLICION DE GIBAS ASFALTICAS                              m3                    1.94               67.63           127.39                            3.82                                131.20
+01.03.05           ELIMINACION PROGRESIVA DE MATERIAL EXCEDENTE                m3               157.83                  25.42           370.18                      3,641.76                                 4,012.04
+01.04             PARCHADO                                                                                                            5,535.92      34,167.53       3,641.77                                43,354.29
+01.04.01           BASE DE AFIRMADO EN PARCHES E=15CM                          m2               603.40                  16.40         3,378.07       5,685.84        825.45                                  9,895.76
+01.04.02           IMPRIMACION BITUMINOSA MANUAL                               m2               603.40                   8.38           806.62       3,500.93        748.34                                  5,056.49
+01.04.03           CARPETA ASFALTICA EN FRIO E=2" EN PARCHES                   m2               603.40                  47.07         1,351.23      24,980.76       2,067.98                                28,402.04
+01.05             SELLADO CON CARPETA ASFALTICA EN CALIENTE                                                                          10,636.93     105,547.92      34,896.92                               151,019.19
+01.05.01           BARRIDO Y LIMPIEZA PARA CARPETA ASFALTICA                   m2              2,943.27                  0.93         1,250.12                      1,516.08                                 2,737.24
+01.05.02           IMPRIMACION ASFALTICA                                       m2              2,943.27                  9.36         3,192.29      20,730.04       3,644.94                                27,549.01
+01.05.03           CARPETA ASFALTICA EN CALIENTE DE 1"                         m2              2,943.27                 41.02         6,194.52      84,817.88      29,735.90                               120,732.94
+01.06             SEÑALIZACION                                                                                                        3,177.45       5,292.94       3,404.60                                11,881.37
+01.06.01           PINTURA DE TRAFICO SOBRE PAVIMENTO                          m2               218.25                  22.07         1,629.19       1,390.47       1,795.46                                 4,816.78
+01.06.02           DEMARCACION LINEAL SOBRE PAVIMENTO                          m2                   28.98               11.09            64.90         184.63            71.51                                321.39
+01.06.03           PINTURA EN BORDE DE VEREDA Y SARDINELES                     m2               290.10                  11.09           649.64       1,848.22        715.73                                  3,217.21
+01.06.04           PINTURA DE TRAFICO EN GIBAS ASFALTICAS                      m2                   97.30               22.07           726.32         619.90        800.44                                  2,147.41
+01.06.05           SEÑALIZACION VERTICAL                                                                                                107.40       1,249.72            21.46                               1,378.58
+01.06.05.01          CORTE Y EXTRACCION MANUAL PARA SOPORTE DE SEÑALES                            m3        0.48    139.89       47.48                  19.66         67.15
+01.06.05.02          ACARREO Y ACOPIO PRODUCTO DE LA EXCAVACIÓN                                   m3        0.48     16.91        7.88                   0.24          8.12
+01.06.05.03          CONCRETO PARA SOPORTE DE SEÑALIZACION VERTICAL                               m3        0.40    388.28       52.04      101.72        1.56      155.31
+01.06.05.04          SUMINISTRO DE SEÑALIZACION VERTICAL                                          glb       4.00    287.00                 1,148.00                1,148.00
+01.07           VARIOS                                                                                                        17,994.00   32,508.16   6,513.43    57,032.80
+01.07.01           REDUCTORES DE VELOCIDAD (GIBAS ASFALTICAS)                                     m2      97.30     128.38     2,266.53    9,961.09    262.56     12,491.37
+01.07.02           SARDINELES SUMERGIDOS                                                                                       1,519.27    1,751.07    339.39      3,609.12
+01.07.02.01          EXCAVACION DE ZANJA PARA SARDINEL H=35 m                                     m3        4.56    107.03      249.53                 238.53       488.06
+01.07.02.02          ACARREO Y ACOPIO DE MATERIAL EXCEDENTE                                       m3        4.56     17.24       74.86                    3.74        78.61
+01.07.02.03          ENCOFRADO Y DESENCOFRADO DE SARDINELES                                       m2      18.25      57.72      602.08      433.50      18.06      1,053.39
+01.07.02.04          SARDINELES SUMERGIDOS DE CONCRETO DE 0.20X0.15M                              m3        3.83    477.67      498.26     1,254.99     76.23      1,829.48
+01.07.02.05          CURADO DE CONCRETO EN SARDINELES SUMERGIDOS                                  m       52.15        3.06      94.54       62.58        2.83      159.58
+01.07.03           AREAS VERDES                                                                                                9,938.21   20,707.70   2,246.23    32,897.19
+01.07.03.01          PREPARACION DE TIERRA DE CHACRA H=0.10M                                      m2     636.40      21.18     5,759.42    7,433.28    287.97     13,478.95
+01.07.03.02          SEMBRADO DE GRASS                                                            m2     636.40      22.47     3,562.82   10,624.70    106.92     14,299.91
+01.07.03.03          RIEGO DE GRASS                                                               m2     636.40        3.52     208.94      190.92    1,839.13     2,240.13
+01.07.03.04          SEMBRADO Y RIEGO DE PLANTONES                                                und     36.00      79.95      407.03     2,458.80     12.21      2,878.20
+01.07.04           LIMPIEZA FINAL DE OBRA                                                         m2    2,943.27       1.35    3,865.34                115.67      3,973.41
+01.07.05           MITIGACION DE IMPACTO AMBIENTAL                                                m2    2,943.27       1.38     404.65       88.30    3,549.58     4,061.71
+01.08           SEGURIDAD Y SALUD EN OBRA                                                                                                  2,552.40                2,552.40
+01.08.01           EQUIPOS DE PROTECCION PERSONAL                                                 glb       1.00   2,282.40                2,282.40                2,282.40
+01.08.02           EQUIPOS DE PROTECCION COLECTIVA                                                glb       1.00    270.00                  270.00                  270.00
+              COSTO DIRECTO                                                                                                                                      294,892.90
+              GASTOS GENERALES (10%)                                                                                                                              29,489.29
+              UTILIDADES (5%)                                                                                                                                     14,744.65
+              ---------------------------------------------------------------------------------
+              SUB TOTAL                                                                                                                                          339,126.84
+              IGV (18%)                                                                                                                                           61,042.83
+              --------------------------------------------------------------------------------
+              PRESUPUESTO DE OBRA                                                                                                                                400,169.67
+              SUPERVISION                                                                                                                                        20390
+                                                                                                                                                                 20,390.40
+              EXPEDIENTE TECNICO                                                                                                                                  26,000.00
+              -------------------------------------------------------------------------------
+              PRESUPUESTO TOTAL DE INVERSION                                                                                                                     446,560.07
+
+              SON :       CUATROCIENTOS CUARENTA Y SEIS MIL QUINIENTOS SESENTA Y 07/100 SOLES
+
