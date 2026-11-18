@@ -1,0 +1,6 @@
+# Copiar a terraform.tfvars (fuera de git) solo si se quiere cambiar algún valor por defecto.
+region                 = "us-east-1"
+nombre                 = "axis"
+memoria_mb             = 2048
+concurrencia_reservada = null
+clase_precio           = "PriceClass_All"

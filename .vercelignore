@@ -6,3 +6,6 @@ docs
 DESIGN.md
 PRODUCT.md
 *.tsbuildinfo
+infra
+Dockerfile
+.dockerignore
