@@ -1,0 +1,17 @@
+node_modules
+.next
+.next-preview
+.next-release
+.git
+.vercel
+.impeccable
+.env*
+*.tsbuildinfo
+next-env.d.ts
+docs
+scripts
+infra
+Dockerfile
+.dockerignore
+DESIGN.md
+PRODUCT.md
