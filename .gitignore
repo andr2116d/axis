@@ -8,3 +8,10 @@ next-env.d.ts
 .next-preview
 .next-release
 .env*
+
+# Terraform (infra/)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
