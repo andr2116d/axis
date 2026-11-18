@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
-const dominio = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+// AXIS_DOMINIO: dominio público fuera de Vercel (p. ej. el de CloudFront en AWS, ver infra/).
+const dominio = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL || process.env.AXIS_DOMINIO;
 const origen = dominio ? new URL('https://' + dominio) : new URL('http://localhost:' + (process.env.PORT || '3000'));
 
 export function metadataAxis(ruta: string, pagina: string, description: string): Metadata {
