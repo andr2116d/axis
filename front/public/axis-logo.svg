@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="118" height="36" viewBox="0 0 118 36" role="img" aria-labelledby="nombre">
+<title id="nombre">Axis</title>
+<style>@media (prefers-color-scheme: dark) { .wordmark { fill: #F6F2EC; } }</style>
+<g transform="scale(.49)"><g stroke="#302D2A" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round">
+<polygon fill="#FE6F2D" points="36,3 68,20 36,37 4,20"/>
+<path d="M68,20L4,20" fill="none"/>
+<path d="M52,28.5L20,28.5" fill="none"/>
+<path d="M36,3L52,28.5" fill="none"/>
+<path d="M36,3L20,28.5" fill="none"/>
+<polygon fill="#FFE5D0" points="4,20 36,37 36,71 4,54"/>
+<path d="M20,28.5L4,54" fill="none"/>
+<path d="M36,54L4,54" fill="none"/>
+<path d="M4,20L36,71" fill="none"/>
+<path d="M20,28.5L36,54" fill="none"/>
+<polygon fill="#FFAA7D" points="36,37 68,20 68,54 36,71"/>
+<path d="M52,28.5L68,54" fill="none"/>
+<path d="M68,20L36,71" fill="none"/>
+<path d="M52,28.5L36,54" fill="none"/>
+<path d="M68,54L36,54" fill="none"/>
+</g></g>
+  <g class="wordmark" fill="#302D2A" transform="translate(45 30.5) scale(0.01798064 -0.01798064)">
+    <path transform="translate(0 0)" d="M46 0L562 1446L901 1446L1417 0L1093 0L983 316L485 316L373 0ZM556 598L906 598L732 1133Z"/>
+    <path transform="translate(1355 0)" d="M26 0L423 539L61 1034L400 1034L597 767L794 1034L1133 1034L767 539L1164 0L826 0L596 315L365 0Z"/>
+    <path transform="translate(2473 0)" d="M118 0L118 1034L429 1034L429 0ZM116 1160L116 1446L430 1446L430 1160Z"/>
+    <path transform="translate(2948 0)" d="M546 -20Q438 -20 336.5 16Q235 52 163 130Q91 208 71 333L351 333Q364 280 398 251Q432 222 472.5 210.5Q513 199 545 199Q622 199 669.5 222Q717 245 717 292Q717 329 688 351Q659 373 589 385L417 418Q276 446 190 517.5Q104 589 102 721Q102 815 153 890.5Q204 966 304 1010Q404 1054 549 1054Q747 1054 865 967Q983 880 984 726L715 726Q704 781 657.5 810Q611 839 545 839Q477 839 432 816Q387 793 387 746Q387 711 425.5 689.5Q464 668 548 652L704 619Q795 597 852 559Q909 521 940 476.5Q971 432 982.5 388Q994 344 994 310Q994 204 936.5 130.5Q879 57 778 18.5Q677 -20 546 -20Z"/>
+  </g>
+</svg>
