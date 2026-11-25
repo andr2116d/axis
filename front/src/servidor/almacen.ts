@@ -1,12 +1,12 @@
 import 'server-only';
 import { randomUUID } from 'node:crypto';
-import type { Expediente, RegistroObra } from '@/dominio/tipos';
+import type { Expediente, PruebaAprendida, RegistroObra } from '@/dominio/tipos';
 import { respaldo } from './respaldo';
 
 // Almacén de Axis: expedientes, registros de obra, archivos y texto leído.
 // Todo acceso pasa por aquí; el soporte físico (Blob o disco) está en respaldo.ts.
 
-type Coleccion = 'expedientes' | 'obras';
+type Coleccion = 'expedientes' | 'obras' | 'pruebas';
 
 function base(coleccion: Coleccion, id: string) {
   if (!/^[a-z0-9-]+$/i.test(id)) throw new Error('Identificador no válido');
@@ -43,12 +43,24 @@ export async function guardarExpediente(e: Expediente) {
   await escribirJSON(`${base('expedientes', e.id)}/expediente.json`, e);
 }
 
-export function leerExpediente(id: string) {
-  return leerJSON<Expediente>(`${base('expedientes', id)}/expediente.json`);
+/** Completa los campos que no tenían los expedientes guardados por versiones anteriores. */
+function completar(e: Expediente | null): Expediente | null {
+  if (!e) return null;
+  const analizadoAntes = e.estado === 'analizado' && !e.semaforo;
+  return {
+    ...e,
+    ubicacion: e.ubicacion ?? null,
+    cobertura: e.cobertura ?? [],
+    semaforo: e.semaforo ?? (analizadoAntes ? (e.hallazgos.some((h) => h.prioridad === 'alta') ? 'rojo' : e.hallazgos.length ? 'amarillo' : 'verde') : 'gris'),
+  };
+}
+
+export async function leerExpediente(id: string) {
+  return completar(await leerJSON<Expediente>(`${base('expedientes', id)}/expediente.json`));
 }
 
 export async function listarExpedientes() {
-  const todos = await listar<Expediente>('expedientes', 'expediente.json');
+  const todos = (await listar<Expediente>('expedientes', 'expediente.json')).map((e) => completar(e)!);
   return todos.sort((a, b) => b.creado.localeCompare(a.creado));
 }
 
@@ -93,4 +105,20 @@ export async function tomarSubida(ruta: string): Promise<Uint8Array> {
   if (!datos) throw new Error('No se encontró un archivo subido; vuelve a intentarlo.');
   await respaldo.borrar(ruta).catch(() => {});
   return datos;
+}
+
+// ── Pruebas aprendidas ───────────────────────────────────────
+
+export async function guardarPrueba(p: PruebaAprendida) {
+  await escribirJSON(`pruebas/${p.id}/prueba.json`, p);
+}
+
+export async function listarPruebas() {
+  const todas = await listar<PruebaAprendida>('pruebas', 'prueba.json');
+  return todas.map((p) => ({ ...p, estado: p.estado ?? 'propuesta', relacionadas: p.relacionadas ?? [] })).sort((a, b) => a.id.localeCompare(b.id));
+}
+
+export function leerPrueba(id: string) {
+  if (!/^PA-\d{3,}$/.test(id)) throw new Error('Identificador no válido');
+  return leerJSON<PruebaAprendida>(`pruebas/${id}/prueba.json`);
 }

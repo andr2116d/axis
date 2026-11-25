@@ -1,0 +1,121 @@
+S10                                                                                                                                              Página                     1
+
+                                                                             Presupuesto
+Presupuesto      0202004       CREACIÓN DEL SERVICIO DE MOVILIDAD URBANA EN AVENIDA C, TRAMO CALLE 12 - CALLE 1, DISTRITO DE ALTO TRUJILLO, PROVINCIA DE TRUJILLO,
+                               DEPARTAMENTO DE LA LIBERTAD
+
+Subpresupuesto   001           MOVILIDAD URBANA EN AVENIDA C
+Cliente          MUNICIPALIDAD DISTRITAL DE ALTO TRUJILLO                                                                                       Costo al         20/03/2026
+
+Lugar            LA LIBERTAD - TRUJILLO - ALTO TRUJILLO
+
+Item             Descripción                                                                                 Und.        Metrado          Precio S/.          Parcial S/.
+
+01               OBRAS PROVISIONALES                                                                                                                                16,540.35
+01.01            CARTEL DE OBRA (GIGANTOGRAFIA) DE 7.20x3.60                                                 und                   1.00         2,688.35             2,688.35
+01.02            ALQUILER DE LOCAL PARA ALMACEN                                                              mes                   4.00           750.00             3,000.00
+01.03            SS.HH. PARA LA CINTRUCCION (BAÑO QUIMICO)                                                   mes                   4.00         1,713.00             6,852.00
+01.04            MOVILIZACION Y DESMOVILIZACION DE EQUIPOS Y HERRAMIENTAS                                    glb                   1.00         4,000.00             4,000.00
+02               OBRAS PRELIMINARES                                                                                                                               151,777.08
+02.01            TRAZO, NIVELES Y REPLANTEO                                                                  m2             14,910.00                  2.63         39,213.30
+02.02            REUBICACION DE POSTES DE RED ELECTRICAS                                                     und                14.00           3,250.00            45,500.00
+02.03            GESTION AMBIENTAL Y MANEJO DE RESIDUOS, PREVENCION Y CONTROL                                glb                   1.00         1,500.00             1,500.00
+02.04            DEMOLICION DE VEREDAS EXISTENTES                                                            m2                930.30              20.34            18,922.30
+02.05            PLAN DE SEGURIDAD, SEÑALIZACION, ORDEN Y LIMPIEZA EN OBRA                                   glb                   1.00         5,680.00             5,680.00
+02.06            EQUIPOS DE PROTECCION INDIVIDUAL                                                            und                50.00             381.00            19,050.00
+02.07            EQUIPOS DE PROTECCION COLECTIVA                                                             glb                   1.00         1,039.18             1,039.18
+02.08            PLAN DE DESVIO Y MANTENIMIENTO DE TRANSITO VEHICULAR                                        glb                   1.00        20,872.30            20,872.30
+03               MITIGACION DEL IMPACTO AMBIENTAL                                                                                                                   21,321.30
+03.01            RIEGO DE LA ZONA DE TRABAJO PARA MITIGAR EL POLVO                                           m2             14,910.00                  1.43         21,321.30
+04               PAVIMENTACION                                                                                                                                   1,642,598.35
+04.01            MOVIMIENTO DE TIERRAS                                                                                                                            333,075.99
+04.01.01         CORTE EN TERRENO NATURAL A NIVEL DE SUB RASANTE (CON EQUIPO                                 m3              7,821.33              11.62            90,883.85
+04.01.02         CORTE EN TERRENO NATURAL A NIVEL DE SUB RASANTE (MANUAL)                                    m3                671.40              53.45            35,886.33
+04.01.03         RELLENO COMPACTADO CON MATERIAL DE PRESTAMO                                                 m3                135.70              23.39             3,174.02
+04.01.04         PERFILADO Y COMPACTADO EN ZONA DE CORTE A NIVEL DE SUB RASANTE                              m2             11,451.51                  3.87         44,317.34
+04.01.05         ELIMINACION DE MATERIAL EXCEDENTE CON EQUIPO D> 5km                                         m3             10,623.04              14.95          158,814.45
+04.02            SUB BASE Y BASE                                                                                                                                  594,104.33
+04.02.01         CONFORMACION Y COMPACTACION DE SUB BASE GRANULAR COMPACTADO AL 95% DEL PM, E=0.15 M         m2             11,451.51              22.93          262,583.12
+04.02.02         CONFORMACION Y COMPACTACION DE BASE GRANULAR COMPACTADO AL 100% DEL PM, E=0.20M             m2             11,451.51              28.95          331,521.21
+04.03            CARPETA ASFALTICA                                                                                                                                629,659.00
+04.03.01         IMPRIMACION ASFALTICA CON MC-30                                                             m2             11,452.51                  8.40         96,201.08
+04.03.02         CARPETA ASFALTICA EN CALIENTE DE 2"                                                         m2             11,452.51              46.58          533,457.92
+04.04      SEÑALIZACION HORIZONTAL Y VERTICAL                                                                        79,722.58
+04.04.01   PINTURA PARA PINTADO DE SIMBOLOS, SARDINELES Y BORDE DE VEREDAS              m2    1,492.45     14.07     20,998.77
+04.04.02   PINTURA BLANCA PARA DEMARCACION DE CALZADA                                   m      963.00      17.31     16,669.53
+04.04.03   SUMINISTRO E INSTALACION DE SEÑALES PREVENTIVAS                              und     25.00     369.65      9,241.25
+04.04.04   SUMINISTRO E INSTALACION DE SEÑALES REGLAMENTARIAS                           und     26.00     369.65      9,610.90
+04.04.05   SUMINISTRO E INSTALACION DE SEÑALES INFORMATIVAS                             und       2.00    369.65       739.30
+04.04.06   SUMINISTRO E INSTALACION DE SEÑALES INFORMATIVAS (TIPO BANDERA)              und       1.00    353.24       353.24
+04.04.07   SUMINISTRO E INSTALACION DE SEÑALES INFORMATIVAS CALLES TRANSVERSALES        und     16.00     273.24      4,371.84
+04.04.08   POSTES DE SOPORTE DE SEÑALES                                                 und     53.00     185.45      9,828.85
+04.04.09   ESTRUCTURA DE SOPORTE (SEÑALES TIPO BANDERA)                                 und       1.00   1,291.30     1,291.30
+04.04.10   EXCAVACION MANUAL                                                            m3        6.12     53.45       327.11
+04.04.11   CONCRETO F'C=210 KG/CM2                                                      m3        7.34    470.48      3,453.32
+04.04.12   ACERO CORRUGADO FY= 4200 kg/cm2 GRADO 60                                     kg     391.39        6.95     2,720.16
+04.04.13   ENCOFRADO Y DESENCOFRADO                                                     m2        4.34     26.96       117.01
+04.05      VARIOS                                                                                                     6,036.45
+04.05.01   NIVELACIÓN TIPO ENCIMADO, TAPA DE BUZONES A NIVEL DE RASANTE (D=1.20M)       und       9.00    357.65      3,218.85
+04.05.02   NIVELACIÓN TIPO ACORTAMIENTO, TAPA DE BUZONES A NIVEL DE RASANTE (D=1.20M)   und       8.00    352.20      2,817.60
+
+05         VEREDAS, MARTILLOS Y RAMPAS DE CONCRETO                                                                  245,642.27
+05.01      MOVIMIENTO DE TIERRAS                                                                                     21,617.64
+05.01.01   PERFILADO Y COMPACTADO EN VEREDAS                                            m2    2,114.48       2.16     4,567.28
+05.01.02   BASE GRANULAR PARA VEREDAS E=0.10 M                                          m2    1,741.61       9.79    17,050.36
+05.02      CONCRETO SIMPLE                                                                                          175,274.58
+05.02.01   CONCRETO F'C= 175 KG/CM2 (E=10CM), INCLUYE ACABADO SEMIPULIDO                m2    2,107.36     47.21     99,488.47
+05.02.02   CONCRETO PARA UÑAS DE VEREDAS F'C=175 KG/CM2                                 m3       99.51    407.25     40,525.45
+05.02.03   ENCOFRADO Y DESENCOFRADO EN VEREDAS                                          m2     436.46      37.70     16,454.54
+05.02.04   CURADO DE VEREDAS CON CURADOR QUIMICO                                        m2    2,114.48       2.56     5,413.07
+05.02.05   JUNTAS DE DILATACION EN VEREDA CADA CUATRO METROS, E=1"                      m      534.00        7.84     4,186.56
+05.02.06   BRUÑADO DE VEREDAS, MARTILLOS Y RAMPAS                                       m     5,030.87       1.83     9,206.49
+05.03      VARIOS                                                                                                    48,750.05
+05.03.01   NIVELACION Y ENCIMADO DE CAJAS DE AGUA                                       und     85.00     262.08     22,276.80
+05.03.02   NIVELACION Y ENCIMADO DE CAJAS DE DESAGUE                                    und     85.00     311.45     26,473.25
+06         BERMA CENTRAL DE CONCRETO (CON JARDINERA CADA 5 METROS)                                                   90,840.63
+06.01      MOVIMIENTO DE TIERRAS                                                                                      4,738.86
+06.01.01   PERFILADO Y COMPACTADO EN BERMA CENTRAL                                      m2     589.85        2.16     1,274.08
+06.01.02   BASE GRANULAR PARA BERMAS E=0.10 M                                           m2     353.91        9.79     3,464.78
+06.02      CONCRETO SIMPLE                                                                                           86,101.77
+06.02.01   CONCRETO F'C= 175 KG/CM2 (E=10CM), INCLUYE ACABADO SEMIPULIDO                m2     559.05      47.21     26,392.75
+06.02.02   CONCRETO PARA UÑAS DE BERMA CENTRAL F'C=175 KG/CM2                           m3      90.07     423.82     38,173.47
+06.02.03   ENCOFRADO Y DESENCOFRADO EN BERMA CENTRAL                                    m2     419.78      37.70     15,825.71
+06.02.04   CURADO DE BERMA CENTRAL CON CURADOR QUIMICO                                  m2     559.05        2.56     1,431.17
+06.02.05   JUNTAS DE DILATACION EN BERMAS CADA CUATRO METROS, E=1"                         m       109.00        7.84        854.56
+06.02.06   BRUÑADO DE BERMA CENTRAL                                                        m      1,871.10       1.83       3,424.11
+07         SARDINELES DE CONCRETO                                                                                         27,664.30
+07.01      MOVIMIENTO DE TIERRAS                                                                                            1,222.18
+07.01.01   EXCAVACION DE ZANJAS PARA SARDINEL                                              m       343.20        2.72        933.50
+07.01.02   ELIMINACION DE MATERIAL EXCEDENTE CON EQUIPO D> 5km                             m3       19.31      14.95         288.68
+07.02      CONCRETO SIMPLE                                                                                                26,442.12
+07.02.01   CONCRETO F'C= 175 KG/CM2 EN SARDINEL PERALTADO (H=0.50 M, E=0.15 M)             m3       25.74     420.43      10,821.87
+07.02.02   ENCOFRADO Y DESENCOFRADO PARA SARDINEL PERALTADO                                m2      205.92      49.52      10,197.16
+07.02.03   ACERO CORRUGADO FY= 4200 kg/cm2 GRADO 60                                        kg      647.64        6.95       4,501.10
+07.02.04   CURADO DE SARDINEL CON CURADOR QUIMICO                                          m2      154.44        3.32        512.74
+07.02.05   JUNTAS DE DILATACION EN SARDINEL CADA TRES METROS, E=1"                         m        52.20        7.84        409.25
+08         OBRAS COMPLEMENTARIAS                                                                                            9,400.77
+08.01      MOBILIARIO URBANO                                                                                                9,400.77
+08.01.01   EXCAVACION MANUAL PARA CIMIENTOS DE BASURERO                                    m3         3.03     45.81         138.80
+08.01.02   ACARRERO DE MATERIAL EXCEDENTE DP. <=50 M.                                      m3         3.79       5.60          21.22
+08.01.03   ELIMINACION DE MATERIAL EXCEDENTE CON EQUIPO D> 5km                             m3         3.79     14.95           56.66
+08.01.04   CONCRETO F'C= 175 KG/CM2, PARA BASE DE BASUREROS                                m2         3.03    444.42        1,346.59
+08.01.05   BASUREROS BASCULANTES                                                           und      33.00     237.50        7,837.50
+09         AREAS VERDES                                                                                                   20,153.72
+09.01      JARDINERIA                                                                                                     16,277.12
+09.01.01   SUMINISTRO Y COLOCACION DE TIERRA CHACRA                                        m2      209.91      10.65        2,235.54
+09.01.02   SUMINISTRO Y SEMBRADO DE GRASS AMERICANO                                        m2      209.91      20.83        4,372.43
+09.01.03   ARBORIZACION CON PLANTONES EN AREA VERDE Y JARDINERAS DE BERMA CENTRAL          und     194.00      31.80        6,169.20
+
+09.01.04   CONSERVACION Y RIEGO DE JARDINERA, HASTA LA EMTREGA DE OBRA.                    glb        1.00   3,499.95       3,499.95
+09.02      CONSERVACION Y PROTECCION                                                                                        3,876.60
+09.02.01   LIMPIEZA FINAL DE OBRA                                                          m2    14,910.00       0.26       3,876.60
+           COSTO DIRECTO                                                                                                2,225,938.77
+           GASTOS GENERALES 10%                                                                                          222,593.88
+           UTILIDAD     5%                                                                                               111,296.94
+                                                                                                                           ------------
+           SUBTOTAL                                                                                                     2,559,829.59
+           IMPUESTO (IGV 18%)                                                                                            460,769.33
+                                                                                                                          ========
+           TOTAL PRESUPUESTO                                                                                            3,020,598.92
+
+           SON :   TRES MILLONES VEINTE MIL QUINIENTOS NOVENTIOCHO Y 92/100 NUEVOS SOLES

@@ -3,17 +3,17 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { Categoria, Expediente, Hallazgo, Prioridad } from '@/dominio/tipos';
-import { GRUPOS_MOTORES, nombreMotor } from '@/dominio/motores';
+import { nombreMotor } from '@/dominio/motores';
 import { Icono, type NombreIcono } from '../Icono';
 import { useAviso } from '../Aviso';
 import { Territorio } from '../territorio/Territorio';
 import { CATEGORIAS, LECTURA, PRIORIDADES, Pill, categoria, tamano } from '../ui';
 import { guardarCarta } from './guardar-carta';
+import { SEMAFORO, Semaforo } from '../Semaforo';
 
 type Pestana = 'hallazgos' | 'documentos' | 'territorio' | 'comprobaciones';
 type Orden = 'prioridad' | 'categoria' | 'titulo';
 const RANGO: Record<Prioridad, number> = { alta: 0, media: 1, confirmar: 2 };
-const TOTAL_MOTORES = GRUPOS_MOTORES.reduce((s, g) => s + g.motores.length, 0);
 
 export function Revision({ expediente }: { expediente: Expediente }) {
   const e = expediente;
@@ -36,7 +36,6 @@ export function Revision({ expediente }: { expediente: Expediente }) {
   const altas = todos.filter((h) => h.prioridad === 'alta').length;
   const observaciones = todos.filter((h) => h.prioridad !== 'confirmar').length;
   const pendientes = todos.length - observaciones;
-  const motoresCorridos = e.ejecucion.filter((x) => x.estado === 'ok').length;
   const lecturaIncompleta = e.documentos.some((d) => d.lectura !== 'leido');
 
   const alternar = async (id: string) => {
@@ -63,14 +62,14 @@ export function Revision({ expediente }: { expediente: Expediente }) {
         <Link className="btn primary" href={`/revision/${e.id}/carta`}><Icono nombre="file" tamano={18} />Abrir carta <span className="btn-count">{incluidos.size}</span></Link>
       </section>
 
-      <div className="summary-strip">
+      <div className={`summary-strip resultado-${e.semaforo}`}>
         <div className="summary-main">
-          <span className="summary-icon"><Icono nombre={observaciones ? 'alert' : pendientes ? 'clock' : 'check'} tamano={23} /></span>
+          <Semaforo estado={e.semaforo} />
           <div>
-            <strong>{observaciones ? 'Hay correcciones que revisar' : pendientes ? 'Revisa la información pendiente' : 'Sin observaciones en lo que se pudo comprobar'}</strong>
+            <strong>{SEMAFORO[e.semaforo].titulo}</strong>
             <small>
-              {altas ? `${altas} de prioridad alta. Empieza por esos puntos. ` : ''}
-              Corrieron {motoresCorridos} de {TOTAL_MOTORES} motores{lecturaIncompleta ? '; hay documentos que no se leyeron completos' : ''}.
+              {altas ? `${altas} ${altas === 1 ? 'observación' : 'observaciones'} de prioridad alta. Empieza por esos puntos. ` : SEMAFORO[e.semaforo].texto + ' '}
+              {e.pruebas ? `Aplicaron ${e.pruebas.aplicadas} de las ${e.pruebas.total} pruebas que Axis aprendió` : `Se revisaron ${e.cobertura.length} grupos de pruebas`}{lecturaIncompleta ? '; hay documentos que no se leyeron completos' : ''}.
             </small>
           </div>
         </div>
@@ -183,7 +182,9 @@ export function Revision({ expediente }: { expediente: Expediente }) {
       {pestana === 'comprobaciones' && (
         <section className="content-panel documents-panel">
           <h2>Qué se comprobó</h2>
-          <p>Motores que corrieron sobre este expediente. Los que no aparecen todavía no están activos; consulta su estado en <Link href="/como-funciona">Cómo funciona</Link>.</p>
+          <p>Grupos de pruebas que tuvieron con qué trabajar en este expediente:</p>
+          {e.cobertura.length ? <ul className="chips">{e.cobertura.map((c) => <li key={c}>{c}</li>)}</ul> : <p className="empty-line">Ningún grupo de pruebas pudo correr con estos documentos.</p>}
+          <p>Motores que corrieron. El estado de todos está en <Link href="/como-funciona">Cómo funciona</Link>.</p>
           <ul className="docs-table">
             {e.ejecucion.map((x) => (
               <li key={x.motor}>
@@ -216,6 +217,13 @@ function Evidencia({ h, incluido, alAlternar, alVerTerritorio }: { h: Hallazgo; 
             <figure key={i}><figcaption><Icono nombre="file" tamano={15} /> <strong>{f.documento}</strong><span>{f.pagina}</span></figcaption><blockquote>{f.extracto}</blockquote></figure>
           ))}
         </div>
+        {h.monto ? <p className="monto">Monto involucrado: S/ {h.monto.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p> : null}
+        {h.origen?.length ? (
+          <div className="origen-prueba">
+            <h4>Por qué Axis corre esta prueba{h.prueba ? ` (${h.prueba})` : ''}</h4>
+            <ul>{h.origen.slice(0, 2).map((o, i) => <li key={i}><b>{o.titulo}</b><span>{o.detalle}</span></li>)}</ul>
+          </div>
+        ) : null}
         <details className="engine-details"><summary>Motores que intervienen</summary><p>{h.motores.map(nombreMotor).join(' → ')}</p></details>
         {h.categoria === 'territorio' && alVerTerritorio && (
           <div className="evidence-origin terrain-origin"><span><Icono nombre="pin" tamano={16} /> Ubicación del tramo disponible</span><button type="button" className="btn secondary" onClick={alVerTerritorio}>Abrir mapa y perfil</button></div>

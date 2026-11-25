@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { SituacionObra } from '@/dominio/tipos';
 import { Icono } from '../Icono';
@@ -9,7 +9,7 @@ import { SelectorArchivos, enviar } from '../SelectorArchivos';
 
 export interface OpcionExpediente { id: string; clave: string; nombre: string }
 
-export function RegistroObra({ expedientes, subidaDirecta }: { expedientes: OpcionExpediente[]; subidaDirecta: boolean }) {
+export function RegistroObra({ expedientes, subidaDirecta, demo }: { expedientes: OpcionExpediente[]; subidaDirecta: boolean; demo?: string }) {
   const router = useRouter();
   const avisar = useAviso();
   const [expedienteId, setExpedienteId] = useState(expedientes[0]?.id ?? '');
@@ -18,6 +18,14 @@ export function RegistroObra({ expedientes, subidaDirecta }: { expedientes: Opci
   const [enviando, setEnviando] = useState(false);
   const [progreso, setProgreso] = useState('');
   const [error, setError] = useState('');
+
+  // Desde el kit de demo: precarga el documento y elige el expediente de Calle Los Incas si existe.
+  useEffect(() => {
+    if (!demo?.startsWith('/demo/')) return;
+    fetch(demo).then((r) => r.blob()).then((b) => setArchivos([new File([b], decodeURIComponent(demo.split('/').pop()!), { type: 'application/pdf' })]));
+    const incas = expedientes.find((e) => /LOS INCAS/i.test(e.nombre));
+    if (incas) { setExpedienteId(incas.id); setSituacion('terminada'); }
+  }, [demo, expedientes]);
 
   if (!expedientes.length) {
     return (

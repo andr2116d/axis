@@ -9,7 +9,7 @@ import { useAviso } from '../Aviso';
 import { LECTURA, tamano } from '../ui';
 
 /** Motores que corren al confirmar, en el orden del servidor. */
-const MOTORES = ['identidad', 'ubicacion', 'cobertura', 'consolidacion'];
+const MOTORES = ['identidad', 'ubicacion', 'verificadores', 'cobertura', 'antecedentes', 'consolidacion'];
 
 export function ConfirmarDocumentos({ expediente }: { expediente: Expediente }) {
   const router = useRouter();

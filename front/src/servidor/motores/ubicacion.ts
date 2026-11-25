@@ -31,9 +31,11 @@ export const motorUbicacion: MotorExpediente = {
     if (!distrito && !departamento) return { estado: 'sin-datos', nota: 'Los documentos no declaran distrito ni departamento.' };
 
     const lugar = [distrito, departamento].filter(Boolean).map((x) => nombrePropio(x!)).join(', ');
+    // Solo cuenta la vía intervenida: lo que va antes de «desde / hasta / entre» en el nombre de la obra.
+    const principal = plano(expediente.nombre).split(/\b(DESDE|HASTA|ENTRE|CON)\b/)[0];
     const tramo = Object.entries(territorio.maps).find(([, m]) => {
       const via = plano(m.name).replace(PREFIJO_VIA, '');
-      return new RegExp(`\\b${via}\\b`).test(todo);
+      return new RegExp(`\\b${via}\\b`).test(principal);
     });
     fijar({ lugar, territorio: tramo?.[0] ?? null });
     return { estado: 'ok', nota: tramo ? `${lugar} · tramo ${tramo[1].name}` : `${lugar} · sin recorte de terreno para la vía` };

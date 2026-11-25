@@ -1,5 +1,7 @@
 import 'server-only';
 import type { EstadoLectura, UnidadPagina } from '@/dominio/tipos';
+import { fragmentosALineas } from '../texto-pdf';
+import { ocultarDatosPersonales } from '../privacidad';
 
 // Motor «Lectura y OCR». Extrae el texto de PDF (por página), Word .docx (por bloques)
 // y Excel .xls/.xlsx (por hoja). Distingue los PDF escaneados (sin capa de texto).
@@ -35,11 +37,19 @@ function resultado(paginas: string[], unidad: UnidadPagina): Lectura {
 }
 
 async function leerPDF(datos: Uint8Array) {
-  const { getDocumentProxy, extractText } = await import('unpdf');
+  const { getDocumentProxy } = await import('unpdf');
   // pdf.js transfiere el búfer: se le pasa una copia.
   const pdf = await getDocumentProxy(new Uint8Array(datos));
-  const { text } = await extractText(pdf, { mergePages: false });
-  return resultado(text.map((t) => t ?? ''), 'pág.');
+  const paginas: string[] = [];
+  for (let i = 1; i <= pdf.numPages; i += 1) {
+    const contenido = await (await pdf.getPage(i)).getTextContent();
+    // Las líneas se rearman por posición: las celdas de una tabla quedan separadas con « | ».
+    const fragmentos = (contenido.items as { str?: string; transform?: number[]; width?: number }[])
+      .filter((it) => typeof it.str === 'string' && it.transform)
+      .map((it) => ({ str: it.str!, x: it.transform![4], y: it.transform![5], ancho: it.width ?? 0 }));
+    paginas.push(ocultarDatosPersonales(fragmentosALineas(fragmentos)).lineas.join('\n'));
+  }
+  return resultado(paginas, 'pág.');
 }
 
 async function leerWord(datos: Uint8Array) {
@@ -55,7 +65,7 @@ async function leerWord(datos: Uint8Array) {
     actual += `${parrafo}\n`;
   }
   if (actual.trim()) bloques.push(actual);
-  return resultado(bloques, 'bloque');
+  return resultado(bloques.map((b) => ocultarDatosPersonales(b.split('\n')).lineas.join('\n')), 'bloque');
 }
 
 async function leerExcel(datos: Uint8Array) {
@@ -63,7 +73,9 @@ async function leerExcel(datos: Uint8Array) {
   const libro = XLSX.read(datos, { type: 'array', cellFormula: false, cellHTML: false });
   const hojas = libro.SheetNames.map((nombre) => {
     const csv = XLSX.utils.sheet_to_csv(libro.Sheets[nombre], { FS: '\t', blankrows: false, strip: true });
-    return `${nombre}\n${csv.replace(/\t+\n/g, '\n').replace(/\t{2,}/g, '\t')}`;
+    // Las celdas se separan con « | », igual que las tablas de un PDF.
+    const lineas = csv.split('\n').map((l) => l.split('\t').map((c) => c.trim()).filter(Boolean).join(' | ')).filter(Boolean);
+    return [nombre, ...ocultarDatosPersonales(lineas).lineas].join('\n');
   });
   return resultado(hojas, 'hoja');
 }

@@ -1,6 +1,6 @@
 import 'server-only';
-import type { Documento, EjecucionMotor, Expediente, Hallazgo, Prioridad, TipoDocumento } from '@/dominio/tipos';
-import { TIPOS_DOCUMENTO } from '@/dominio/tipos';
+import type { DatosCarta, Documento, EjecucionMotor, Expediente, Hallazgo, Prioridad, Semaforo, TipoDocumento } from '@/dominio/tipos';
+import { CAMPOS_CARTA, TIPOS_DOCUMENTO } from '@/dominio/tipos';
 import * as almacen from './almacen';
 import type { ArchivoEntrante } from './http';
 import { leerDocumento } from './motores/lectura';
@@ -8,13 +8,17 @@ import { clasificarDocumentoExpediente } from './motores/clasificacion';
 import { identidadDeDocumento, motorIdentidad, nombreDeObra } from './motores/identidad';
 import { motorUbicacion } from './motores/ubicacion';
 import { motorCobertura } from './motores/cobertura';
-import type { ContextoExpediente, HallazgoNuevo, MotorExpediente } from './motores/tipos';
+import type { ContextoExpediente, HallazgoNuevo } from './motores/tipos';
+import { correrVerificadores, partesDeArchivo, type AnalisisVerificadores } from './analisis/adaptador';
+import { evaluarPrueba, hallazgoDePrueba, type ObraEvaluada } from './aprendizaje/pruebas';
+import { frase, nombrePropio } from './texto';
+import { VERIFICADORES } from '@/datos/verificadores';
+import { aplicablesIniciales } from './aprendizaje/biblioteca';
 
 // Servicio del evaluador: recibe un expediente, lo lee y clasifica (paso 1), y
 // después de que la persona confirma los tipos, corre los motores (paso 2).
 
-/** Motores del análisis, en orden: los primeros resuelven datos que usan los siguientes. */
-const MOTORES_ANALISIS: MotorExpediente[] = [motorIdentidad, motorUbicacion, motorCobertura];
+const SIN_NOMBRE = 'Expediente sin nombre de obra';
 
 const ORDEN_PRIORIDAD: Record<Prioridad, number> = { alta: 0, media: 1, confirmar: 2 };
 
@@ -43,7 +47,12 @@ export async function recibirExpediente(archivos: ArchivoEntrante[]): Promise<Ex
     await almacen.guardarArchivo('expedientes', id, docId, datos);
     const lectura = await medir('lectura', ejecucion, () => leerDocumento(archivo.nombre, datos));
     await almacen.guardarTexto('expedientes', id, docId, lectura.paginas);
-    const sugerencia = await medir('clasificacion-documental', ejecucion, async () => clasificarDocumentoExpediente(archivo.nombre, lectura.paginas));
+    const sugerencia = await medir('clasificacion-documental', ejecucion, async () => {
+      // Un PDF que trae varias partes (memoria, presupuesto, metrados…) es el expediente completo.
+      const partes = partesDeArchivo(lectura.paginas);
+      if (partes.length >= 3) return { tipo: 'Expediente completo' as TipoDocumento, confianza: 0.95, razon: `Contiene ${partes.length} partes: ${partes.join(', ').toLowerCase()}.` };
+      return clasificarDocumentoExpediente(archivo.nombre, lectura.paginas);
+    });
     identidades.push(identidadDeDocumento(lectura.paginas));
     documentos.push({
       id: docId, nombre: archivo.nombre, bytes: datos.byteLength,
@@ -55,9 +64,12 @@ export async function recibirExpediente(archivos: ArchivoEntrante[]): Promise<Ex
   const expediente: Expediente = {
     id,
     clave,
-    nombre: nombreDeObra(identidades) ?? 'Expediente sin nombre de obra',
+    nombre: nombreDeObra(identidades) ?? SIN_NOMBRE,
     lugar: null,
     territorio: null,
+    ubicacion: null,
+    semaforo: 'gris',
+    cobertura: [],
     creado: new Date().toISOString(),
     estado: 'por-confirmar',
     documentos,
@@ -78,43 +90,123 @@ export async function analizarExpediente(id: string, tipos: Record<string, strin
     if (tipo && (TIPOS_DOCUMENTO as readonly string[]).includes(tipo)) d.tipo = tipo as TipoDocumento;
   }
 
+  const textos = await Promise.all(expediente.documentos.map((d) => almacen.leerTexto('expedientes', id, d.id)));
+  const porDoc = new Map(expediente.documentos.map((d, i) => [d.id, textos[i]]));
   const nuevos: HallazgoNuevo[] = [];
   const ejecucion = expediente.ejecucion.filter((e) => e.motor === 'lectura' || e.motor === 'clasificacion-documental');
   const ctx: ContextoExpediente = {
     expediente,
-    texto: (docId) => almacen.leerTexto('expedientes', id, docId),
+    texto: async (docId) => porDoc.get(docId) ?? [],
     reportar: (h) => nuevos.push(h),
+    reportados: () => nuevos,
     fijar: (datos) => Object.assign(expediente, datos),
   };
-
-  for (const motor of MOTORES_ANALISIS) {
+  const correr = async (motor: string, fn: () => Promise<{ estado: 'ok' | 'sin-datos'; nota?: string }>) => {
     const inicio = performance.now();
     try {
-      const r = await motor.ejecutar(ctx);
-      ejecucion.push({ motor: motor.id, estado: r.estado, ms: Math.round(performance.now() - inicio), nota: r.nota });
+      const r = await fn();
+      ejecucion.push({ motor, estado: r.estado, ms: Math.round(performance.now() - inicio), nota: r.nota });
     } catch (error) {
       // Un motor que falla no detiene a los demás; queda registrado.
-      ejecucion.push({ motor: motor.id, estado: 'error', ms: Math.round(performance.now() - inicio), nota: (error as Error).message });
+      ejecucion.push({ motor, estado: 'error', ms: Math.round(performance.now() - inicio), nota: (error as Error).message });
     }
-  }
+  };
+
+  // 1. Identidad y ubicación declarada (distrito, departamento).
+  await correr('identidad', () => motorIdentidad.ejecutar(ctx));
+  await correr('ubicacion', () => motorUbicacion.ejecutar(ctx));
+
+  // 2. Verificadores: presupuesto, metrados, APU, especificaciones, cronograma, planos y territorio.
+  let analisis: AnalisisVerificadores | null = null;
+  await correr('verificadores', async () => {
+    analisis = correrVerificadores(expediente.documentos, textos);
+    const g = analisis.resultado.generales;
+    nuevos.push(...analisis.hallazgos);
+    ctx.partes = analisis.partes;
+    if (g.ubicacion) expediente.ubicacion = { punto: g.ubicacion, distrito: g.distrito ? nombrePropio(g.distrito) : null, estimada: !!g.ubicacionEstimada };
+    else if (expediente.lugar) expediente.ubicacion = null;
+    if (expediente.nombre === SIN_NOMBRE && g.nombre) expediente.nombre = frase(g.nombre);
+    expediente.cobertura = analisis.resultado.cobertura;
+    const c = analisis.resultado.conteos;
+    return { estado: 'ok', nota: `${c.partidas} partidas, ${c.metrados} metrados, ${c.apus} APU, ${c.especificaciones} especificaciones, ${c.actividades} actividades de cronograma leídas; ${analisis.hallazgos.length} observación(es).` };
+  });
+
+  // 3. Contenido mínimo y lectura incompleta.
+  await correr('cobertura', () => motorCobertura.ejecutar(ctx));
+
+  // 4. Pruebas aprendidas de obras terminadas y paralizadas.
+  let totalAprendidas = 0;
+  let aplicadasAprendidas = 0;
+  await correr('antecedentes', async () => {
+    const pruebas = (await almacen.listarPruebas()).filter((p) => p.estado === 'aceptada');
+    if (!pruebas.length) return { estado: 'sin-datos', nota: 'Todavía no hay pruebas aprendidas aceptadas.' };
+    const obra = obraEvaluada(expediente, analisis);
+    let aplican = 0;
+    let alertan = 0;
+    totalAprendidas = pruebas.length;
+    for (const p of pruebas) {
+      const v = evaluarPrueba(p, obra);
+      if (!v.aplica) continue;
+      aplican += 1;
+      if (v.dispara) { alertan += 1; nuevos.push(hallazgoDePrueba(p, v)); }
+    }
+    aplicadasAprendidas = aplican;
+    return { estado: 'ok', nota: `${pruebas.length} prueba(s) aprendida(s): ${aplican} aplican a esta obra, ${alertan} alertan.` };
+  });
+
+  const base = VERIFICADORES.filter((v) => v.tipo !== 'proveedor').length;
+  const av = analisis as AnalisisVerificadores | null;
+  const corridas = av ? Math.max(av.ejecutadas.size, aplicablesIniciales({
+    partes: new Set<string>([...av.partes, ...expediente.documentos.map((d) => d.tipo)]),
+    ubicacion: !!expediente.ubicacion,
+    cotizaciones: av.resultado.conteos.cotizaciones > 0,
+  })) : 0;
+  expediente.pruebas = { aplicadas: corridas + aplicadasAprendidas, total: base + totalAprendidas };
 
   const inicio = performance.now();
   expediente.hallazgos = consolidar(nuevos);
+  expediente.semaforo = semaforo(expediente);
   ejecucion.push({ motor: 'consolidacion', estado: 'ok', ms: Math.round(performance.now() - inicio), nota: `${expediente.hallazgos.length} hallazgo(s).` });
 
   expediente.ejecucion = ejecucion;
   expediente.estado = 'analizado';
-  expediente.carta = { incluidos: expediente.hallazgos.map((h) => h.id), destinatario: expediente.carta.destinatario };
+  expediente.carta = { ...expediente.carta, incluidos: expediente.hallazgos.map((h) => h.id) };
   await almacen.guardarExpediente(expediente);
   return expediente;
 }
 
-export async function actualizarCarta(id: string, carta: { incluidos?: string[]; destinatario?: string }) {
+/** Datos de un expediente que necesitan las pruebas aprendidas. */
+export function obraEvaluada(e: Expediente, analisis: AnalisisVerificadores | null, textos?: string[][]): ObraEvaluada {
+  const texto = (...tipos: TipoDocumento[]) => analisis
+    ? analisis.textoDe(...tipos)
+    : e.documentos.map((d, i) => (tipos.includes(d.tipo) || d.tipo === 'Expediente completo' ? (textos?.[i] ?? []).join('\n') : '')).join('\n');
+  return {
+    id: e.id,
+    ubicacion: e.ubicacion?.punto ?? null,
+    distrito: e.ubicacion?.distrito ?? e.lugar?.split(',')[0] ?? null,
+    textoPartidas: texto('Presupuesto', 'Metrados', 'Precios unitarios'),
+    textoEstudios: texto('Memoria', 'Estudio de suelos', 'Especificaciones', 'Planos'),
+  };
+}
+
+/** Rojo: algo grave. Amarillo: observaciones o puntos por confirmar. Verde: nada que observar en lo que se pudo revisar. Gris: no se pudo revisar. */
+function semaforo(e: Expediente): Semaforo {
+  if (e.hallazgos.some((h) => h.prueba === 'D-PERTINENCIA') || (e.hallazgos.some((h) => h.titulo.startsWith('Los archivos no parecen')))) return 'gris';
+  if (e.hallazgos.some((h) => h.prioridad === 'alta')) return 'rojo';
+  if (e.hallazgos.length || !e.cobertura.length) return 'amarillo';
+  return 'verde';
+}
+
+export async function actualizarCarta(id: string, cambios: Partial<DatosCarta>) {
   const expediente = await almacen.leerExpediente(id);
   if (!expediente) throw new Error('Expediente no encontrado');
   const validos = new Set(expediente.hallazgos.map((h) => h.id));
-  if (carta.incluidos) expediente.carta.incluidos = carta.incluidos.filter((h) => validos.has(h));
-  if (typeof carta.destinatario === 'string') expediente.carta.destinatario = carta.destinatario.slice(0, 200);
+  if (cambios.incluidos) expediente.carta.incluidos = cambios.incluidos.filter((h) => validos.has(h));
+  for (const campo of CAMPOS_CARTA) {
+    const v = cambios[campo];
+    if (typeof v === 'string') expediente.carta[campo] = v.slice(0, 200);
+  }
+  if (typeof cambios.plazo === 'number' && cambios.plazo >= 1 && cambios.plazo <= 60) expediente.carta.plazo = Math.round(cambios.plazo);
   await almacen.guardarExpediente(expediente);
   return expediente;
 }

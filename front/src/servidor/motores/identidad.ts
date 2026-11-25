@@ -21,7 +21,7 @@ export interface IdentidadDocumento {
 export function identidadDeDocumento(paginas: string[]): IdentidadDocumento {
   const id: IdentidadDocumento = {};
   for (let i = 0; i < Math.min(PAGINAS, paginas.length); i += 1) {
-    const original = paginas[i];
+    const original = paginas[i].replace(/ \| /g, ' ');
     const p = plano(original);
     if (!id.nombre) {
       const m = INICIO_NOMBRE.exec(p);

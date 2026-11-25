@@ -6,7 +6,8 @@ import { Icono, type NombreIcono } from './Icono';
 
 const SECCIONES: { href: string; texto: string; icono: NombreIcono; activa: (ruta: string) => boolean }[] = [
   { href: '/', texto: 'Revisar expedientes', icono: 'files', activa: (r) => r === '/' || r.startsWith('/revision') },
-  { href: '/obras', texto: 'Obras terminadas y paralizadas', icono: 'layers', activa: (r) => r.startsWith('/obras') },
+  { href: '/obras', texto: 'Obras terminadas', icono: 'layers', activa: (r) => r.startsWith('/obras') },
+  { href: '/pruebas', texto: 'Pruebas', icono: 'check', activa: (r) => r.startsWith('/pruebas') },
   { href: '/como-funciona', texto: 'Cómo funciona', icono: 'list', activa: (r) => r.startsWith('/como-funciona') },
 ];
 
