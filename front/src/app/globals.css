@@ -697,3 +697,12 @@ a.btn{text-decoration:none}
 .grupos-motores li{display:grid;gap:1px;border-top:1px solid var(--line);padding:7px 0;font-size:.86rem}
 .grupos-motores li span{color:var(--muted);font-size:.8rem}
 @media(max-width:1040px){.flujo ol{grid-template-columns:1fr}.flujo li:not(:last-child)::after{content:"↓";right:auto;left:22px;top:auto;bottom:-15px}}
+.kit-cabecera{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.kit-escenario{display:inline-block;font-size:.78rem;font-weight:750;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.kit-progreso{flex:none;border:1px solid var(--warm-line);background:var(--white);border-radius:999px;padding:4px 12px;font-size:.8rem;font-weight:700}
+.kit-lista{margin-top:12px;font-size:.86rem}
+.kit-lista summary{font-weight:700;cursor:pointer}
+.kit-lista ul{list-style:none;margin:8px 0 0;padding:0}
+.kit-lista li{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border-top:1px solid var(--warm-line);padding:6px 0}
+@media(max-width:620px){.kit-lista li{grid-template-columns:1fr}}
+.kit-derecha{display:grid;justify-items:end;gap:8px;flex:none}

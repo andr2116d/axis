@@ -9,7 +9,7 @@ import { SelectorArchivos, enviar } from '../SelectorArchivos';
 
 export interface OpcionExpediente { id: string; clave: string; nombre: string }
 
-export function RegistroObra({ expedientes, subidaDirecta, demo }: { expedientes: OpcionExpediente[]; subidaDirecta: boolean; demo?: string }) {
+export function RegistroObra({ expedientes, subidaDirecta, demo }: { expedientes: OpcionExpediente[]; subidaDirecta: boolean; demo?: { archivo: string; via: string; situacion: SituacionObra } }) {
   const router = useRouter();
   const avisar = useAviso();
   const [expedienteId, setExpedienteId] = useState(expedientes[0]?.id ?? '');
@@ -19,12 +19,15 @@ export function RegistroObra({ expedientes, subidaDirecta, demo }: { expedientes
   const [progreso, setProgreso] = useState('');
   const [error, setError] = useState('');
 
-  // Desde el kit de demo: precarga el documento y elige el expediente de Calle Los Incas si existe.
+  // Desde la demo: precarga el documento de la obra y elige el expediente de esa calle (el más reciente).
   useEffect(() => {
-    if (!demo?.startsWith('/demo/')) return;
-    fetch(demo).then((r) => r.blob()).then((b) => setArchivos([new File([b], decodeURIComponent(demo.split('/').pop()!), { type: 'application/pdf' })]));
-    const incas = expedientes.find((e) => /LOS INCAS/i.test(e.nombre));
-    if (incas) { setExpedienteId(incas.id); setSituacion('terminada'); }
+    if (!demo?.archivo.startsWith('/demo/')) return;
+    fetch(demo.archivo).then((r) => r.blob()).then((b) => setArchivos([new File([b], decodeURIComponent(demo.archivo.split('/').pop()!), { type: 'application/pdf' })]));
+    const plano = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+    const via = plano(demo.via).replace(/^(CALLE|JIRON|AVENIDA|PASAJE)\s+/, '');
+    const suyo = expedientes.find((e) => plano(e.nombre).includes(via));
+    if (suyo) setExpedienteId(suyo.id);
+    setSituacion(demo.situacion);
   }, [demo, expedientes]);
 
   if (!expedientes.length) {

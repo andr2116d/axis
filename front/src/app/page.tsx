@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { listarExpedientes, listarPruebas } from '@/servidor/almacen';
 import { pruebasConocidas } from '@/servidor/aprendizaje/biblioteca';
+import { estadoEscenarios } from '@/servidor/aprendizaje/escenarios';
 import { usaBlob } from '@/servidor/respaldo';
 import { CargaExpediente } from '@/componentes/CargaExpediente';
 import { Icono } from '@/componentes/Icono';
@@ -15,6 +16,7 @@ export default async function Inicio() {
   const [todos, aprendidas] = await Promise.all([listarExpedientes(), listarPruebas()]);
   const recientes = todos.slice(0, 6);
   const pruebas = pruebasConocidas(aprendidas).filter((p) => p.estado === 'activa').length;
+  const escenarios = estadoEscenarios(aprendidas);
   return (
     <>
       <section className="hero">
@@ -28,7 +30,7 @@ export default async function Inicio() {
         </div>
         <div className="cover-territory"><MapaPortada clave="incas" lugar="El Porvenir, La Libertad" /></div>
       </section>
-      <KitDemo subidaDirecta={usaBlob} />
+      <KitDemo subidaDirecta={usaBlob} actual={escenarios.actual} lista={escenarios.lista} />
       <section className="start-grid" aria-label="Cómo iniciar una revisión">
         <CargaExpediente subidaDirecta={usaBlob} />
         <div className="samples-section">

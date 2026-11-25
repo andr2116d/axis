@@ -1,0 +1,169 @@
+[
+  {
+    "id": "E01", "zona": "El Porvenir", "condicion": "redes", "situacion": "terminada",
+    "titulo": "Redes de desagüe que el expediente no previó",
+    "original": { "archivo": "/demo/LL-01_pistas-calle-los-incas_con-errores.pdf", "via": "Calle Los Incas", "coord": [-8.086, -78.9948] },
+    "obra": { "archivo": "/demo/OBRA-LL-01_resolucion-adicional-01_sintetica.pdf", "tipo": "Resolución de adicional" },
+    "cercano": { "archivo": "/demo/LL-02_pistas-calle-santa-clara_limpio.pdf", "via": "Calle Santa Clara", "distancia": 850 }
+  },
+  {
+    "id": "E02", "zona": "Huanchaco", "condicion": "napa", "situacion": "paralizada",
+    "titulo": "Napa freática que paralizó la obra",
+    "original": { "archivo": "/demo/escenarios/E02-A_jiron-manco-capac.pdf", "via": "Jirón Manco Cápac", "coord": [-8.07873, -79.11988], "distrito": "HUANCHACO", "errores": ["E4", "E5", "E9"] },
+    "obra": {
+      "archivo": "/demo/escenarios/E02-OBRA_informe-paralizacion.pdf", "tipo": "Informe de paralización",
+      "oficina": "ENTIDAD DE DEMOSTRACIÓN – SUBGERENCIA DE OBRAS", "titulo": "INFORME TÉCNICO N° 031-2026-SGO – OBRA PARALIZADA", "fecha": "Huanchaco, 3 de julio de 2026",
+      "secciones": [
+        ["ASUNTO:", ["Estado situacional de la obra «Mejoramiento de pistas y veredas en el Jirón Manco Cápac - Huanchaco», paralizada con 41 % de avance físico."]],
+        ["ANÁLISIS:", [
+          "Al excavar la caja del pavimento a 0.90 m apareció napa freática: el agua aflora en el fondo de la excavación y el suelo quedó saturado en 160 m del tramo, lo que impide compactar.",
+          "El estudio de mecánica de suelos del expediente exploró hasta 1.50 m y declaró que no se encontró nivel freático; el expediente no incluyó partidas de bombeo ni abatimiento de napa.",
+          "Por ello la obra se encuentra paralizada desde el 12 de junio de 2026."
+        ]],
+        ["RECOMENDACIÓN:", ["Elaborar el expediente del saldo de obra con exploración complementaria, abatimiento de la napa y subdrenaje, y exigir en la zona costera que el estudio de suelos sustente el nivel freático."]]
+      ]
+    },
+    "cercano": { "archivo": "/demo/escenarios/E02-B_jiron-pilcomayo.pdf", "via": "Jirón Pilcomayo", "coord": [-8.07849, -79.1187], "distancia": 130 }
+  },
+  {
+    "id": "E03", "zona": "Víctor Larco", "condicion": "subrasante", "situacion": "terminada",
+    "titulo": "Suelo inadecuado bajo la calzada",
+    "original": { "archivo": "/demo/escenarios/E03-A_calle-los-claveles.pdf", "via": "Calle Los Claveles", "coord": [-8.13267, -79.04018], "distrito": "VICTOR LARCO HERRERA", "errores": ["E1", "E6", "E15"] },
+    "obra": {
+      "archivo": "/demo/escenarios/E03-OBRA_resolucion-adicional.pdf", "tipo": "Resolución de adicional",
+      "oficina": "ENTIDAD DE DEMOSTRACIÓN – GERENCIA DE OBRAS", "titulo": "RESOLUCIÓN GERENCIAL N° 058-2026-GO", "fecha": "Víctor Larco, 21 de agosto de 2026",
+      "secciones": [
+        ["CONSIDERANDO:", [
+          "Que, al perfilar la calzada de la Calle Los Claveles, el supervisor verificó suelo inadecuado: arcilla de alta plasticidad con CBR de 3 %, muy por debajo del 14.5 % que indicaba el estudio de suelos del expediente técnico.",
+          "Que, para alojar la estructura del pavimento se requiere el mejoramiento de subrasante con reemplazo de material en 0.30 m y material de préstamo, partidas que el expediente técnico no consideró.",
+          "Que, la obra se encuentra terminada, habiéndose ejecutado el adicional con una incidencia de 7.8 %."
+        ]],
+        ["SE RESUELVE:", ["APROBAR la Prestación Adicional de Obra N° 01 por mejoramiento de subrasante de la obra «Mejoramiento de pistas y veredas en la Calle Los Claveles - Víctor Larco»."]]
+      ]
+    },
+    "cercano": { "archivo": "/demo/escenarios/E03-B_calle-los-tilos.pdf", "via": "Calle Los Tilos", "coord": [-8.13226, -79.04219], "distancia": 230 }
+  },
+  {
+    "id": "E04", "zona": "Florencia de Mora", "condicion": "drenaje", "situacion": "terminada",
+    "titulo": "Lluvias sin drenaje pluvial",
+    "original": { "archivo": "/demo/escenarios/E04-A_calle-2-de-junio.pdf", "via": "Calle 2 de Junio", "coord": [-8.07924, -79.02314], "distrito": "FLORENCIA DE MORA", "errores": ["E2", "E10", "E18"], "sinDrenaje": true },
+    "obra": {
+      "archivo": "/demo/escenarios/E04-OBRA_resolucion-adicional.pdf", "tipo": "Resolución de adicional",
+      "oficina": "ENTIDAD DE DEMOSTRACIÓN – GERENCIA DE DESARROLLO URBANO", "titulo": "RESOLUCIÓN GERENCIAL N° 077-2026-GDU", "fecha": "Florencia de Mora, 9 de abril de 2026",
+      "secciones": [
+        ["CONSIDERANDO:", [
+          "Que, durante las lluvias de marzo de 2026 el agua de las calles altas escurrió por la Calle 2 de Junio y erosionó la base granular recién colocada en las cuadras 3 y 4.",
+          "Que, el supervisor informó que el expediente técnico no incluyó drenaje pluvial: no se previeron cunetas, badenes ni sumideros pese a la pendiente de la vía.",
+          "Que, la obra se encuentra terminada tras ejecutar el adicional de cunetas y badenes."
+        ]],
+        ["SE RESUELVE:", ["APROBAR la Prestación Adicional de Obra N° 01 por drenaje pluvial (cunetas de concreto y badenes) de la obra «Mejoramiento de pistas y veredas en la Calle 2 de Junio - Florencia de Mora»."]]
+      ]
+    },
+    "cercano": { "archivo": "/demo/escenarios/E04-B_calle-25-de-diciembre.pdf", "via": "Calle 25 de Diciembre", "coord": [-8.07938, -79.02468], "distancia": 170, "sinDrenaje": true }
+  },
+  {
+    "id": "E05", "zona": "La Esperanza", "condicion": "relleno", "situacion": "paralizada",
+    "titulo": "Relleno con desmonte bajo la vía",
+    "original": { "archivo": "/demo/escenarios/E05-A_calle-santa-maria.pdf", "via": "Calle Santa María", "coord": [-8.06221, -79.04686], "distrito": "LA ESPERANZA", "errores": ["E3", "E11", "E14"] },
+    "obra": {
+      "archivo": "/demo/escenarios/E05-OBRA_informe-paralizacion.pdf", "tipo": "Informe de paralización",
+      "oficina": "ENTIDAD DE DEMOSTRACIÓN – SUBGERENCIA DE OBRAS", "titulo": "INFORME TÉCNICO N° 044-2026-SGO – OBRA PARALIZADA", "fecha": "La Esperanza, 18 de septiembre de 2026",
+      "secciones": [
+        ["ANÁLISIS:", [
+          "Al excavar la caja de la calzada en la Calle Santa María se encontró relleno no controlado de desmonte, basura enterrada y material orgánico hasta 1.10 m de profundidad, que no puede servir de apoyo al pavimento.",
+          "El expediente técnico no exploró ese tramo ni previó la eliminación de ese material, la sobreexcavación ni su reemplazo.",
+          "La obra se encuentra paralizada desde el 2 de septiembre de 2026 a la espera del expediente del saldo."
+        ]],
+        ["RECOMENDACIÓN:", ["Incorporar exploración en cada cuadra y la partida de eliminación y reemplazo de material conforme a la Norma E.050."]]
+      ]
+    },
+    "cercano": { "archivo": "/demo/escenarios/E05-B_calle-uruguay.pdf", "via": "Calle Uruguay", "coord": [-8.06206, -79.04519], "distancia": 185 }
+  },
+  {
+    "id": "E06", "zona": "Alto Trujillo", "condicion": "roca", "situacion": "terminada",
+    "titulo": "Roca donde el expediente decía arena",
+    "original": { "archivo": "/demo/escenarios/E06-A_jiron-cesar-vallejo.pdf", "via": "Jirón César Vallejo", "coord": [-8.06783, -78.98499], "distrito": "EL PORVENIR", "errores": ["E7", "E12", "E16"] },
+    "obra": {
+      "archivo": "/demo/escenarios/E06-OBRA_liquidacion.pdf", "tipo": "Liquidación",
+      "oficina": "ENTIDAD DE DEMOSTRACIÓN – SUBGERENCIA DE LIQUIDACIONES", "titulo": "INFORME DE LIQUIDACIÓN DEL CONTRATO DE OBRA N° 012-2026", "fecha": "Alto Trujillo, 30 de octubre de 2026",
+      "secciones": [
+        ["RESUMEN DE LA EJECUCIÓN:", [
+          "La obra «Mejoramiento de pistas y veredas en el Jirón César Vallejo - Alto Trujillo» se encuentra terminada y recibida.",
+          "Durante la ejecución se encontró terreno rocoso: excavación en roca suelta en 180 m y roca fija en 40 m, donde el expediente técnico consideraba arena limosa. Se aprobó el Adicional N° 01 por excavación en roca con martillo hidráulico.",
+          "El costo final de obra supera en 11.2 % al monto contratado por ese adicional."
+        ]]
+      ]
+    },
+    "cercano": { "archivo": "/demo/escenarios/E06-B_calle-tomas-solano.pdf", "via": "Calle Tomás Solano", "coord": [-8.06841, -78.98571], "distancia": 100 }
+  },
+  {
+    "id": "E07", "zona": "El Porvenir norte", "condicion": "muros", "situacion": "terminada",
+    "titulo": "Talud que necesitó muro de contención",
+    "original": { "archivo": "/demo/escenarios/E07-A_calle-12.pdf", "via": "Calle 12", "coord": [-8.06676, -79.00161], "distrito": "EL PORVENIR", "errores": ["E8", "E13", "E17"] },
+    "obra": {
+      "archivo": "/demo/escenarios/E07-OBRA_resolucion-adicional.pdf", "tipo": "Resolución de adicional",
+      "oficina": "ENTIDAD DE DEMOSTRACIÓN – GERENCIA DE DESARROLLO URBANO", "titulo": "RESOLUCIÓN GERENCIAL N° 090-2026-GDU", "fecha": "El Porvenir, 12 de mayo de 2026",
+      "secciones": [
+        ["CONSIDERANDO:", [
+          "Que, al cortar el terreno para la vereda del lado alto de la Calle 12 el talud quedó con 2.40 m de altura y se produjo un deslizamiento que comprometió las viviendas colindantes.",
+          "Que, el expediente técnico no evaluó la estabilidad del talud ni previó un muro de contención; el supervisor recomendó construir 64 m de muro de contención de concreto armado.",
+          "Que, la obra se encuentra terminada con el adicional ejecutado."
+        ]],
+        ["SE RESUELVE:", ["APROBAR la Prestación Adicional de Obra N° 01 por muro de contención de la obra «Mejoramiento de pistas y veredas en la Calle 12 - El Porvenir»."]]
+      ]
+    },
+    "cercano": { "archivo": "/demo/escenarios/E07-B_calle-san-valentin.pdf", "via": "Calle San Valentín", "coord": [-8.06835, -79.00285], "distancia": 225 }
+  },
+  {
+    "id": "E08", "zona": "Trujillo, El Bosque", "condicion": "redes", "situacion": "paralizada",
+    "titulo": "Tubería de agua que nadie catastró",
+    "original": { "archivo": "/demo/escenarios/E08-A_calle-putumayo.pdf", "via": "Calle Putumayo", "coord": [-8.09827, -79.01577], "distrito": "TRUJILLO", "errores": ["E1", "E4", "E19"] },
+    "obra": {
+      "archivo": "/demo/escenarios/E08-OBRA_informe-paralizacion.pdf", "tipo": "Informe de paralización",
+      "oficina": "ENTIDAD DE DEMOSTRACIÓN – SUBGERENCIA DE OBRAS", "titulo": "INFORME TÉCNICO N° 052-2026-SGO – OBRA PARALIZADA", "fecha": "Trujillo, 6 de octubre de 2026",
+      "secciones": [
+        ["ANÁLISIS:", [
+          "Al excavar la caja del pavimento en la Calle Putumayo se encontró una tubería de agua potable de asbesto cemento de 6\" a 0.50 m, con fugas, que no figuraba en los planos y que interfiere con la estructura del pavimento.",
+          "La empresa prestadora informó que la red debe reubicarse antes de pavimentar; el expediente técnico no incluyó el catastro de redes ni partidas de reubicación.",
+          "La obra se encuentra paralizada desde el 21 de septiembre de 2026."
+        ]]
+      ]
+    },
+    "cercano": { "archivo": "/demo/escenarios/E08-B_calle-alexander-fleming.pdf", "via": "Calle Alexander Fleming", "coord": [-8.09776, -79.01488], "distancia": 115 }
+  },
+  {
+    "id": "E09", "zona": "Moche", "condicion": "napa", "situacion": "terminada",
+    "titulo": "Agua en la excavación junto al valle",
+    "original": { "archivo": "/demo/escenarios/E09-A_jiron-francisco-bolognesi.pdf", "via": "Jirón Francisco Bolognesi", "coord": [-8.16945, -79.00868], "distrito": "MOCHE", "errores": ["E2", "E5", "E21"] },
+    "obra": {
+      "archivo": "/demo/escenarios/E09-OBRA_resolucion-adicional.pdf", "tipo": "Resolución de adicional",
+      "oficina": "ENTIDAD DE DEMOSTRACIÓN – GERENCIA DE OBRAS", "titulo": "RESOLUCIÓN GERENCIAL N° 101-2026-GO", "fecha": "Moche, 25 de septiembre de 2026",
+      "secciones": [
+        ["CONSIDERANDO:", [
+          "Que, en la excavación de la caja de la calzada del Jirón Francisco Bolognesi se registró nivel freático a 0.80 m, con filtraciones de agua constantes por la cercanía del canal de regadío.",
+          "Que, el expediente técnico declaró que no se encontró napa freática y no incluyó bombeo ni subdrenaje, por lo que se aprobó el abatimiento con motobombas y un subdren longitudinal.",
+          "Que, la obra se encuentra terminada."
+        ]],
+        ["SE RESUELVE:", ["APROBAR la Prestación Adicional de Obra N° 01 por abatimiento de napa freática y subdrenaje."]]
+      ]
+    },
+    "cercano": { "archivo": "/demo/escenarios/E09-B_calle-comandante-moore.pdf", "via": "Calle Comandante Moore", "coord": [-8.16981, -79.00978], "distancia": 130 }
+  },
+  {
+    "id": "E10", "zona": "Laredo", "condicion": "drenaje", "situacion": "paralizada",
+    "titulo": "Calle inundada por falta de drenaje",
+    "original": { "archivo": "/demo/escenarios/E10-A_calle-independencia.pdf", "via": "Calle Independencia", "coord": [-8.09031, -78.95998], "distrito": "LAREDO", "errores": ["E3", "E9", "E15"], "sinDrenaje": true },
+    "obra": {
+      "archivo": "/demo/escenarios/E10-OBRA_informe-paralizacion.pdf", "tipo": "Informe de paralización",
+      "oficina": "ENTIDAD DE DEMOSTRACIÓN – SUBGERENCIA DE OBRAS", "titulo": "INFORME TÉCNICO N° 015-2026-SGO – OBRA PARALIZADA", "fecha": "Laredo, 14 de marzo de 2026",
+      "secciones": [
+        ["ANÁLISIS:", [
+          "Las lluvias de febrero de 2026 inundaron la Calle Independencia: el agua quedó empozada sobre la base granular y la saturó en 120 m.",
+          "El expediente técnico no contempla drenaje pluvial: no hay cunetas, alcantarillas ni sumideros, y la rasante no lleva el agua a ningún punto de descarga.",
+          "La obra se encuentra paralizada hasta aprobar el expediente del saldo con el drenaje."
+        ]]
+      ]
+    },
+    "cercano": { "archivo": "/demo/escenarios/E10-B_jiron-la-union.pdf", "via": "Jirón La Unión", "coord": [-8.08989, -78.96085], "distancia": 105, "sinDrenaje": true }
+  }
+]

@@ -6,12 +6,14 @@ import { Icono } from '@/componentes/Icono';
 import { LECTURA, fecha } from '@/componentes/ui';
 import { PropuestaPrueba } from '@/componentes/obras/PropuestaPrueba';
 import { pruebasConocidas } from '@/servidor/aprendizaje/biblioteca';
+import { escenarioPorId } from '@/servidor/aprendizaje/escenarios';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Obras terminadas y paralizadas' };
 
-export default async function PaginaObras({ searchParams }: { searchParams: Promise<{ demo?: string }> }) {
-  const { demo } = await searchParams;
+export default async function PaginaObras({ searchParams }: { searchParams: Promise<{ escenario?: string }> }) {
+  const esc = escenarioPorId((await searchParams).escenario);
+  const demo = esc ? { archivo: esc.obra.archivo, via: esc.original.via, situacion: esc.situacion } : undefined;
   const [expedientes, obras, pruebas] = await Promise.all([listarExpedientes(), listarObras(), listarPruebas()]);
   const porId = new Map(expedientes.map((e) => [e.id, e]));
   const pruebaPorId = new Map(pruebas.map((p) => [p.id, p]));
