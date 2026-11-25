@@ -35,9 +35,11 @@ const TIPOS_DE_EXPEDIENTE = new Set<TipoDocumento>(REQUISITOS.map((r) => r.tipo)
 
 export const motorCobertura: MotorExpediente = {
   id: 'cobertura',
-  async ejecutar({ expediente, reportar }) {
+  async ejecutar({ expediente, reportar, reportados, partes }) {
     const docs = expediente.documentos;
-    const presentes = new Set(docs.map((d) => d.tipo));
+    // Si el motor de verificadores ya concluyó que no es un expediente, no se repite.
+    if (reportados().some((h) => h.prueba === 'D-PERTINENCIA')) return { estado: 'ok', nota: 'Los archivos no son un expediente técnico.' };
+    const presentes = new Set([...docs.map((d) => d.tipo), ...(partes ?? [])]);
 
     // Puerta de pertinencia: si nada parece parte de un expediente, no se sigue.
     if (![...presentes].some((t) => TIPOS_DE_EXPEDIENTE.has(t))) {
