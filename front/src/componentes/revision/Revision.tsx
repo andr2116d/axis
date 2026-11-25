@@ -70,6 +70,7 @@ export function Revision({ expediente }: { expediente: Expediente }) {
             <small>
               {altas ? `${altas} ${altas === 1 ? 'observación' : 'observaciones'} de prioridad alta. Empieza por esos puntos. ` : SEMAFORO[e.semaforo].texto + ' '}
               {e.pruebas ? `Aplicaron ${e.pruebas.aplicadas} de las ${e.pruebas.total} pruebas que Axis aprendió` : `Se revisaron ${e.cobertura.length} grupos de pruebas`}{lecturaIncompleta ? '; hay documentos que no se leyeron completos' : ''}.
+              {e.pruebas && e.pruebas.aplicadas < e.pruebas.total && <> <button type="button" className="text-link" onClick={() => setPestana('pruebas')}>¿Por qué no todas?</button></>}
             </small>
           </div>
         </div>
@@ -188,29 +189,68 @@ const ESTADO_PRUEBA = {
   observa: { texto: 'Observó', clase: 'alta' },
   confirmar: { texto: 'Por confirmar', clase: 'confirmar' },
   pasa: { texto: 'Pasó', clase: 'confirmed' },
-  'no-aplica': { texto: 'No aplica', clase: 'neutral' },
 } as const;
 
 function PanelPruebas({ e }: { e: Expediente }) {
-  const lista = e.resultadoPruebas ?? [];
-  const cuenta = (estado: keyof typeof ESTADO_PRUEBA) => lista.filter((r) => r.estado === estado).length;
-  const orden = { observa: 0, confirmar: 1, pasa: 2, 'no-aplica': 3 };
+  const todas = e.resultadoPruebas ?? [];
+  const corrieron = todas.filter((r) => r.estado !== 'no-aplica' && r.estado !== 'descartada');
+  const descartadas = todas.filter((r) => r.estado === 'descartada');
+  const sinDocumentos = todas.filter((r) => r.estado === 'no-aplica');
+  const noCorrieron = descartadas.length + sinDocumentos.length;
+  const cuenta = (estado: keyof typeof ESTADO_PRUEBA) => corrieron.filter((r) => r.estado === estado).length;
+  const orden = { observa: 0, confirmar: 1, pasa: 2 };
   return (
     <section className="content-panel panel-pruebas">
       <h2>{e.pruebas ? `Corrieron ${e.pruebas.aplicadas} de las ${e.pruebas.total} pruebas que Axis aprendió` : 'Pruebas'}</h2>
-      <p>Cada prueba nació de un error real o de una obra terminada o paralizada. El modelo elige las que aplican según los documentos y la ubicación de la obra.</p>
+      <p>Cada prueba nació de un error real o de una obra terminada o paralizada. Antes de correrlas, el modelo lee el expediente y elige las que valen la pena para esta obra.</p>
       <ul className="chips">
         {(Object.keys(ESTADO_PRUEBA) as (keyof typeof ESTADO_PRUEBA)[]).map((k) => <li key={k} className={`chip-${ESTADO_PRUEBA[k].clase}`}>{ESTADO_PRUEBA[k].texto}: {cuenta(k)}</li>)}
+        {noCorrieron > 0 && <li>No corrieron: {noCorrieron}</li>}
       </ul>
       <ul className="lista-pruebas">
-        {[...lista].sort((a, b) => Number(b.origen === 'obra') - Number(a.origen === 'obra') || orden[a.estado] - orden[b.estado]).map((r) => (
+        {[...corrieron].sort((a, b) => Number(b.origen === 'obra') - Number(a.origen === 'obra') || orden[a.estado as keyof typeof orden] - orden[b.estado as keyof typeof orden]).map((r) => (
           <li key={r.id} className={r.origen === 'obra' ? 'de-obra' : ''}>
             <span className="mono">{r.id}</span>
             <span className="nombre-prueba">{r.nombre}{r.origen === 'obra' && <small>Aprendida de una obra</small>}{r.motivo && <small>{r.motivo}</small>}</span>
-            <span className={`pill ${ESTADO_PRUEBA[r.estado].clase}`}>{ESTADO_PRUEBA[r.estado].texto}</span>
+            <span className={`pill ${ESTADO_PRUEBA[r.estado as keyof typeof ESTADO_PRUEBA].clase}`}>{ESTADO_PRUEBA[r.estado as keyof typeof ESTADO_PRUEBA].texto}</span>
           </li>
         ))}
       </ul>
+      {noCorrieron > 0 && (
+        <details className="no-corrieron">
+          <summary>Ver por qué no corrieron {noCorrieron === 1 ? 'una prueba' : `${noCorrieron} pruebas`}</summary>
+          {descartadas.length > 0 && (
+            <>
+              <h3>El modelo decidió no correrlas</h3>
+              <p>Leyó el expediente y la ubicación de la obra, y concluyó que no aportan nada aquí. Así la revisión se concentra en lo que sí puede fallar.</p>
+              <ul className="lista-pruebas">
+                {descartadas.map((r) => (
+                  <li key={r.id}>
+                    <span className="mono">{r.id}</span>
+                    <span className="nombre-prueba">{r.nombre}{r.motivo && <small>{r.motivo}</small>}</span>
+                    <span className="pill neutral">No pertinente</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {sinDocumentos.length > 0 && (
+            <>
+              <h3>No aplican a esta obra</h3>
+              <p>Les falta un documento o la obra está fuera de su alcance.</p>
+              <ul className="lista-pruebas">
+                {sinDocumentos.map((r) => (
+                  <li key={r.id}>
+                    <span className="mono">{r.id}</span>
+                    <span className="nombre-prueba">{r.nombre}{r.motivo && <small>{r.motivo.charAt(0).toUpperCase() + r.motivo.slice(1)}.</small>}</span>
+                    <span className="pill neutral">No aplica</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </details>
+      )}
       <details className="engine-details">
         <summary>Detalle técnico: motores que corrieron</summary>
         {e.cobertura.length > 0 && <ul className="chips">{e.cobertura.map((c) => <li key={c}>{c}</li>)}</ul>}
