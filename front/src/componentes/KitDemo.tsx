@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Icono } from './Icono';
-import { enviar } from './SelectorArchivos';
+import { subirDemo } from './demo/GuiaDemo';
+import { EVENTO_DEMO, guardarDemo, leerDemo } from './demo/estado';
 
 // Demo con los escenarios cargados en el servidor: muestra el siguiente que el modelo
 // todavía no aprendió. Un clic revisa un expediente o registra la obra.
@@ -16,8 +17,6 @@ export interface EscenarioKit {
   cercano: { archivo: string; via: string; distancia: number };
 }
 
-const CLAVE = 'axis-escenario-demo';
-
 const OTROS = [
   { titulo: 'Presupuesto real de la Av. Jaime Blanco', texto: 'Publicado en el SEACE (LP-ABR-12-2026-MDEP). Axis encuentra sus 3 errores reales.', archivo: '/demo/REAL_presupuesto_av-jaime-blanco_SEACE.pdf' },
   { titulo: 'Expediente incompleto · Pasaje Los Rosales', texto: 'Solo trae algunas partes: Axis dice qué falta y qué no pudo revisar.', archivo: '/demo/LL-03_pistas-pasaje-los-rosales_incompleto.pdf' },
@@ -27,29 +26,29 @@ export function KitDemo({ subidaDirecta, actual, lista }: { subidaDirecta: boole
   const router = useRouter();
   const [cargando, setCargando] = useState('');
   const [error, setError] = useState('');
-  // El navegador recuerda el escenario que empezó esta persona hasta que lo termine,
+  // El escenario de esta persona (guardado en su navegador) se muestra hasta que lo termine,
   // aunque al aceptar la prueba (paso 3) el escenario ya cuente como aprendido.
   const [propio, setPropio] = useState<string | null>(null);
   useEffect(() => {
-    try { setPropio(localStorage.getItem(CLAVE)); } catch { /* sin almacenamiento: se usa el siguiente pendiente */ }
+    const leer = () => setPropio(leerDemo()?.escenario ?? null);
+    leer();
+    window.addEventListener(EVENTO_DEMO, leer);
+    return () => window.removeEventListener(EVENTO_DEMO, leer);
   }, []);
-  const recordar = (id: string | null) => {
-    setPropio(id);
-    try { if (id) localStorage.setItem(CLAVE, id); else localStorage.removeItem(CLAVE); } catch { /* opcional */ }
-  };
+  const recordar = (id: string) => guardarDemo({ escenario: id, paso: 0 });
   const e = lista.find((x) => x.id === propio) ?? actual ?? lista[lista.length - 1];
   const siguiente = lista.find((x) => !x.aprendido && x.id !== e.id) ?? null;
   const numero = lista.findIndex((x) => x.id === e.id) + 1;
   const hechos = lista.filter((x) => x.aprendido).length;
 
   const revisar = async (url: string) => {
-    if (url === e.original.archivo || url === e.cercano.archivo) recordar(e.id);
     setCargando(url);
     setError('');
     try {
-      const blob = await (await fetch(url)).blob();
-      const archivo = new File([blob], decodeURIComponent(url.split('/').pop()!), { type: 'application/pdf' });
-      const { id } = await enviar<{ id: string }>('/api/expedientes', [archivo], {}, subidaDirecta);
+      const id = await subirDemo(url, subidaDirecta);
+      const previo = leerDemo();
+      if (url === e.original.archivo) guardarDemo({ escenario: e.id, paso: 1, a: id });
+      else if (url === e.cercano.archivo) guardarDemo({ ...(previo?.escenario === e.id ? previo : { escenario: e.id }), paso: 4, b: id });
       router.push(`/revision/${id}`);
     } catch (x) {
       setError((x as Error).message);
@@ -100,7 +99,7 @@ export function KitDemo({ subidaDirecta, actual, lista }: { subidaDirecta: boole
           <div>
             <strong>Registra la obra {e.situacion}</strong>
             <p>{e.obra.tipo}: Axis compara lo que pasó con el expediente y propone una prueba nueva. Tú la aceptas.</p>
-            <div className="kit-acciones"><Link className="btn primary" href={`/obras?escenario=${e.id}`} onClick={() => recordar(e.id)}><Icono nombre="layers" tamano={17} />Registrar</Link><a className="text-link" href={e.obra.archivo} download>PDF</a></div>
+            <div className="kit-acciones"><Link className="btn primary" href={`/obras?escenario=${e.id}`} onClick={() => { const previo = leerDemo(); if (previo?.escenario !== e.id || previo.paso < 2) guardarDemo({ ...(previo?.escenario === e.id ? previo : {}), escenario: e.id, paso: 2 }); }}><Icono nombre="layers" tamano={17} />Registrar</Link><a className="text-link" href={e.obra.archivo} download>PDF</a></div>
           </div>
         </li>
         <li>
