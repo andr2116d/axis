@@ -72,8 +72,9 @@ export interface ResultadoPrueba {
   id: string;
   nombre: string;
   origen: 'entrenamiento' | 'obra';
-  estado: 'observa' | 'confirmar' | 'pasa' | 'no-aplica';
-  /** Por qué no aplicó (documentos que faltan, fuera del radio…). */
+  /** 'descartada': el modelo leyó el expediente y decidió no correrla. */
+  estado: 'observa' | 'confirmar' | 'pasa' | 'no-aplica' | 'descartada';
+  /** Por qué no aplicó o por qué el modelo la descartó. */
   motivo?: string;
 }
 

@@ -56,6 +56,7 @@ export const GRUPOS_MOTORES: GrupoMotores[] = [
   },
   {
     id: 'aprendizaje', nombre: 'Antecedentes y aprendizaje', icono: 'layers', motores: [
+      { id: 'seleccion-pruebas', nombre: 'Selección de pruebas', proposito: 'Lee el expediente y decide qué pruebas valen la pena para esta obra, y por qué descarta las demás.', estado: 'parcial', pendiente: 'Entrenar la selección con las pruebas que más observan por tipo de obra.' },
       { id: 'antecedentes', nombre: 'Búsqueda de antecedentes', proposito: 'Corre las pruebas aprendidas de obras cercanas y el historial de costos de la zona (MEF).', estado: 'activo' },
       { id: 'evidencia-obra', nombre: 'Evidencia de obra', proposito: 'Extrae lo que pasó en obra de resoluciones, informes, actas y liquidaciones.', estado: 'activo' },
       { id: 'causas', nombre: 'Clasificación de causas', proposito: 'Regresión logística entrenada con 11,408 consultas reales (87 % de exactitud) más reglas de campo.', estado: 'activo' },

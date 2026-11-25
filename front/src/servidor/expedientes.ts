@@ -14,6 +14,7 @@ import { evaluarPrueba, hallazgoDePrueba, type ObraEvaluada } from './aprendizaj
 import { frase, nombrePropio } from './texto';
 import { VERIFICADORES } from '@/datos/verificadores';
 import { faltantes } from './aprendizaje/biblioteca';
+import { seleccionarPruebas } from './aprendizaje/seleccion';
 
 // Servicio del evaluador: recibe un expediente, lo lee y clasifica (paso 1), y
 // después de que la persona confirma los tipos, corre los motores (paso 2).
@@ -171,8 +172,12 @@ export async function analizarExpediente(id: string, tipos: Record<string, strin
         : av?.ejecutadas.has(v.id) || !falta.length ? 'pasa' : 'no-aplica';
     return { id: v.id, nombre: v.nombre, origen: 'entrenamiento', estado, motivo: estado === 'no-aplica' ? `falta: ${falta.join(', ').toLowerCase()}` : undefined };
   });
-  expediente.resultadoPruebas = [...resultadosAprendidas, ...iniciales];
-  const aplicadas = expediente.resultadoPruebas.filter((r) => r.estado !== 'no-aplica').length;
+  // El modelo decide qué pruebas valen la pena para esta obra (simulado, ver seleccion.ts).
+  const inicioSeleccion = performance.now();
+  expediente.resultadoPruebas = seleccionarPruebas(expediente, [...resultadosAprendidas, ...iniciales]);
+  const descartadas = expediente.resultadoPruebas.filter((r) => r.estado === 'descartada').length;
+  ejecucion.push({ motor: 'seleccion-pruebas', estado: 'ok', ms: Math.round(performance.now() - inicioSeleccion), nota: descartadas ? `${descartadas} prueba(s) no pertinentes para esta obra.` : 'El expediente pide todas las pruebas.' });
+  const aplicadas = expediente.resultadoPruebas.filter((r) => r.estado !== 'no-aplica' && r.estado !== 'descartada').length;
   expediente.pruebas = { aplicadas, total: iniciales.length + totalAprendidas };
 
   const inicio = performance.now();
