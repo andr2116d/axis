@@ -5,7 +5,7 @@ import { usaBlob } from '@/servidor/respaldo';
 import { CargaExpediente } from '@/componentes/CargaExpediente';
 import { Icono } from '@/componentes/Icono';
 import { MapaPortada } from '@/componentes/territorio/Territorio';
-import { KitDemo } from '@/componentes/KitDemo';
+import { BotonDemo } from '@/componentes/KitDemo';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,14 +19,11 @@ export default async function Inicio() {
         <div className="hero-copy">
           <h1>Revisa expedientes<br className="desktop-br" /> antes de construir.</h1>
           <p>Axis ya aprendió {pruebas} pruebas de errores reales en obras de La Libertad y aprende una nueva con cada obra terminada o paralizada. Da un semáforo, la evidencia de cada observación y la carta lista para enviar.</p>
-          <div className="hero-actions">
-            <a className="btn primary" href="#demo"><Icono nombre="arrow" tamano={18} />Probar la demo</a>
-            <a className="text-link" href="#cargar">Subir mi expediente <Icono nombre="chevron" tamano={15} /></a>
-          </div>
+          <BotonDemo subidaDirecta={usaBlob} actual={escenarios.actual} lista={escenarios.lista} />
+          <a className="text-link" href="#cargar">O sube tu propio expediente <Icono nombre="chevron" tamano={15} /></a>
         </div>
         <div className="cover-territory"><MapaPortada clave="incas" lugar="El Porvenir, La Libertad" /></div>
       </section>
-      <KitDemo subidaDirecta={usaBlob} actual={escenarios.actual} lista={escenarios.lista} />
       <section className="start-grid" aria-label="Cómo iniciar una revisión">
         <CargaExpediente subidaDirecta={usaBlob} />
         <div className="samples-section que-subir">
@@ -35,6 +32,7 @@ export default async function Inicio() {
             <li><Icono nombre="files" tamano={18} /><span><b>El expediente completo en un PDF</b> o sus partes por separado: memoria, presupuesto, metrados, precios unitarios, especificaciones, cronograma, fórmula polinómica, estudio de suelos y planos.</span></li>
             <li><Icono nombre="file" tamano={18} /><span><b>PDF, Word o Excel.</b> Los presupuestos exportados de S10 o Delphin se leen partida por partida.</span></li>
             <li><Icono nombre="check" tamano={18} /><span><b>Axis confirma contigo qué es cada archivo</b> antes de revisar y te dice qué no pudo leer.</span></li>
+            <li><Icono nombre="upload" tamano={18} /><span><b>¿Sin archivos a mano?</b> Descarga el <a href="/demo/REAL_presupuesto_av-jaime-blanco_SEACE.pdf" download>presupuesto real de la Av. Jaime Blanco</a> (SEACE, con 3 errores reales) o un <a href="/demo/LL-03_pistas-pasaje-los-rosales_incompleto.pdf" download>expediente incompleto</a> y súbelos aquí.</span></li>
           </ul>
         </div>
       </section>

@@ -87,7 +87,7 @@ export function GuiaDemo({ subidaDirecta }: { subidaDirecta: boolean }) {
   } else if (estado.b && ruta === `/revision/${estado.b}`) {
     paso = 4;
     texto = `${esc.cercano.via} no tenía errores sembrados, pero la prueba que Axis aprendió de la obra la observa (hallazgo «Pruebas aprendidas»). ¡Demo completa!`;
-    accion = <><Link className="btn secondary" href="/pruebas">Ver todas las pruebas</Link><Link className="btn primary" href="/#demo" onClick={salir}><Icono nombre="check" tamano={17} />Terminar</Link></>;
+    accion = <><Link className="btn secondary" href="/pruebas">Ver todas las pruebas</Link><Link className="btn primary" href="/" onClick={salir}><Icono nombre="check" tamano={17} />Terminar</Link></>;
   } else {
     texto = `Tienes una demo en curso: ${esc.titulo.toLowerCase()} (${esc.zona}).`;
     accion = estado.paso === 1 && estado.a ? siguiente(`/revision/${estado.a}`, 'Continuar')
