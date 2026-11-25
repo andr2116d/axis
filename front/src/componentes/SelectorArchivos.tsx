@@ -63,13 +63,13 @@ export function SelectorArchivos({ archivos, alCambiar, titulo, ayuda }: {
 export async function enviar<T>(url: string, archivos: File[], campos: Record<string, string>, directa: boolean, alAvanzar?: (texto: string) => void): Promise<T> {
   let r: Response;
   if (directa) {
-    const { upload } = await import('@vercel/blob/client');
+    const { uploadPresigned } = await import('@vercel/blob/client');
     const lote = crypto.randomUUID();
     const subidas = [];
     for (const [i, a] of archivos.entries()) {
       alAvanzar?.(`Subiendo ${i + 1} de ${archivos.length}…`);
       const limpio = a.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w.-]+/g, '_');
-      const blob = await upload(`subidas/${lote}/${limpio}`, a, { access: 'private', handleUploadUrl: '/api/subidas', multipart: a.size > 8 * 1024 * 1024 });
+      const blob = await uploadPresigned(`subidas/${lote}/${limpio}`, a, { access: 'private', handleUploadUrl: '/api/subidas', multipart: a.size > 8 * 1024 * 1024 });
       subidas.push({ ruta: blob.pathname, nombre: a.name });
     }
     alAvanzar?.('Leyendo documentos…');
