@@ -749,3 +749,7 @@ body:has(.guia-demo) .toast{bottom:128px}
 .kit-mas .kit-otros{border-top:0;padding-top:4px}
 @media(max-width:1040px){.kit-principal{grid-template-columns:1fr}.kit-recorrido{grid-template-columns:1fr 1fr}}
 @media(max-width:620px){.kit-recorrido{grid-template-columns:1fr}}
+.boton-demo{display:grid;gap:8px;max-width:440px;margin:26px 0 10px}
+.boton-demo small{color:var(--muted);font-size:.84rem}
+.boton-demo .text-link{min-height:0;padding:0;background:none;border:0}
+.que-subir a{color:var(--accent);font-weight:650}
