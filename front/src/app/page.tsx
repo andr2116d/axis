@@ -1,20 +1,16 @@
-import Link from 'next/link';
-import { listarExpedientes, listarPruebas } from '@/servidor/almacen';
+import { listarPruebas } from '@/servidor/almacen';
 import { pruebasConocidas } from '@/servidor/aprendizaje/biblioteca';
 import { estadoEscenarios } from '@/servidor/aprendizaje/escenarios';
 import { usaBlob } from '@/servidor/respaldo';
 import { CargaExpediente } from '@/componentes/CargaExpediente';
 import { Icono } from '@/componentes/Icono';
 import { MapaPortada } from '@/componentes/territorio/Territorio';
-import { fecha } from '@/componentes/ui';
-import { Semaforo, SEMAFORO } from '@/componentes/Semaforo';
 import { KitDemo } from '@/componentes/KitDemo';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Inicio() {
-  const [todos, aprendidas] = await Promise.all([listarExpedientes(), listarPruebas()]);
-  const recientes = todos.slice(0, 6);
+  const aprendidas = await listarPruebas();
   const pruebas = pruebasConocidas(aprendidas).filter((p) => p.estado === 'activa').length;
   const escenarios = estadoEscenarios(aprendidas);
   return (
@@ -33,22 +29,13 @@ export default async function Inicio() {
       <KitDemo subidaDirecta={usaBlob} actual={escenarios.actual} lista={escenarios.lista} />
       <section className="start-grid" aria-label="Cómo iniciar una revisión">
         <CargaExpediente subidaDirecta={usaBlob} />
-        <div className="samples-section">
-          <div className="section-heading"><h2>Revisiones recientes</h2><p>Expedientes subidos por la entidad.</p></div>
-          {recientes.length ? (
-            <div className="samples">
-              {recientes.map((e) => (
-                <Link key={e.id} className="sample" href={`/revision/${e.id}`}>
-                  {e.estado === 'analizado' ? <Semaforo estado={e.semaforo} tamano="chico" /> : <span className="sample-icon"><Icono nombre="clock" tamano={19} /></span>}
-                  <span>
-                    <strong>{e.nombre}</strong>
-                    <small><span className="mono">{e.clave}</span> · {e.estado === 'analizado' ? `${SEMAFORO[e.semaforo].titulo} · ${e.hallazgos.length} hallazgo(s)` : 'Por confirmar documentos'} · {fecha(e.creado)}</small>
-                  </span>
-                  <Icono nombre="chevron" tamano={19} />
-                </Link>
-              ))}
-            </div>
-          ) : <p className="empty-line">Todavía no hay revisiones. Sube el primer expediente.</p>}
+        <div className="samples-section que-subir">
+          <div className="section-heading"><h2>Qué subir</h2><p>Lo mismo que entrega el proyectista.</p></div>
+          <ul>
+            <li><Icono nombre="files" tamano={18} /><span><b>El expediente completo en un PDF</b> o sus partes por separado: memoria, presupuesto, metrados, precios unitarios, especificaciones, cronograma, fórmula polinómica, estudio de suelos y planos.</span></li>
+            <li><Icono nombre="file" tamano={18} /><span><b>PDF, Word o Excel.</b> Los presupuestos exportados de S10 o Delphin se leen partida por partida.</span></li>
+            <li><Icono nombre="check" tamano={18} /><span><b>Axis confirma contigo qué es cada archivo</b> antes de revisar y te dice qué no pudo leer.</span></li>
+          </ul>
         </div>
       </section>
     </>
