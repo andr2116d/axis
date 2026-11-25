@@ -5,6 +5,8 @@ import { CargaExpediente } from '@/componentes/CargaExpediente';
 import { Icono } from '@/componentes/Icono';
 import { MapaPortada } from '@/componentes/territorio/Territorio';
 import { fecha } from '@/componentes/ui';
+import { Semaforo, SEMAFORO } from '@/componentes/Semaforo';
+import { KitDemo } from '@/componentes/KitDemo';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +17,7 @@ export default async function Inicio() {
       <section className="hero">
         <div className="hero-copy">
           <h1>Revisa expedientes<br className="desktop-br" /> antes de construir.</h1>
-          <p>Revisa metrados, presupuesto y diseño en un solo lugar, con las pruebas que Axis aprende de las obras terminadas y paralizadas. Abre la evidencia de cada observación y prepara tu carta.</p>
+          <p>Axis corre 30 pruebas nacidas de errores reales en obras de La Libertad, más las que aprende de cada obra terminada o paralizada. Da un semáforo, la evidencia de cada observación y la carta lista para enviar.</p>
           <div className="hero-actions">
             <a className="btn primary" href="#cargar"><Icono nombre="upload" tamano={18} />Subir un expediente</a>
             <Link className="text-link" href="/obras">Registrar una obra terminada o paralizada <Icono nombre="chevron" tamano={15} /></Link>
@@ -31,10 +33,10 @@ export default async function Inicio() {
             <div className="samples">
               {recientes.map((e) => (
                 <Link key={e.id} className="sample" href={`/revision/${e.id}`}>
-                  <span className="sample-icon"><Icono nombre={e.estado === 'analizado' ? 'check' : 'clock'} tamano={19} /></span>
+                  {e.estado === 'analizado' ? <Semaforo estado={e.semaforo} tamano="chico" /> : <span className="sample-icon"><Icono nombre="clock" tamano={19} /></span>}
                   <span>
                     <strong>{e.nombre}</strong>
-                    <small><span className="mono">{e.clave}</span> · {e.estado === 'analizado' ? `${e.hallazgos.length} hallazgo(s)` : 'Por confirmar documentos'} · {fecha(e.creado)}</small>
+                    <small><span className="mono">{e.clave}</span> · {e.estado === 'analizado' ? `${SEMAFORO[e.semaforo].titulo} · ${e.hallazgos.length} hallazgo(s)` : 'Por confirmar documentos'} · {fecha(e.creado)}</small>
                   </span>
                   <Icono nombre="chevron" tamano={19} />
                 </Link>
@@ -43,6 +45,7 @@ export default async function Inicio() {
           ) : <p className="empty-line">Todavía no hay revisiones. Sube el primer expediente.</p>}
         </div>
       </section>
+      <KitDemo />
     </>
   );
 }
