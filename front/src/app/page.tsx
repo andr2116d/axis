@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { listarExpedientes } from '@/servidor/almacen';
+import { listarExpedientes, listarPruebas } from '@/servidor/almacen';
+import { pruebasConocidas } from '@/servidor/aprendizaje/biblioteca';
 import { usaBlob } from '@/servidor/respaldo';
 import { CargaExpediente } from '@/componentes/CargaExpediente';
 import { Icono } from '@/componentes/Icono';
@@ -11,20 +12,23 @@ import { KitDemo } from '@/componentes/KitDemo';
 export const dynamic = 'force-dynamic';
 
 export default async function Inicio() {
-  const recientes = (await listarExpedientes()).slice(0, 6);
+  const [todos, aprendidas] = await Promise.all([listarExpedientes(), listarPruebas()]);
+  const recientes = todos.slice(0, 6);
+  const pruebas = pruebasConocidas(aprendidas).filter((p) => p.estado === 'activa').length;
   return (
     <>
       <section className="hero">
         <div className="hero-copy">
           <h1>Revisa expedientes<br className="desktop-br" /> antes de construir.</h1>
-          <p>Axis corre 30 pruebas nacidas de errores reales en obras de La Libertad, más las que aprende de cada obra terminada o paralizada. Da un semáforo, la evidencia de cada observación y la carta lista para enviar.</p>
+          <p>Axis ya aprendió {pruebas} pruebas de errores reales en obras de La Libertad y aprende una nueva con cada obra terminada o paralizada. Da un semáforo, la evidencia de cada observación y la carta lista para enviar.</p>
           <div className="hero-actions">
-            <a className="btn primary" href="#cargar"><Icono nombre="upload" tamano={18} />Subir un expediente</a>
-            <Link className="text-link" href="/obras">Registrar una obra terminada o paralizada <Icono nombre="chevron" tamano={15} /></Link>
+            <a className="btn primary" href="#demo"><Icono nombre="arrow" tamano={18} />Probar la demo</a>
+            <a className="text-link" href="#cargar">Subir mi expediente <Icono nombre="chevron" tamano={15} /></a>
           </div>
         </div>
         <div className="cover-territory"><MapaPortada clave="incas" lugar="El Porvenir, La Libertad" /></div>
       </section>
+      <KitDemo subidaDirecta={usaBlob} />
       <section className="start-grid" aria-label="Cómo iniciar una revisión">
         <CargaExpediente subidaDirecta={usaBlob} />
         <div className="samples-section">
@@ -45,7 +49,6 @@ export default async function Inicio() {
           ) : <p className="empty-line">Todavía no hay revisiones. Sube el primer expediente.</p>}
         </div>
       </section>
-      <KitDemo />
     </>
   );
 }

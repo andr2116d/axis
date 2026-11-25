@@ -1,10 +1,9 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icono } from './Icono';
 import { SelectorArchivos, enviar } from './SelectorArchivos';
-import { useArchivosDemo } from './archivos-demo';
 
 export function CargaExpediente({ subidaDirecta }: { subidaDirecta: boolean }) {
   const router = useRouter();
@@ -12,7 +11,6 @@ export function CargaExpediente({ subidaDirecta }: { subidaDirecta: boolean }) {
   const [enviando, setEnviando] = useState(false);
   const [progreso, setProgreso] = useState('');
   const [error, setError] = useState('');
-  useArchivosDemo('expediente', useCallback((a: File) => setArchivos([a]), []));
 
   const subir = async () => {
     setEnviando(true);
