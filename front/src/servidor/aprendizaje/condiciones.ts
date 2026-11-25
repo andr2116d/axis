@@ -43,8 +43,9 @@ export const CONDICIONES: Condicion[] = [
   {
     id: 'subrasante', nombre: 'Suelo inadecuado: mejoramiento de subrasante no previsto',
     enObra: /MEJORAMIENTO DE (LA )?SUBRASANTE|MEJORAMIENTO DE(L)? SUELO|SUELO INADECUADO|MATERIAL INADECUADO|SUBRASANTE INESTABLE|CAPACIDAD PORTANTE (BAJA|INSUFICIENTE)/,
-    partidas: ['mejoramiento de subrasante', 'mejoramiento de suelo', 'material de prestamo', 'over', 'reemplazo de material', 'estabilizacion'],
-    estudios: ['cbr', 'subrasante', 'capacidad portante', 'mejoramiento'],
+    // Todo expediente vial menciona la subrasante y un CBR: solo cuenta si prevé tratarla.
+    partidas: ['mejoramiento de subrasante', 'mejoramiento de suelo', 'material de prestamo', 'reemplazo de material', 'estabilizacion de suelo'],
+    estudios: ['mejoramiento de subrasante', 'subrasante inadecuada', 'suelo inadecuado', 'reemplazo de material'],
     radio: 500,
     recomendacion: 'Solicitar ensayos de CBR por tramo y, si la subrasante es pobre, la partida de mejoramiento o reemplazo de material.',
     relacionadas: [{ id: 'X-SECCION', diferencia: 'revisa que el corte aloje las capas, no la calidad del suelo' }],

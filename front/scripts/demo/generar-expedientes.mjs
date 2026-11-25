@@ -471,6 +471,23 @@ const EXPEDIENTES = [
   },
 ];
 
+// Escenarios de la demo del servidor (src/datos/escenarios-demo.json): expediente original y cercano.
+const ESCENARIOS = JSON.parse(fs.readFileSync(new URL('../../src/datos/escenarios-demo.json', import.meta.url), 'utf8'));
+const articulo = (via) => (/^(Jirón|Pasaje)/.test(via) ? 'EL' : 'LA');
+const sinTildes = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+for (const [n, esc] of ESCENARIOS.filter((x) => x.id !== 'E01').entries()) {
+  for (const [lado, d] of [['A', esc.original], ['B', esc.cercano]]) {
+    EXPEDIENTES.push({
+      archivo: d.archivo.replace('/demo/', ''), cui: `00002${String(n * 2 + (lado === 'A' ? 1 : 2)).padStart(2, '0')}`,
+      nombre: `MEJORAMIENTO DE PISTAS Y VEREDAS EN ${articulo(d.via)} ${sinTildes(d.via)} - ${sinTildes(esc.zona.split(',')[0])}`,
+      entidad: `MUNICIPALIDAD DISTRITAL DE ${esc.original.distrito}`, distrito: esc.original.distrito, via: d.via,
+      coord: d.coord, longitud: 240 + n * 10, plazo: 90, inicio: [2026, 12, 1], costoAl: '20/10/2026', fechaCotizacion: '15/10/2026',
+      errores: lado === 'A' ? Object.fromEntries(esc.original.errores.map((e) => [e, 1])) : {},
+      drenaje: !d.sinDrenaje,
+    });
+  }
+}
+
 const SOLO = process.argv.slice(3);
 for (const exp of EXPEDIENTES.filter((x) => !SOLO.length || SOLO.includes(x.archivo))) {
   const r = generar(exp);
