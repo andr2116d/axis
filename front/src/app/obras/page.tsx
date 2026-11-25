@@ -11,12 +11,15 @@ import { escenarioPorId } from '@/servidor/aprendizaje/escenarios';
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Obras terminadas y paralizadas' };
 
-export default async function PaginaObras({ searchParams }: { searchParams: Promise<{ escenario?: string }> }) {
-  const esc = escenarioPorId((await searchParams).escenario);
+export default async function PaginaObras({ searchParams }: { searchParams: Promise<{ escenario?: string; obra?: string }> }) {
+  const params = await searchParams;
+  const esc = escenarioPorId(params.escenario);
   const demo = esc ? { archivo: esc.obra.archivo, via: esc.original.via, situacion: esc.situacion } : undefined;
   const [expedientes, obras, pruebas] = await Promise.all([listarExpedientes(), listarObras(), listarPruebas()]);
   const porId = new Map(expedientes.map((e) => [e.id, e]));
   const pruebaPorId = new Map(pruebas.map((p) => [p.id, p]));
+  // En la demo solo se muestra la obra de quien la recorre.
+  const visibles = esc ? obras.filter((o) => o.id === params.obra) : obras;
   const existentes = pruebasConocidas(pruebas).filter((x) => x.estado === 'activa').map(({ id, nombre }) => ({ id, nombre }));
   // Solo expedientes reales y ya revisados: al menos un documento reconocido como parte del expediente.
   const opciones = expedientes
@@ -36,12 +39,18 @@ export default async function PaginaObras({ searchParams }: { searchParams: Prom
         <li><span>4</span>Aplicarla en nuevas revisiones</li>
       </ol>
       <div className="learn-grid">
-        <RegistroObra expedientes={opciones} subidaDirecta={usaBlob} demo={demo} />
+        {esc && params.obra ? (
+          <section className="content-panel learn-input">
+            <span className="pill confirmed"><Icono nombre="check" tamano={13} />Obra registrada</span>
+            <h2>{esc.original.via} · obra {esc.situacion}</h2>
+            <p>Axis leyó la {esc.obra.tipo.toLowerCase()}, la comparó con el expediente original y te muestra a la derecha lo que encontró y la prueba que propone.</p>
+          </section>
+        ) : <RegistroObra expedientes={opciones} subidaDirecta={usaBlob} demo={demo} />}
         <section className="content-panel learn-validation">
-          <h2>Lo que Axis aprendió</h2>
-          {obras.length ? (
+          <h2>{esc ? 'Lo que Axis encontró en la obra' : 'Lo que Axis aprendió'}</h2>
+          {visibles.length ? (
             <ul className="obra-list">
-              {obras.map((o) => {
+              {visibles.map((o) => {
                 const e = porId.get(o.expedienteId);
                 const hechos = o.hechos ?? [];
                 return (
@@ -73,7 +82,7 @@ export default async function PaginaObras({ searchParams }: { searchParams: Prom
                 );
               })}
             </ul>
-          ) : <p className="empty-line">Aún no hay obras registradas.</p>}
+          ) : <p className="empty-line">{esc ? 'Pulsa «Registrar obra»: aquí aparecerá lo que pasó en la obra, si el expediente lo había previsto y la prueba nueva que propone Axis.' : 'Aún no hay obras registradas.'}</p>}
           <p className="inline-note"><Icono nombre="layers" tamano={15} /> Todas las pruebas que Axis aprendió están en <Link href="/pruebas">Pruebas</Link>.</p>
         </section>
       </div>

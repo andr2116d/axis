@@ -730,3 +730,22 @@ body:has(.guia-demo) .toast{bottom:128px}
 .que-subir li{display:flex;gap:10px;align-items:flex-start;border-bottom:1px solid var(--line);padding:11px 0;font-size:.88rem;color:var(--muted)}
 .que-subir li svg{color:var(--accent);margin-top:2px}
 .que-subir b{color:var(--ink)}
+
+/* ── Demo de la portada: un solo camino ───────────────────── */
+.kit-principal{display:grid;grid-template-columns:1fr 300px;gap:28px;align-items:center}
+.kit-principal h2{font-size:clamp(24px,2.6vw,32px);margin:2px 0 14px}
+.kit-recorrido{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.kit-recorrido li{display:flex;gap:10px;align-items:flex-start;background:var(--white);border:1px solid var(--warm-line);border-radius:10px;padding:11px}
+.kit-recorrido li>span{display:grid;place-items:center;flex:none;width:26px;height:26px;border-radius:50%;background:var(--warm);color:var(--accent);font-weight:760;font-size:.85rem}
+.kit-recorrido li.listo>span{background:var(--good);color:#fff}
+.kit-recorrido strong{display:block;font-size:.88rem}
+.kit-recorrido small{display:block;font-size:.78rem;color:var(--muted);margin-top:2px}
+.kit-accion{display:grid;gap:8px;justify-items:center;text-align:center}
+.kit-accion small{color:var(--muted);font-size:.8rem}
+.btn-grande{min-height:58px;width:100%;font-size:1.05rem;border-radius:12px}
+.kit-accion .kit-progreso{margin-top:6px}
+.kit-mas{margin-top:18px;border-top:1px solid var(--warm-line);padding-top:12px}
+.kit-mas summary{font-weight:700;cursor:pointer;font-size:.9rem}
+.kit-mas .kit-otros{border-top:0;padding-top:4px}
+@media(max-width:1040px){.kit-principal{grid-template-columns:1fr}.kit-recorrido{grid-template-columns:1fr 1fr}}
+@media(max-width:620px){.kit-recorrido{grid-template-columns:1fr}}

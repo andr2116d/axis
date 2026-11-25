@@ -13,18 +13,30 @@ import { EVENTO_DEMO, avanzarDemo, guardarDemo, leerDemo, type EstadoDemo } from
 
 const PASOS = ['Revisar', 'Carta', 'Obra y prueba', 'Aplicar'];
 
-/** Sube un PDF de la demo como expediente y devuelve el id de la revisión. */
-export async function subirDemo(url: string, subidaDirecta: boolean) {
+/**
+ * Sube un PDF de la demo y lo revisa de una vez: en la demo no hay nada que confirmar,
+ * se aceptan los tipos que sugiere Axis. Devuelve el id de la revisión.
+ */
+export async function revisarDemo(url: string, subidaDirecta: boolean, progreso: (texto: string) => void) {
+  progreso('Leyendo el expediente…');
   const blob = await (await fetch(url)).blob();
   const archivo = new File([blob], decodeURIComponent(url.split('/').pop()!), { type: 'application/pdf' });
-  return (await enviar<{ id: string }>('/api/expedientes', [archivo], {}, subidaDirecta)).id;
+  const { id } = await enviar<{ id: string }>('/api/expedientes', [archivo], {}, subidaDirecta);
+  progreso('Corriendo las pruebas…');
+  const e = (await (await fetch(`/api/expedientes/${id}`)).json()) as { documentos: { id: string; tipo: string }[] };
+  const r = await fetch(`/api/expedientes/${id}/analisis`, {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ tipos: Object.fromEntries(e.documentos.map((d) => [d.id, d.tipo])) }),
+  });
+  if (!r.ok) throw new Error('No se pudo revisar el expediente de la demo.');
+  return id;
 }
 
 export function GuiaDemo({ subidaDirecta }: { subidaDirecta: boolean }) {
   const ruta = usePathname();
   const router = useRouter();
   const [estado, setEstado] = useState<EstadoDemo | null>(null);
-  const [cargando, setCargando] = useState(false);
+  const [cargando, setCargando] = useState('');
 
   useEffect(() => {
     const leer = () => setEstado(leerDemo());
@@ -38,16 +50,16 @@ export function GuiaDemo({ subidaDirecta }: { subidaDirecta: boolean }) {
   useEffect(() => {
     if (estado?.a && ruta === `/revision/${estado.a}/carta`) avanzarDemo({ paso: 2 });
   }, [ruta, estado?.a]);
-  if (!estado || !esc || estado.paso === 0) return null;
+  // En la portada, la tarjeta de la demo ya muestra el avance y el botón para continuar.
+  if (!estado || !esc || estado.paso === 0 || ruta === '/') return null;
 
   const cercano = async () => {
-    setCargando(true);
     try {
-      const b = await subirDemo(esc.cercano.archivo, subidaDirecta);
+      const b = await revisarDemo(esc.cercano.archivo, subidaDirecta, setCargando);
       avanzarDemo({ paso: 4, b });
       router.push(`/revision/${b}`);
     } finally {
-      setCargando(false);
+      setCargando('');
     }
   };
   const salir = () => guardarDemo(null);
@@ -56,25 +68,25 @@ export function GuiaDemo({ subidaDirecta }: { subidaDirecta: boolean }) {
   let texto: string;
   let accion: React.ReactNode = null;
   const siguiente = (href: string, etiqueta: string) => <Link className="btn primary" href={href}><Icono nombre="arrow" tamano={17} />{etiqueta}</Link>;
-  const botonCercano = <button type="button" className="btn primary" disabled={cargando} onClick={cercano}><Icono nombre={cargando ? 'clock' : 'arrow'} tamano={17} />{cargando ? 'Leyendo…' : `Siguiente: revisar ${esc.cercano.via}`}</button>;
+  const botonCercano = <button type="button" className="btn primary" disabled={!!cargando} onClick={cercano}><Icono nombre={cargando ? 'clock' : 'arrow'} tamano={17} />{cargando || `Siguiente: revisar ${esc.cercano.via}`}</button>;
 
   if (estado.a && ruta === `/revision/${estado.a}`) {
     paso = 1;
-    texto = 'Si te pide confirmar los documentos, pulsa «Confirmar y revisar». Luego mira el semáforo, los hallazgos y la pestaña Pruebas.';
+    texto = 'Este es el resultado: el semáforo y cada error con su documento y página. Mira también la pestaña «Pruebas».';
     accion = siguiente(`/revision/${estado.a}/carta`, 'Siguiente: armar la carta');
   } else if (estado.a && ruta === `/revision/${estado.a}/carta`) {
     paso = 2;
-    texto = 'Esta es la carta para el proyectista. Quita lo que no quieras enviar, completa tus datos y descárgala en PDF.';
+    texto = 'La carta para el proyectista ya está armada. Quita lo que no quieras enviar; puedes descargarla en PDF.';
     accion = siguiente(`/obras?escenario=${esc.id}`, 'Siguiente: registrar la obra');
   } else if (ruta.startsWith('/obras')) {
     paso = 3;
     texto = estado.paso >= 3
-      ? 'Axis aprendió una prueba nueva de esta obra. Ahora mira cómo la aplica en un expediente cercano.'
-      : `El documento de la obra (${esc.obra.tipo.toLowerCase()}) ya está cargado. Pulsa «Registrar obra», revisa lo que encontró Axis y pulsa «Aceptar prueba».`;
+      ? 'Listo: Axis aprendió una prueba nueva. Ahora mira cómo la aplica en otro expediente.'
+      : `Ya cargamos la ${esc.obra.tipo.toLowerCase()} de la obra. Pulsa «Registrar obra» y luego «Aceptar prueba».`;
     accion = estado.paso >= 3 ? botonCercano : null;
   } else if (estado.b && ruta === `/revision/${estado.b}`) {
     paso = 4;
-    texto = `${esc.cercano.via} no tiene errores sembrados: si te pide confirmar, confírmalo. El hallazgo de «Pruebas aprendidas» es la prueba que Axis aprendió de la obra. ¡Demo completa!`;
+    texto = `${esc.cercano.via} no tenía errores sembrados, pero la prueba que Axis aprendió de la obra la observa (hallazgo «Pruebas aprendidas»). ¡Demo completa!`;
     accion = <><Link className="btn secondary" href="/pruebas">Ver todas las pruebas</Link><Link className="btn primary" href="/#demo" onClick={salir}><Icono nombre="check" tamano={17} />Terminar</Link></>;
   } else {
     texto = `Tienes una demo en curso: ${esc.titulo.toLowerCase()} (${esc.zona}).`;

@@ -47,10 +47,12 @@ export function RegistroObra({ expedientes, subidaDirecta, demo }: { expedientes
     setEnviando(true);
     setError('');
     try {
-      await enviar('/api/obras', archivos, { expedienteId, situacion }, subidaDirecta, setProgreso);
+      const { id } = await enviar<{ id: string }>('/api/obras', archivos, { expedienteId, situacion }, subidaDirecta, setProgreso);
       setArchivos([]);
       avisar('Obra registrada.');
-      router.refresh();
+      // En la demo se muestra solo la obra recién registrada.
+      if (demo) router.push(`/obras?escenario=${encodeURIComponent(new URLSearchParams(window.location.search).get('escenario') ?? '')}&obra=${id}`);
+      else router.refresh();
     } catch (e) {
       setError((e as Error).message);
     } finally {
