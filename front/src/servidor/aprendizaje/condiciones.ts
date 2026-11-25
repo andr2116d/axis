@@ -118,8 +118,17 @@ export function senalesEnObra(paginas: string[]): Senal[] {
   return out;
 }
 
-/** Primera palabra clave presente en el texto (normalizado), o null. */
+/** Frases que niegan lo que sigue: «no se encontró nivel freático» no es haberlo previsto. */
+const NEGACION = /(NO SE (ENCONTRO|DETECTO|OBSERVO|REGISTRO|EVIDENCIO|IDENTIFICO)|NO PRESENTA|NO EXISTE|SIN PRESENCIA DE|AUSENCIA DE|NO SE INTERVIENE|NO INTERVIENE)[^.;]{0,40}$/;
+
+/** Primera palabra clave presente en el texto (normalizado) sin estar negada, o null. */
 export function presente(texto: string, palabras: string[]): string | null {
   const t = normalizar(texto);
-  return palabras.find((p) => new RegExp(`\\b${normalizar(p)}`).test(t)) ?? null;
+  for (const p of palabras) {
+    const re = new RegExp(`\\b${normalizar(p)}`, 'g');
+    for (const m of t.matchAll(re)) {
+      if (!NEGACION.test(t.slice(Math.max(0, m.index! - 60), m.index))) return p;
+    }
+  }
+  return null;
 }

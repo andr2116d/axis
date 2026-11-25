@@ -90,6 +90,7 @@ export const motorIdentidad: MotorExpediente = {
             { documento: referencia.d.nombre, pagina: citar(referencia.d.unidad, referencia.id.nombre!.pagina), extracto: referencia.id.nombre!.extracto },
           ],
           motores: ['lectura', 'identidad'],
+          prueba: 'X-IDENTIDAD',
         });
       }
     }
@@ -104,6 +105,7 @@ export const motorIdentidad: MotorExpediente = {
         solicitud: 'Uniformizar el código único de inversión en todos los documentos del expediente.',
         fuentes: conCui.map((x) => ({ documento: x.d.nombre, pagina: citar(x.d.unidad, x.id.cui!.pagina), extracto: x.id.cui!.extracto })),
         motores: ['lectura', 'identidad'],
+          prueba: 'X-IDENTIDAD',
       });
     }
     return { estado: 'ok', nota: `${conNombre.length} documento(s) con nombre de obra, ${conCui.length} con CUI.` };

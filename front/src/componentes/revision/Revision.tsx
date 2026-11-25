@@ -11,7 +11,7 @@ import { CATEGORIAS, LECTURA, PRIORIDADES, Pill, categoria, tamano } from '../ui
 import { guardarCarta } from './guardar-carta';
 import { SEMAFORO, Semaforo } from '../Semaforo';
 
-type Pestana = 'hallazgos' | 'documentos' | 'territorio' | 'comprobaciones';
+type Pestana = 'hallazgos' | 'pruebas' | 'documentos' | 'territorio';
 type Orden = 'prioridad' | 'categoria' | 'titulo';
 const RANGO: Record<Prioridad, number> = { alta: 0, media: 1, confirmar: 2 };
 
@@ -48,7 +48,7 @@ export function Revision({ expediente }: { expediente: Expediente }) {
   };
 
   const pestanas: [Pestana, string, NombreIcono][] = [
-    ['hallazgos', 'Hallazgos', 'list'], ['documentos', 'Documentos', 'files'], ['territorio', 'Territorio', 'map'], ['comprobaciones', 'Qué se comprobó', 'check'],
+    ['hallazgos', 'Hallazgos', 'list'], ['pruebas', e.pruebas ? `Pruebas (${e.pruebas.aplicadas} de ${e.pruebas.total})` : 'Pruebas', 'check'], ['documentos', 'Documentos', 'files'], ['territorio', 'Territorio', 'map'],
   ];
 
   return (
@@ -137,10 +137,10 @@ export function Revision({ expediente }: { expediente: Expediente }) {
                 )) : (
                   <div className="empty">
                     <h3>{todos.length ? 'Sin hallazgos en esta vista' : 'Sin observaciones'}</h3>
-                    <p>{todos.length ? 'Elige otra categoría o borra el filtro de estado.' : 'Los motores que corrieron no encontraron observaciones. Revisa en «Qué se comprobó» el alcance de esta revisión.'}</p>
+                    <p>{todos.length ? 'Elige otra categoría o borra el filtro de estado.' : 'Los motores que corrieron no encontraron observaciones. Revisa en «Pruebas» qué corrió y qué no aplicó.'}</p>
                     {todos.length
                       ? <button type="button" className="btn secondary" onClick={() => { setCat('todos'); setFiltro('todos'); }}>Ver todos los hallazgos</button>
-                      : <button type="button" className="btn secondary" onClick={() => setPestana('comprobaciones')}><Icono nombre="check" tamano={18} />Qué se comprobó</button>}
+                      : <button type="button" className="btn secondary" onClick={() => setPestana('pruebas')}><Icono nombre="check" tamano={18} />Ver las pruebas</button>}
                   </div>
                 )}
               </div>
@@ -179,25 +179,53 @@ export function Revision({ expediente }: { expediente: Expediente }) {
           </section>
         ))}
 
-      {pestana === 'comprobaciones' && (
-        <section className="content-panel documents-panel">
-          <h2>Qué se comprobó</h2>
-          <p>Grupos de pruebas que tuvieron con qué trabajar en este expediente:</p>
-          {e.cobertura.length ? <ul className="chips">{e.cobertura.map((c) => <li key={c}>{c}</li>)}</ul> : <p className="empty-line">Ningún grupo de pruebas pudo correr con estos documentos.</p>}
-          <p>Motores que corrieron. El estado de todos está en <Link href="/como-funciona">Cómo funciona</Link>.</p>
-          <ul className="docs-table">
-            {e.ejecucion.map((x) => (
-              <li key={x.motor}>
-                <Icono nombre={x.estado === 'ok' ? 'check' : x.estado === 'sin-datos' ? 'clock' : 'alert'} tamano={22} />
-                <span><strong>{nombreMotor(x.motor)}</strong><small>{x.nota ?? (x.estado === 'ok' ? 'Completado.' : '')}</small></span>
-                <span className="mono">{x.ms} ms</span>
-                <span className="doc-status">{x.estado === 'ok' ? 'Corrió' : x.estado === 'sin-datos' ? 'Sin datos' : 'Error'}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      {pestana === 'pruebas' && <PanelPruebas e={e} />}
     </>
+  );
+}
+
+const ESTADO_PRUEBA = {
+  observa: { texto: 'Observó', clase: 'alta' },
+  confirmar: { texto: 'Por confirmar', clase: 'confirmar' },
+  pasa: { texto: 'Pasó', clase: 'confirmed' },
+  'no-aplica': { texto: 'No aplica', clase: 'neutral' },
+} as const;
+
+function PanelPruebas({ e }: { e: Expediente }) {
+  const lista = e.resultadoPruebas ?? [];
+  const cuenta = (estado: keyof typeof ESTADO_PRUEBA) => lista.filter((r) => r.estado === estado).length;
+  const orden = { observa: 0, confirmar: 1, pasa: 2, 'no-aplica': 3 };
+  return (
+    <section className="content-panel panel-pruebas">
+      <h2>{e.pruebas ? `Corrieron ${e.pruebas.aplicadas} de las ${e.pruebas.total} pruebas que Axis aprendió` : 'Pruebas'}</h2>
+      <p>Cada prueba nació de un error real o de una obra terminada o paralizada. El modelo elige las que aplican según los documentos y la ubicación de la obra.</p>
+      <ul className="chips">
+        {(Object.keys(ESTADO_PRUEBA) as (keyof typeof ESTADO_PRUEBA)[]).map((k) => <li key={k} className={`chip-${ESTADO_PRUEBA[k].clase}`}>{ESTADO_PRUEBA[k].texto}: {cuenta(k)}</li>)}
+      </ul>
+      <ul className="lista-pruebas">
+        {[...lista].sort((a, b) => Number(b.origen === 'obra') - Number(a.origen === 'obra') || orden[a.estado] - orden[b.estado]).map((r) => (
+          <li key={r.id} className={r.origen === 'obra' ? 'de-obra' : ''}>
+            <span className="mono">{r.id}</span>
+            <span className="nombre-prueba">{r.nombre}{r.origen === 'obra' && <small>Aprendida de una obra</small>}{r.motivo && <small>{r.motivo}</small>}</span>
+            <span className={`pill ${ESTADO_PRUEBA[r.estado].clase}`}>{ESTADO_PRUEBA[r.estado].texto}</span>
+          </li>
+        ))}
+      </ul>
+      <details className="engine-details">
+        <summary>Detalle técnico: motores que corrieron</summary>
+        {e.cobertura.length > 0 && <ul className="chips">{e.cobertura.map((c) => <li key={c}>{c}</li>)}</ul>}
+        <ul className="docs-table">
+          {e.ejecucion.map((x) => (
+            <li key={x.motor}>
+              <Icono nombre={x.estado === 'ok' ? 'check' : x.estado === 'sin-datos' ? 'clock' : 'alert'} tamano={20} />
+              <span><strong>{nombreMotor(x.motor)}</strong><small>{x.nota ?? ''}</small></span>
+              <span className="mono">{x.ms} ms</span>
+              <span className="doc-status">{x.estado === 'ok' ? 'Corrió' : x.estado === 'sin-datos' ? 'Sin datos' : 'Error'}</span>
+            </li>
+          ))}
+        </ul>
+      </details>
+    </section>
   );
 }
 

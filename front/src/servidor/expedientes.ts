@@ -1,5 +1,5 @@
 import 'server-only';
-import type { DatosCarta, Documento, EjecucionMotor, Expediente, Hallazgo, Prioridad, Semaforo, TipoDocumento } from '@/dominio/tipos';
+import type { DatosCarta, Documento, EjecucionMotor, Expediente, Hallazgo, Prioridad, ResultadoPrueba, Semaforo, TipoDocumento } from '@/dominio/tipos';
 import { CAMPOS_CARTA, TIPOS_DOCUMENTO } from '@/dominio/tipos';
 import * as almacen from './almacen';
 import type { ArchivoEntrante } from './http';
@@ -13,7 +13,7 @@ import { correrVerificadores, partesDeArchivo, type AnalisisVerificadores } from
 import { evaluarPrueba, hallazgoDePrueba, type ObraEvaluada } from './aprendizaje/pruebas';
 import { frase, nombrePropio } from './texto';
 import { VERIFICADORES } from '@/datos/verificadores';
-import { aplicablesIniciales } from './aprendizaje/biblioteca';
+import { faltantes } from './aprendizaje/biblioteca';
 
 // Servicio del evaluador: recibe un expediente, lo lee y clasifica (paso 1), y
 // después de que la persona confirma los tipos, corre los motores (paso 2).
@@ -137,6 +137,7 @@ export async function analizarExpediente(id: string, tipos: Record<string, strin
   // 4. Pruebas aprendidas de obras terminadas y paralizadas.
   let totalAprendidas = 0;
   let aplicadasAprendidas = 0;
+  const resultadosAprendidas: ResultadoPrueba[] = [];
   await correr('antecedentes', async () => {
     const pruebas = (await almacen.listarPruebas()).filter((p) => p.estado === 'aceptada');
     if (!pruebas.length) return { estado: 'sin-datos', nota: 'Todavía no hay pruebas aprendidas aceptadas.' };
@@ -146,6 +147,7 @@ export async function analizarExpediente(id: string, tipos: Record<string, strin
     totalAprendidas = pruebas.length;
     for (const p of pruebas) {
       const v = evaluarPrueba(p, obra);
+      resultadosAprendidas.push({ id: p.id, nombre: p.nombre, origen: 'obra', estado: !v.aplica ? 'no-aplica' : v.dispara ? 'observa' : 'pasa', motivo: !v.aplica ? v.motivo : !v.dispara ? `el expediente tiene ${v.evidencia}` : undefined });
       if (!v.aplica) continue;
       aplican += 1;
       if (v.dispara) { alertan += 1; nuevos.push(hallazgoDePrueba(p, v)); }
@@ -154,14 +156,24 @@ export async function analizarExpediente(id: string, tipos: Record<string, strin
     return { estado: 'ok', nota: `${pruebas.length} prueba(s) aprendida(s): ${aplican} aplican a esta obra, ${alertan} alertan.` };
   });
 
-  const base = VERIFICADORES.filter((v) => v.tipo !== 'proveedor').length;
+  // Resultado de cada prueba: observa, pasa o no aplica (y por qué).
   const av = analisis as AnalisisVerificadores | null;
-  const corridas = av ? Math.max(av.ejecutadas.size, aplicablesIniciales({
-    partes: new Set<string>([...av.partes, ...expediente.documentos.map((d) => d.tipo)]),
+  const condiciones = {
+    partes: new Set<string>([...(av?.partes ?? []), ...expediente.documentos.map((d) => d.tipo)]),
     ubicacion: !!expediente.ubicacion,
-    cotizaciones: av.resultado.conteos.cotizaciones > 0,
-  })) : 0;
-  expediente.pruebas = { aplicadas: corridas + aplicadasAprendidas, total: base + totalAprendidas };
+    cotizaciones: (av?.resultado.conteos.cotizaciones ?? 0) > 0,
+  };
+  const iniciales: ResultadoPrueba[] = VERIFICADORES.filter((v) => v.tipo !== 'proveedor').map((v) => {
+    const suyos = nuevos.filter((h) => h.prueba === v.id);
+    const falta = faltantes(v.documentos, condiciones);
+    const estado: ResultadoPrueba['estado'] = suyos.some((h) => h.prioridad !== 'confirmar') ? 'observa'
+      : suyos.length ? 'confirmar'
+        : av?.ejecutadas.has(v.id) || !falta.length ? 'pasa' : 'no-aplica';
+    return { id: v.id, nombre: v.nombre, origen: 'entrenamiento', estado, motivo: estado === 'no-aplica' ? `falta: ${falta.join(', ').toLowerCase()}` : undefined };
+  });
+  expediente.resultadoPruebas = [...resultadosAprendidas, ...iniciales];
+  const aplicadas = expediente.resultadoPruebas.filter((r) => r.estado !== 'no-aplica').length;
+  expediente.pruebas = { aplicadas, total: iniciales.length + totalAprendidas };
 
   const inicio = performance.now();
   expediente.hallazgos = consolidar(nuevos);
