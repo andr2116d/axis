@@ -1,0 +1,104 @@
+                                                                   Presupuesto
+Presupuesto 0201044         REPARACION DE CALZADA O PISTA; EN EL(LA) AV. JAIME BLANCO DESDE LA CALLE SANTA CLARA HASTA LA CALLE
+                            SALAZAR BONDY DISTRITO DE EL PORVENIR, PROVINCIA TRUJILLO, DEPARTAMENTO LA LIBERTAD CUI:2735216
+
+
+Cliente       MUNICIPALIDAD DISTRITAL DE EL PORVENIR                                                              Costo al        30/07/2026
+Lugar         LA LIBERTAD - TRUJILLO - EL PORVENIR
+Item          Descripción                                                           Und.   Metrado          Precio S/          Parcial S/
+01            MANTENIMIENTO INFRAESTRUCTURA VIAL                                                                                 2,090,093.80
+01.01          OBRAS PROVISIONALES                                                                                                   8,124.80
+01.01.01        CARTEL DE IDENTIFICACION DE OBRA 4.80X3.60M                         und              1.00        2,124.80            2,124.80
+01.01.02        OFICINA, ALMACEN Y CASETA DE GUARDANIA                              glb              2.00        1,000.00            2,000.00
+01.01.03        ALQUILER DE SERVICIOS HIGIENICOS PORTATILES                         glb              2.00        2,000.00            4,000.00
+01.02          TRABAJOS PRELIMINARES                                                                                                47,348.14
+01.02.01        MOVILIZACION Y DESMOVILIZACION DE EQUIPOS Y HERRAMIENTAS MANUALES   glb              1.00        4,930.00            4,930.00
+01.02.02        DESVIO Y MANTENIMIENTO DE TRAFICO                                   glb              1.00        4,371.70            4,371.70
+01.02.03        TRAZO Y REPLANTEO EN PAVIMENTACIÓN                                  m2        22,782.30                 1.67        38,046.44
+01.03          MOVIMIENTO DE TIERRAS                                                                                               121,759.71
+01.03.01        CORTE Y ROTURA DE PAVIMENTO FLEXIBLE 2"                             m          1,457.30                 6.67         9,720.19
+01.03.02        DEMOLICION DE GIBAS ASFALTICAS EXISTENTES (E=0.10M APROX.)          m3               2.16           70.40              152.06
+01.03.03        EXTRACCION DE AFIRMADO Y PERFILADO DE BORDES DE AREAS A PARCHAR     m2         3,013.84                 5.03        15,159.62
+01.03.04        BARRIDO DE MATERIAL RESULTANTE DEL PARCHE                           m2         3,013.84                 0.70         2,109.69
+01.03.05        CORTE DE TERRENO A NIVEL DE SUBRASANTE CON MAQUINARIA               m3         1,169.23             15.67           18,321.83
+01.03.06         ACARREO Y ACOPIO DE MATERIAL EXCEDENTE                             m3         1,169.23                 9.41        11,002.45
+01.03.07                                                                         m3
+                ELIMINACION PROGRESIVA DE MATERIAL EXCEDENTE PROCEDENTE DE PARCHADO            2,559.54             25.51           65,293.87
+01.04          PARCHADO                                                                                                            213,681.25
+01.04.01        BASE AFIRMADO EN PARCHES E=15CM                                     m2         3,013.84             16.55           49,879.05
+01.04.02        IMPRIMACION BITUMINOSA MANUAL                                       m2         3,013.84                 8.42        25,376.53
+01.04.03        CARPETA ASFALTICA EN FRIO E=2" EN PARCHES                           m2         3,013.84             45.93          138,425.67
+01.05          SELLADO CON CARPETA ASFALTICA EN CALIENTE                                                                           682,751.06
+01.05.01        BARRIDO Y LIMPIEZA PARA CARPETA ASFALTICA                           m2        13,922.33                 0.95        13,226.21
+01.05.02        IMPRIMACION ASFALTICA                                               m2        13,922.33                 9.40       130,869.90
+01.05.03        CARPETA ASFALTICA EN CALIENTE DE 1"                                 m2        13,922.33             38.69          538,654.95
+01.06          PAVIMENTO FLEXIBLE                                                                                                  612,440.57
+01.06.01        PERFILADO Y COMPACTADO DE LA SUBRASANTE CON MAQUINARIA              m2         5,846.13                 6.26        36,596.77
+01.06.02        BASE DE MATERIAL GRANULAR(AFIRMADO),E=0.15m.C/MAQUINARIA            m2         5,846.13             18.45          107,861.10
+01.06.03         IMPRIMACION ASFALTICA CON MC-30                                    m2         5,846.13                 9.40        54,953.62
+01.06.04         COLOCACION DE CARPETA ASLFATICA EN CALIENTE DE 2"                  m2         5,846.13             70.65          413,029.08
+01.07          SEÑALIZACION                                                                                                         46,865.39
+01.07.01        PINTURA DE TRAFICO SOBRE PAVIMENTO                                  m2         1,133.38             22.27           25,240.37
+01.07.02        DEMARCACION LINEAL SOBRE PAVIMENTO                                  m2          199.48              11.15            2,224.20
+01.07.03        PINTURA EN BORDE DE VEREDA Y SARDINELES                             m2          941.02              11.15           10,492.37
+01.07.04        PINTURA DE TRAFICO EN GIBAS ASFALTICAS                              m2          400.02              22.27            8,908.45
+01.07.05        SEÑALIZACION VERTICAL                                                                                               13,255.98
+01.07.05.01       CORTE Y EXTRACCION MANUAL DE VEREDA DE CONCRETO                   m3               3.74          141.93              530.82
+01.07.05.02       ACARREO Y ACOPIO PRODUCTO DE LA EXCAVACIÓN                        m3               3.74           17.60               65.82
+01.07.05.03       CONCRETO PARA SOPORTE DE SEÑALIZACION VERTICAL                    m3               3.74          392.07            1,466.34
+01.07.05.04       SUMINISTRO DE SEÑALIZACION VERTICAL                               glb          39.00             287.00           11,193.00
+01.08          SARDINEL                                                                                                            127,693.95
+01.08.01        EXCAVACION DE ZANJA PARA SARDINEL H=25CM                            m3           79.71             109.34            8,715.49
+01.08.02        ACARREO Y ACOPIO PRODUCTO DE LA EXCAVACION PARA SARDINEL            m3           79.71              18.80            1,498.55
+01.08.03        ENCOFRADO Y DESENCOFRADO EN SARDINELES                              m2          637.67              58.56           37,341.96
+01.08.04        SARDINELES DE CONCRETO DE 0.15X0.40 DE fc=175kg/cm2                 m3          127.53             448.88           57,245.67
+01.08.05        CURADO DE CONCRETO EN SARDINELES (INCL. ADITIVO)                    m          2,125.56                 3.15         6,695.51
+01.08.06        JUNTAS DE DILATACION EN SARDINEL @3 METROS, e=1"                    m          2,125.56                 7.62        16,196.77
+01.09          SARDINELES SUMERGIDOS                                                                                                92,847.12
+01.09.01        EXCAVACION DE ZANJA PARA SARDINEL SUMERGIDO H=30CM                  m3          143.50             109.34           15,690.29
+01.09.02        ACARREO Y ACOPIO PRODUCTO DE LA EXCAVACION PARA SARDINEL SUMERGIDOm3            143.50              18.80            2,697.80
+01.09.03        SARDINELES SUMERGIDOS DE CONCRETO DE 0.15X0.30 DE fc=175kg/cm2      m3          143.50             448.88           64,414.28
+01.09.04        CURADO DE CONCRETO EN SARDINELES SUMERGIDOS (INCL. ADITIVO)         m          3,188.81                 3.15        10,044.75
+                                                                                               Presupuesto
+Presupuesto 0201044              REPARACION DE CALZADA O PISTA; EN EL(LA) AV. JAIME BLANCO DESDE LA CALLE SANTA CLARA HASTA LA CALLE
+                                 SALAZAR BONDY DISTRITO DE EL PORVENIR, PROVINCIA TRUJILLO, DEPARTAMENTO LA LIBERTAD CUI:2735216
+
+
+Cliente    MUNICIPALIDAD DISTRITAL DE EL PORVENIR                                                                                          Costo al        30/07/2026
+Lugar      LA LIBERTAD - TRUJILLO - EL PORVENIR
+Item       Descripción                                                                                       Und.   Metrado          Precio S/          Parcial S/
+01         MANTENIMIENTO INFRAESTRUCTURA VIAL                                                                                                             2,090,093.80
+01.10        VEREDAS                                                                                                                                         17,167.63
+01.10.01       EXCAVACION PARA VEREDA H=20CM                                                                 m3           35.97             109.34            3,932.96
+01.10.02       PERFILADO, NIVELACION Y COMPACTACION PARA VEREDAS                                             m2          179.84                  5.93         1,066.45
+01.10.03       BASE DE AFIRMADO PARA VEREDAS e=0.10m                                                         m2          179.84              14.49            2,605.88
+01.10.04       ENCOFRADO Y DESENCOFRADO EN VEREDAS                                                           m2           19.39              55.26            1,071.49
+01.10.05       VEREDA DE CONCRETO e = 0.10 m F'c = 175 Kg/cm2                                                m3           17.89             448.88            8,030.46
+01.10.06       CURADO DE CONCRETO EN VEREDAS (INCL. ADITIVO)                                                 m2          179.84                  2.56           460.39
+01.11        MARTILLOS                                                                                                                                       17,744.36
+01.11.01       EXCAVACION PARA MARTILLO H=10CM                                                               m3           10.56             109.34            1,154.63
+01.11.02       PERFILADO, NIVELACION Y COMPACTACION PARA MARTILLOS                                           m2          105.62                  5.93           626.33
+01.11.03       BASE DE AFIRMADO PARA MARTILLOS e=0.10m                                                       m2          105.62              14.49            1,530.43
+01.11.04       ENCOFRADO Y DESENCOFRADO EN MARTILLOS                                                         m2           41.76              55.26            2,307.66
+01.11.05       MARTILLO DE CONCRETO e = 0.25 m F'c = 175 Kg/cm2                                              m3           26.41             448.88           11,854.92
+01.11.06       CURADO DE CONCRETO EN MARTILLOS (INCL. ADITIVO)                                               m2          105.62                  2.56           270.39
+01.12        VARIOS                                                                                                                                          82,437.84
+01.12.01       REDUCTORES DE VELOCIDAD (GIBAS ASFALTICAS)                                                    m2          400.02             120.59           48,238.41
+01.12.02       LIMPIEZA FINAL DE OBRA                                                                        m2        19,768.46                 0.35         6,918.96
+01.12.03       MITIGACION DE IMPACTO AMBIENTAL                                                               m2        19,768.46                 1.38        27,280.47
+01.13        SEGURIDAD Y SALUD EN OBRA                                                                                                                        5,976.00
+01.13.01       EQUIPOS DE PROTECCION INDIVIDUAL                                                              glb              1.00        5,706.00            5,706.00
+01.13.02       EQUIPOS DE PROTECCION COLECTIVA                                                               glb              1.00          270.00              270.00
+           COSTO DIRECTO                                                                                                                                  2,090,093.80
+           GASTOS GENERALES (8%)                                                                                                                            167,207.50
+           UTILIDADES (5%)                                                                                                                                  104,504.69
+           ---------------------------------------------------------------------------------
+           SUB TOTAL                                                                                                                                      2,361,805.99
+           IGV (18%)                                                                                                                                        425,125.08
+           --------------------------------------------------------------------------------
+           PRESUPUESTO DE OBRA                                                                                                                            2,786,931.07
+           SUPERVISION                                                                                                                                       44,000.00
+           -------------------------------------------------------------------------------
+           PRESUPUESTO TOTAL DE INVERSION                                                                                                                 2,830,931.07
+           SON :       DOS MILLONES OCHOCIENTOS CINCUENTA MIL NOVECIENTOS TREINTA Y UNO Y 07/100 SOLES
+
