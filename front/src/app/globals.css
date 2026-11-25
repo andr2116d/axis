@@ -706,3 +706,23 @@ a.btn{text-decoration:none}
 .kit-lista li{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border-top:1px solid var(--warm-line);padding:6px 0}
 @media(max-width:620px){.kit-lista li{grid-template-columns:1fr}}
 .kit-derecha{display:grid;justify-items:end;gap:8px;flex:none}
+
+/* ── Guía de la demo ─────────────────────────────────────── */
+body:has(.guia-demo){padding-bottom:118px}
+.guia-demo{position:fixed;z-index:3;left:0;right:0;bottom:0;background:var(--ink);color:#fff8ed;box-shadow:0 -8px 24px #0000002e}
+.guia-dentro{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:18px;padding:12px 0}
+.guia-pasos{list-style:none;margin:0;padding:0;display:flex;gap:6px}
+.guia-pasos li{display:flex;align-items:center;gap:5px;font-size:.76rem;font-weight:700;color:#bdb7aa;white-space:nowrap}
+.guia-pasos li span{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;border:1px solid #6d675d}
+.guia-pasos li.guia-hecho{color:#9ad3a8}
+.guia-pasos li.guia-hecho span{background:#2f6b43;border-color:#2f6b43;color:#fff}
+.guia-pasos li.guia-actual{color:#fff}
+.guia-pasos li.guia-actual span{background:var(--action);border-color:var(--action);color:#291b13}
+.guia-texto{margin:0;font-size:.9rem;line-height:1.4}
+.guia-acciones{display:flex;align-items:center;gap:8px}
+.guia-acciones .btn.secondary{background:transparent;color:#fff8ed;border-color:#8a8478}
+.guia-acciones .icon-btn{color:#bdb7aa;background:transparent;border:0}
+@media(max-width:1040px){.guia-dentro{grid-template-columns:1fr;gap:8px}.guia-pasos{flex-wrap:wrap}body:has(.guia-demo){padding-bottom:190px}}
+@media print{.guia-demo{display:none}}
+body:has(.guia-demo) .toast{bottom:128px}
+@media(max-width:1040px){body:has(.guia-demo) .toast{bottom:200px}}

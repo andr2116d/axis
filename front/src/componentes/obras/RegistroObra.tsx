@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { SituacionObra } from '@/dominio/tipos';
 import { Icono } from '../Icono';
@@ -20,8 +20,11 @@ export function RegistroObra({ expedientes, subidaDirecta, demo }: { expedientes
   const [error, setError] = useState('');
 
   // Desde la demo: precarga el documento de la obra y elige el expediente de esa calle (el más reciente).
+  const precargado = useRef(false);
   useEffect(() => {
-    if (!demo?.archivo.startsWith('/demo/')) return;
+    // Solo una vez: después de registrar, la página se refresca y no debe volver a cargarlo.
+    if (precargado.current || !demo?.archivo.startsWith('/demo/')) return;
+    precargado.current = true;
     fetch(demo.archivo).then((r) => r.blob()).then((b) => setArchivos([new File([b], decodeURIComponent(demo.archivo.split('/').pop()!), { type: 'application/pdf' })]));
     const plano = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
     const via = plano(demo.via).replace(/^(CALLE|JIRON|AVENIDA|PASAJE)\s+/, '');
