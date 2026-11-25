@@ -50,6 +50,7 @@ export const motorCobertura: MotorExpediente = {
         accion: 'Confirmar el tipo de cada archivo o subir las partes del expediente técnico.',
         fuentes: docs.map((d) => ({ documento: d.nombre, pagina: `${d.paginas} ${d.unidad === 'pág.' ? 'pág.' : d.unidad === 'hoja' ? 'hoja(s)' : 'bloque(s)'}`, extracto: d.sugerencia.razon })),
         motores: ['clasificacion-documental', 'cobertura'],
+        prueba: 'D-PERTINENCIA',
       });
       return { estado: 'ok', nota: 'Los archivos no son un expediente técnico.' };
     }
@@ -64,6 +65,7 @@ export const motorCobertura: MotorExpediente = {
         solicitud: `Adjuntar ${articulo(r.tipo).toLowerCase()} del expediente técnico.`,
         fuentes: [{ documento: 'Contenido mínimo del expediente', pagina: 'norma', extracto: NORMA }],
         motores: ['clasificacion-documental', 'cobertura'],
+        prueba: 'D-CONTENIDO',
       });
     }
 
@@ -81,6 +83,7 @@ export const motorCobertura: MotorExpediente = {
         solicitud: `Adjuntar «${d.nombre}» en PDF con texto seleccionable.`,
         fuentes: [{ documento: d.nombre, pagina: `${d.paginasConTexto}/${d.paginas} ${d.unidad} con texto`, extracto: `Lectura: ${motivo}.` }],
         motores: ['lectura', 'cobertura'],
+        prueba: 'V-LEGIBLE',
       });
     }
     return { estado: 'ok', nota: `${[...presentes].filter((t) => TIPOS_DE_EXPEDIENTE.has(t)).length} de ${REQUISITOS.length} partes del contenido mínimo.` };

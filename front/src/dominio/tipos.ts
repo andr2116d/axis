@@ -68,6 +68,15 @@ export interface Hallazgo {
   monto?: number;
 }
 
+export interface ResultadoPrueba {
+  id: string;
+  nombre: string;
+  origen: 'entrenamiento' | 'obra';
+  estado: 'observa' | 'confirmar' | 'pasa' | 'no-aplica';
+  /** Por qué no aplicó (documentos que faltan, fuera del radio…). */
+  motivo?: string;
+}
+
 /** Resultado general de la revisión. */
 export type Semaforo = 'rojo' | 'amarillo' | 'verde' | 'gris';
 
@@ -110,6 +119,8 @@ export interface Expediente {
   cobertura: string[];
   /** Cuántas de las pruebas que conoce Axis aplicaron a este expediente. */
   pruebas?: { aplicadas: number; total: number };
+  /** Resultado de cada prueba sobre este expediente. */
+  resultadoPruebas?: ResultadoPrueba[];
   creado: string;
   estado: EstadoExpediente;
   documentos: Documento[];

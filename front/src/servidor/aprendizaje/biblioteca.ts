@@ -53,6 +53,11 @@ const REQUISITO: Record<string, (c: { partes: Set<string>; ubicacion: boolean; c
   Todos: () => true,
 };
 
+/** Documentos que le faltan a una prueba inicial para correr (vacío si puede correr). */
+export function faltantes(documentos: string[], c: { partes: Set<string>; ubicacion: boolean; cotizaciones: boolean }): string[] {
+  return documentos.filter((d) => !(REQUISITO[d] ?? (() => false))(c));
+}
+
 /** Cuántas pruebas iniciales tienen con qué correr según las partes presentes del expediente. */
 export function aplicablesIniciales(c: { partes: Set<string>; ubicacion: boolean; cotizaciones: boolean }): number {
   return VERIFICADORES.filter((v) => v.tipo !== 'proveedor' && v.documentos.every((d) => (REQUISITO[d] ?? (() => false))(c))).length;
