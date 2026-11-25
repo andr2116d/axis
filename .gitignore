@@ -15,3 +15,7 @@ next-env.d.ts
 *.tfstate.*
 *.tfvars
 !*.tfvars.example
+
+# Datos locales de Axis (expedientes subidos, modelos)
+.axis-datos/
+.impeccable/
