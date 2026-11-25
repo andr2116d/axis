@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 74"><title>Axis</title>
-<g stroke="#302D2A" stroke-width="3" stroke-linejoin="round">
-<path fill="#FE6F2D" d="M36 3 68 20 36 37 4 20Z"/>
-<path fill="#FFE5D0" d="M4 20 36 37v34L4 54Z"/>
-<path fill="#FFAA7D" d="M36 37 68 20v34L36 71Z"/>
-<path fill="none" d="M4 20h64M20 11v9m16 17L4 54m0-17 16 8.5M36 37l32 17m-16-8.5L68 37"/>
-</g>
-</svg>
