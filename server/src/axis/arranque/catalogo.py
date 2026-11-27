@@ -3,7 +3,7 @@ import structlog
 from axis.compartido.dominio.motores import Motor
 from axis.compartido.infraestructura.registro_artefactos import RegistroArtefactos
 from axis.compartido.infraestructura.s3 import ClienteS3
-from axis.motores.catalogo import CATALOGO
+from axis.motores.catalogo import CATALOGO, FIJOS
 
 log = structlog.get_logger()
 
@@ -14,9 +14,10 @@ class CatalogoRecargable:
     def __init__(self, s3: ClienteS3, bucket: str) -> None:
         self._entradas = [(e, RegistroArtefactos(s3, bucket, e.prefijo)) for e in CATALOGO]
         self._cargados: dict[str, tuple[str, Motor]] = {}
+        self._fijos = [construir() for construir in FIJOS]
 
     def motores(self) -> list[Motor]:
-        return [m for _, m in self._cargados.values()]
+        return [*self._fijos, *(m for _, m in self._cargados.values())]
 
     async def refrescar(self) -> None:
         for entrada, registro in self._entradas:
