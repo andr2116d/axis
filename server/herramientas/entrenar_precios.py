@@ -13,6 +13,7 @@ Con eso se eligen la agrupación y los umbrales, en vez de fijarlos a ojo.
 import argparse
 import asyncio
 import json
+import os
 from concurrent.futures import ProcessPoolExecutor
 from datetime import UTC, datetime
 from functools import partial
@@ -51,6 +52,8 @@ CANDIDATOS = [
     for v in (1.5, 2.0, 2.5)
 ]
 TOLERANCIA_PROMOCION = 0.02
+# Cada proceso carga toda la base de precios: con todos los núcleos, deja sin memoria a la API.
+PROCESOS = int(os.environ.get("AXIS_PROCESOS_ENTRENAMIENTO", "4"))
 # Agrupa por objeto, alcance (suministro, instalación) y medida (DN, f'c, espesor).
 ESQUEMA_CLAVE = 3
 
@@ -121,7 +124,7 @@ def main() -> None:
     observados = cargar()
     print(f"Base: {len(observados)} precios de {len({o.obra for o in observados})} obras")
     # Cada configuración se evalúa en su propio proceso: son independientes y usan CPU.
-    with ProcessPoolExecutor() as procesos:
+    with ProcessPoolExecutor(max_workers=PROCESOS) as procesos:
         resultados = list(procesos.map(partial(evaluar, observados), CANDIDATOS))
     for m in sorted(resultados, key=puntaje, reverse=True)[:6]:
         p = m["parametros"]
