@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+# Los artefactos de modelos y los datos de entrenamiento viven en S3
+*.onnx
+*.joblib
+datos/
+.env*
+cdk.out/
