@@ -163,3 +163,12 @@ Casi todos los motores leen partidas (precios, metrados, valorizaciones). Se ext
   - **cobertura: 38 %** de las partidas.
 
   Varias de las "falsas alarmas" son en realidad precios raros que vale la pena mirar (trazo y replanteo a 4,5 veces lo usual).
+
+## Expediente (implementado)
+
+- `POST /expedientes` crea un expediente (obra, CUI, entidad, tipología).
+- `POST /expedientes/{id}/documentos {"id_documento"}` adjunta un documento ya analizado. **Cada parte la da el documento más reciente que la trae**: subir solo metrados nuevos reemplaza la sección de metrados (v2) y deja las demás.
+- `POST /expedientes/{id}/evaluar` arma la entrada de los motores con las **secciones vigentes**, cada una leída solo de sus páginas en su documento.
+  - Cada resultado de motor guarda una **firma**: el motor, su versión y el documento de cada parte que lee. Al reevaluar, un motor cuyas partes no cambiaron **no se vuelve a correr**.
+  - Cada sección queda `rojo`, `ambar`, `verde` o **`sin_revisar`**. Una sección que ningún motor lee todavía no se pinta de verde.
+- Las evaluaciones se numeran y se guardan completas (resultados, omisiones, fallas), así que se puede reconstruir qué se dijo en cada versión.
