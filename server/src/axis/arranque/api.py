@@ -14,6 +14,7 @@ from axis.arranque.puentes import (
     ResumenesDesdeDocumentos,
 )
 from axis.arranque.recursos import Recursos
+from axis.arranque.rutas_compuestas import crear_router as router_compuesto
 from axis.compartido.dominio.errores import ErrorAxis
 from axis.compartido.infraestructura.logs import configurar_logs
 from axis.compartido.infraestructura.reloj import RelojSistema
@@ -135,16 +136,24 @@ def create_app(config: Config | None = None) -> FastAPI:
         )
         return EvaluarExpediente(repositorio=expedientes(), evaluador=evaluador, reloj=reloj)
 
+    def adjuntar_documento() -> AdjuntarDocumento:
+        return AdjuntarDocumento(
+            repositorio=expedientes(),
+            documentos=ResumenesDesdeDocumentos(documentos()),
+            reloj=reloj,
+        )
+
     app.include_router(
         router_expediente(
             lambda: CrearExpediente(repositorio=expedientes(), reloj=reloj),
-            lambda: AdjuntarDocumento(
-                repositorio=expedientes(),
-                documentos=ResumenesDesdeDocumentos(documentos()),
-                reloj=reloj,
-            ),
+            adjuntar_documento,
             lambda: ObtenerExpediente(repositorio=expedientes()),
             evaluar_expediente,
+        )
+    )
+    app.include_router(
+        router_compuesto(
+            analizar_documento, adjuntar_documento, evaluar_expediente, config.limite_subida_bytes
         )
     )
     _registrar_errores(app)

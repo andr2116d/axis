@@ -129,7 +129,7 @@ def crear_router(
         expediente = await caso.ejecutar(
             OrdenCrearExpediente(cuerpo.nombre_obra, cuerpo.cui, cuerpo.entidad, cuerpo.tipologia)
         )
-        return _salida(VistaExpediente(expediente, None))
+        return salida_expediente(VistaExpediente(expediente, None))
 
     @router.post("/{id_expediente}/documentos")
     async def adjuntar_documento(
@@ -139,24 +139,24 @@ def crear_router(
         vista: Annotated[ObtenerExpediente, Depends(obtener)],
     ) -> ExpedienteSalida:
         await caso.ejecutar(IdExpediente(id_expediente), cuerpo.id_documento)
-        return _salida(await vista.ejecutar(IdExpediente(id_expediente)))
+        return salida_expediente(await vista.ejecutar(IdExpediente(id_expediente)))
 
     @router.get("/{id_expediente}")
     async def consultar(
         id_expediente: UUID, caso: Annotated[ObtenerExpediente, Depends(obtener)]
     ) -> ExpedienteSalida:
-        return _salida(await caso.ejecutar(IdExpediente(id_expediente)))
+        return salida_expediente(await caso.ejecutar(IdExpediente(id_expediente)))
 
     @router.post("/{id_expediente}/evaluar")
     async def evaluar_expediente(
         id_expediente: UUID, caso: Annotated[EvaluarExpediente, Depends(evaluar)]
     ) -> ExpedienteSalida:
-        return _salida(await caso.ejecutar(IdExpediente(id_expediente)))
+        return salida_expediente(await caso.ejecutar(IdExpediente(id_expediente)))
 
     return router
 
 
-def _salida(vista: VistaExpediente) -> ExpedienteSalida:
+def salida_expediente(vista: VistaExpediente) -> ExpedienteSalida:
     expediente, evaluacion = vista.expediente, vista.ultima_evaluacion
     secciones = expediente.secciones_vigentes()
     return ExpedienteSalida(
