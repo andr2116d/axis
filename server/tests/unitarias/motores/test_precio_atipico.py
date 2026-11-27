@@ -184,8 +184,16 @@ def test_el_objeto_salta_los_verbos_de_alcance():
 def test_con_un_parecido_debil_un_precio_muy_distinto_es_ambar_no_rojo():
     grupo = Grupo("und", "SEÑAL DE SALIDA", 61, 7, math.log(9.56), 0.2, 8.6, 25.9)
     umbrales = Umbrales(veces_minimas=2.5, desvios_ambar=3.0, desvios_rojo=5.0)
-    lejano = Comparacion(grupo, similitud=0.47, desvios=17.4, veces=32.2)
+    medio = Comparacion(grupo, similitud=0.55, desvios=17.4, veces=32.2)
     cercano = Comparacion(grupo, similitud=0.9, desvios=17.4, veces=32.2)
 
-    assert severidad_de(lejano, umbrales) is Severidad.AMBAR
+    assert severidad_de(medio, umbrales) is Severidad.AMBAR
     assert severidad_de(cercano, umbrales) is Severidad.ROJO
+
+
+def test_sin_una_partida_parecida_no_hay_hallazgo_de_precio():
+    grupo = Grupo("und", "SEÑAL DE SALIDA", 61, 7, math.log(9.56), 0.2, 8.6, 25.9)
+    umbrales = Umbrales(veces_minimas=2.5, desvios_ambar=3.0, desvios_rojo=5.0)
+    otra_cosa = Comparacion(grupo, similitud=0.47, desvios=17.4, veces=32.2)
+
+    assert severidad_de(otra_cosa, umbrales) is None

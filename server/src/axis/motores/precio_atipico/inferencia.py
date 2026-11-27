@@ -78,10 +78,13 @@ class MotorPrecioAtipico:
 
 
 SIMILITUD_PARA_ROJO = 0.65
+# Por debajo de este parecido la partida más cercana ya es otra cosa (una señal de tránsito
+# frente a una señal de salida): comparar sus precios no dice nada y solo genera ruido.
+SIMILITUD_PARA_HALLAZGO = 0.5
 
 
 def severidad_de(c: Comparacion, umbrales: Umbrales) -> Severidad | None:
-    if max(c.veces, 1 / c.veces) < umbrales.veces_minimas:
+    if max(c.veces, 1 / c.veces) < umbrales.veces_minimas or c.similitud < SIMILITUD_PARA_HALLAZGO:
         return None
     # Rojo solo si la partida comparada es claramente la misma: con un parecido débil
     # (una señal de tránsito frente a una señal de evacuación) la diferencia es una pregunta.
