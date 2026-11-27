@@ -33,6 +33,11 @@ class ArtefactoDocumentos:
 class ClasificadorPaginasSklearn:
     def __init__(self, modelo: object) -> None:
         self._modelo = modelo
+        self._etiquetas = tuple(Etiqueta(str(c)) for c in modelo.classes_)  # type: ignore[attr-defined]
+
+    @property
+    def etiquetas(self) -> tuple[Etiqueta, ...]:
+        return self._etiquetas
 
     async def clasificar(self, textos: Sequence[str]) -> list[Clasificacion]:
         if not textos:
@@ -57,6 +62,15 @@ class ClasificadorDocumentosSklearn:
         self._modelo = modelo
         self._etiquetas_pagina = tuple(etiquetas_pagina)
         self._fases = fases
+        self._etiquetas = tuple(Etiqueta(str(c)) for c in modelo.classes_)  # type: ignore[attr-defined]
+
+    @property
+    def etiquetas(self) -> tuple[Etiqueta, ...]:
+        return self._etiquetas
+
+    def fase_de(self, etiqueta: Etiqueta) -> Fase | None:
+        fase = self._fases.get(etiqueta)
+        return Fase(fase) if fase else None
 
     async def clasificar(self, paginas: Sequence[Pagina]) -> TipoDocumento:
         return await asyncio.to_thread(self._clasificar, paginas)
@@ -66,11 +80,10 @@ class ClasificadorDocumentosSklearn:
         probabilidades = self._modelo.predict_proba(rasgos)[0]  # type: ignore[attr-defined]
         indice = int(np.argmax(probabilidades))
         etiqueta = str(self._modelo.classes_[indice])  # type: ignore[attr-defined]
-        fase = self._fases.get(etiqueta)
         return TipoDocumento(
             etiqueta=Etiqueta(etiqueta),
             confianza=float(probabilidades[indice]),
-            fase=Fase(fase) if fase else None,
+            fase=self.fase_de(Etiqueta(etiqueta)),
         )
 
 

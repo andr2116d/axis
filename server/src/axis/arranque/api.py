@@ -13,15 +13,24 @@ from axis.compartido.dominio.errores import ErrorAxis
 from axis.compartido.infraestructura.logs import configurar_logs
 from axis.compartido.infraestructura.reloj import RelojSistema
 from axis.documentos.adaptadores.entrada.http import ERRORES_HTTP as ERRORES_DOCUMENTOS
+from axis.documentos.adaptadores.entrada.http import CasosDocumentos
 from axis.documentos.adaptadores.entrada.http import crear_router as router_documentos
 from axis.documentos.adaptadores.salida.almacen_s3 import AlmacenS3
 from axis.documentos.adaptadores.salida.lector_archivos import LectorArchivosLocal
 from axis.documentos.adaptadores.salida.ocr_tesseract import OcrTesseract
-from axis.documentos.adaptadores.salida.postgres import RepositorioDocumentosPostgres
+from axis.documentos.adaptadores.salida.postgres import (
+    RepositorioCorreccionesPostgres,
+    RepositorioDocumentosPostgres,
+)
 from axis.documentos.aplicacion.casos_de_uso.analizar_documento import AnalizarDocumento
 from axis.documentos.aplicacion.casos_de_uso.consultar_documento import (
     ObtenerDocumento,
     ObtenerPagina,
+)
+from axis.documentos.aplicacion.casos_de_uso.corregir_clasificacion import (
+    CorregirClasificacion,
+    ListarCorrecciones,
+    ObtenerEtiquetas,
 )
 
 log = structlog.get_logger()
@@ -49,10 +58,17 @@ def create_app(config: Config | None = None) -> FastAPI:
     ocr = OcrTesseract(config.ocr_idioma, config.ocr_dpi, config.ocr_concurrencia)
     reloj = RelojSistema()
 
+    def documentos() -> RepositorioDocumentosPostgres:
+        return RepositorioDocumentosPostgres(recursos().motor_bd)
+
+    def correcciones() -> RepositorioCorreccionesPostgres:
+        return RepositorioCorreccionesPostgres(recursos().motor_bd)
+
     def analizar_documento() -> AnalizarDocumento:
         r = recursos()
         return AnalizarDocumento(
-            repositorio=RepositorioDocumentosPostgres(r.motor_bd),
+            repositorio=documentos(),
+            correcciones=correcciones(),
             almacen=AlmacenS3(r.s3, config.s3_bucket_documentos),
             lector=lector,
             ocr=ocr,
@@ -60,17 +76,22 @@ def create_app(config: Config | None = None) -> FastAPI:
             reloj=reloj,
         )
 
-    def obtener_documento() -> ObtenerDocumento:
-        return ObtenerDocumento(RepositorioDocumentosPostgres(recursos().motor_bd))
-
-    def obtener_pagina() -> ObtenerPagina:
-        return ObtenerPagina(RepositorioDocumentosPostgres(recursos().motor_bd))
-
-    app.include_router(
-        router_documentos(
-            analizar_documento, obtener_documento, obtener_pagina, config.limite_subida_bytes
-        )
+    casos = CasosDocumentos(
+        analizar=analizar_documento,
+        obtener=lambda: ObtenerDocumento(documentos()),
+        obtener_pagina=lambda: ObtenerPagina(documentos()),
+        corregir=lambda: CorregirClasificacion(
+            documentos=documentos(),
+            correcciones=correcciones(),
+            modelos=recursos().modelos_documentos,
+            reloj=reloj,
+        ),
+        listar_correcciones=lambda: ListarCorrecciones(
+            documentos=documentos(), correcciones=correcciones()
+        ),
+        etiquetas=lambda: ObtenerEtiquetas(recursos().modelos_documentos),
     )
+    app.include_router(router_documentos(casos, config.limite_subida_bytes))
     _registrar_errores(app)
     _registrar_medicion(app)
 

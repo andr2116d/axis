@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
 from axis.compartido.dominio.valores import Fase
 from axis.documentos.dominio.entidades import (
+    Correccion,
     Documento,
     EvaluacionEdicion,
     Huella,
@@ -19,6 +20,8 @@ from axis.documentos.dominio.valores import (
     Clasificacion,
     CodigoSenal,
     Etiqueta,
+    FuenteClasificacion,
+    IdCorreccion,
     IdDocumento,
     OrigenPagina,
     TipoArchivo,
@@ -37,6 +40,7 @@ documentos = sa.Table(
     sa.Column("tipo_etiqueta", sa.Text, nullable=False),
     sa.Column("tipo_confianza", sa.Float, nullable=False),
     sa.Column("tipo_fase", sa.Text),
+    sa.Column("tipo_fuente", sa.Text, nullable=False, server_default="modelo"),
     sa.Column("senales", JSONB, nullable=False),
     sa.Column("rareza", sa.Float),
     sa.Column("fase_subida", sa.Text),
@@ -60,7 +64,22 @@ paginas = sa.Table(
     sa.Column("alto_pt", sa.Float, nullable=False),
     sa.Column("etiqueta", sa.Text),
     sa.Column("confianza", sa.Float),
+    sa.Column("fuente", sa.Text, nullable=False, server_default="modelo"),
     sa.Column("confianza_ocr", sa.Float),
+)
+
+correcciones = sa.Table(
+    "correcciones",
+    metadatos,
+    sa.Column("id", sa.Uuid, primary_key=True),
+    # Por hash y sin clave foránea: la corrección sobrevive a que el documento se reanalice.
+    sa.Column("hash_contenido", sa.Text, nullable=False, index=True),
+    sa.Column("pagina", sa.Integer),
+    sa.Column("etiqueta_anterior", sa.Text),
+    sa.Column("etiqueta", sa.Text, nullable=False),
+    sa.Column("fase", sa.Text),
+    sa.Column("version_modelos", sa.Text, nullable=False),
+    sa.Column("corregido_en", sa.DateTime(timezone=True), nullable=False),
 )
 
 partes = sa.Table(
@@ -117,6 +136,50 @@ class RepositorioDocumentosPostgres:
             return await _armar(conexion, dict(fila))
 
 
+class RepositorioCorreccionesPostgres:
+    def __init__(self, motor: AsyncEngine) -> None:
+        self._motor = motor
+
+    async def guardar(self, correccion: Correccion) -> None:
+        async with self._motor.begin() as conexion:
+            await conexion.execute(
+                sa.insert(correcciones).values(
+                    id=correccion.id,
+                    hash_contenido=correccion.hash_contenido,
+                    pagina=correccion.pagina,
+                    etiqueta_anterior=correccion.etiqueta_anterior,
+                    etiqueta=correccion.etiqueta,
+                    fase=correccion.fase.value if correccion.fase else None,
+                    version_modelos=correccion.version_modelos,
+                    corregido_en=correccion.corregido_en,
+                )
+            )
+
+    async def listar(self, hash_contenido: str) -> list[Correccion]:
+        consulta = (
+            sa.select(correcciones)
+            .where(correcciones.c.hash_contenido == hash_contenido)
+            .order_by(correcciones.c.corregido_en)
+        )
+        async with self._motor.connect() as conexion:
+            filas = (await conexion.execute(consulta)).mappings().all()
+        return [_correccion(dict(f)) for f in filas]
+
+
+def _correccion(fila: Mapping[str, object]) -> Correccion:
+    pagina, anterior, fase = fila["pagina"], fila["etiqueta_anterior"], fila["fase"]
+    return Correccion(
+        id=IdCorreccion(_uuid(fila["id"])),
+        hash_contenido=str(fila["hash_contenido"]),
+        pagina=_int(pagina) if pagina is not None else None,
+        etiqueta_anterior=Etiqueta(str(anterior)) if anterior is not None else None,
+        etiqueta=Etiqueta(str(fila["etiqueta"])),
+        fase=Fase(str(fase)) if fase else None,
+        version_modelos=str(fila["version_modelos"]),
+        corregido_en=_fecha(fila["corregido_en"]),
+    )
+
+
 async def _armar(conexion: AsyncConnection, fila: Mapping[str, object]) -> Documento:
     id_documento = fila["id"]
     filas_paginas = (
@@ -155,6 +218,7 @@ async def _armar(conexion: AsyncConnection, fila: Mapping[str, object]) -> Docum
             Etiqueta(str(fila["tipo_etiqueta"])),
             _float(fila["tipo_confianza"]),
             Fase(str(tipo_fase)) if tipo_fase else None,
+            FuenteClasificacion(str(fila["tipo_fuente"])),
         ),
         edicion=EvaluacionEdicion(
             tuple(_senal(_a_dict(s)) for s in senales) if isinstance(senales, list) else (),
@@ -186,6 +250,7 @@ def _fila_documento(documento: Documento) -> dict[str, object]:
         "tipo_etiqueta": documento.tipo.etiqueta,
         "tipo_confianza": documento.tipo.confianza,
         "tipo_fase": documento.tipo.fase.value if documento.tipo.fase else None,
+        "tipo_fuente": documento.tipo.fuente.value,
         "senales": [
             {"codigo": s.codigo.value, "descripcion": s.descripcion, "paginas": list(s.paginas)}
             for s in documento.edicion.senales
@@ -209,6 +274,7 @@ def _fila_pagina(id_documento: IdDocumento, pagina: Pagina) -> dict[str, object]
         "alto_pt": pagina.alto_pt,
         "etiqueta": c.etiqueta if c else None,
         "confianza": c.confianza if c else None,
+        "fuente": c.fuente.value if c else FuenteClasificacion.MODELO.value,
         "confianza_ocr": pagina.confianza_ocr,
     }
 
@@ -234,7 +300,9 @@ def _pagina(fila: Mapping[str, object]) -> Pagina:
         ancho_pt=_float(fila["ancho_pt"]),
         alto_pt=_float(fila["alto_pt"]),
         clasificacion=(
-            Clasificacion(Etiqueta(str(etiqueta)), _float(confianza))
+            Clasificacion(
+                Etiqueta(str(etiqueta)), _float(confianza), FuenteClasificacion(str(fila["fuente"]))
+            )
             if etiqueta is not None and confianza is not None
             else None
         ),

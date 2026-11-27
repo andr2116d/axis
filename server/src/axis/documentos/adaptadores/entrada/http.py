@@ -1,10 +1,11 @@
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, Response, UploadFile, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from axis.compartido.dominio.errores import ErrorAxis
 from axis.compartido.dominio.valores import Fase
@@ -13,18 +14,28 @@ from axis.documentos.aplicacion.casos_de_uso.consultar_documento import (
     ObtenerDocumento,
     ObtenerPagina,
 )
-from axis.documentos.aplicacion.dto import OrdenAnalizarDocumento, OrdenObtenerPagina
-from axis.documentos.dominio.entidades import Documento, Pagina
+from axis.documentos.aplicacion.casos_de_uso.corregir_clasificacion import (
+    CorregirClasificacion,
+    ListarCorrecciones,
+    ObtenerEtiquetas,
+)
+from axis.documentos.aplicacion.dto import (
+    OrdenAnalizarDocumento,
+    OrdenCorregir,
+    OrdenObtenerPagina,
+)
+from axis.documentos.dominio.entidades import Correccion, Documento, Pagina
 from axis.documentos.dominio.errores import (
     ArchivoDemasiadoGrande,
     ArchivoIlegible,
     ArchivoNoSoportado,
     ArchivoVacio,
     DocumentoNoEncontrado,
+    EtiquetaInvalida,
     ModelosNoDisponibles,
     PaginaNoEncontrada,
 )
-from axis.documentos.dominio.valores import IdDocumento
+from axis.documentos.dominio.valores import FuenteClasificacion, IdDocumento
 
 ERRORES_HTTP: dict[type[ErrorAxis], int] = {
     ArchivoVacio: status.HTTP_400_BAD_REQUEST,
@@ -33,6 +44,7 @@ ERRORES_HTTP: dict[type[ErrorAxis], int] = {
     ArchivoDemasiadoGrande: status.HTTP_413_CONTENT_TOO_LARGE,
     DocumentoNoEncontrado: status.HTTP_404_NOT_FOUND,
     PaginaNoEncontrada: status.HTTP_404_NOT_FOUND,
+    EtiquetaInvalida: status.HTTP_422_UNPROCESSABLE_CONTENT,
     ModelosNoDisponibles: status.HTTP_503_SERVICE_UNAVAILABLE,
 }
 
@@ -46,6 +58,7 @@ _NOMBRES_FASE = {
 class Clasificado(BaseModel):
     etiqueta: str
     confianza: float
+    fuente: FuenteClasificacion = FuenteClasificacion.MODELO
 
 
 class TipoDocumentoSalida(Clasificado):
@@ -120,13 +133,66 @@ class PaginaSalida(PaginaResumen):
     texto: str
 
 
-def crear_router(
-    analizar: Callable[[], AnalizarDocumento],
-    obtener: Callable[[], ObtenerDocumento],
-    obtener_pagina: Callable[[], ObtenerPagina],
-    limite_bytes: int,
-) -> APIRouter:
+class CorreccionEntrada(BaseModel):
+    pagina: int | None = Field(None, description="Página a corregir; vacío = el documento completo")
+    etiqueta: str = Field(description="Qué es en realidad: metrados, cotizacion, valorizacion…")
+    fase: Fase | None = Field(None, description="Solo si el tipo es nuevo y se sabe su fase")
+
+
+class CorreccionSalida(BaseModel):
+    id: UUID
+    pagina: int | None
+    etiqueta_anterior: str | None
+    etiqueta: str
+    fase: Fase | None
+    version_modelos: str
+    corregido_en: datetime
+
+
+class ResultadoCorreccionSalida(BaseModel):
+    correccion: CorreccionSalida
+    es_etiqueta_nueva: bool
+    documento: DocumentoSalida
+
+
+class EtiquetaDocumento(BaseModel):
+    etiqueta: str
+    fase: Fase | None
+
+
+class EtiquetasSalida(BaseModel):
+    version_modelos: str
+    paginas: list[str]
+    documentos: list[EtiquetaDocumento]
+
+
+@dataclass(frozen=True)
+class CasosDocumentos:
+    """Cómo obtener cada caso de uso por petición; lo arma `arranque`."""
+
+    analizar: Callable[[], AnalizarDocumento]
+    obtener: Callable[[], ObtenerDocumento]
+    obtener_pagina: Callable[[], ObtenerPagina]
+    corregir: Callable[[], CorregirClasificacion]
+    listar_correcciones: Callable[[], ListarCorrecciones]
+    etiquetas: Callable[[], ObtenerEtiquetas]
+
+
+def crear_router(casos: CasosDocumentos, limite_bytes: int) -> APIRouter:
     router = APIRouter(prefix="/documentos", tags=["documentos"])
+    analizar, obtener, obtener_pagina = casos.analizar, casos.obtener, casos.obtener_pagina
+
+    # Va antes de /{id_documento} para que "etiquetas" no se lea como un id.
+    @router.get("/etiquetas")
+    async def etiquetas(
+        caso: Annotated[ObtenerEtiquetas, Depends(casos.etiquetas)],
+    ) -> EtiquetasSalida:
+        conocidas = await caso.ejecutar()
+        return EtiquetasSalida(
+            version_modelos=conocidas.version,
+            paginas=list(conocidas.paginas),
+            documentos=[EtiquetaDocumento(etiqueta=e, fase=f) for e, f in conocidas.documentos],
+        )
 
     @router.post("", status_code=status.HTTP_201_CREATED)
     async def subir(
@@ -165,7 +231,42 @@ def crear_router(
         encontrada = await caso.ejecutar(OrdenObtenerPagina(IdDocumento(id_documento), numero))
         return PaginaSalida(**_pagina(encontrada).model_dump(), texto=encontrada.texto)
 
+    @router.post("/{id_documento}/correcciones", status_code=status.HTTP_201_CREATED)
+    async def corregir(
+        id_documento: UUID,
+        cuerpo: CorreccionEntrada,
+        caso: Annotated[CorregirClasificacion, Depends(casos.corregir)],
+    ) -> ResultadoCorreccionSalida:
+        resultado = await caso.ejecutar(
+            OrdenCorregir(IdDocumento(id_documento), cuerpo.pagina, cuerpo.etiqueta, cuerpo.fase)
+        )
+        documento = resultado.documento
+        return ResultadoCorreccionSalida(
+            correccion=_correccion(resultado.correccion),
+            es_etiqueta_nueva=resultado.es_etiqueta_nueva,
+            documento=_documento(documento, documento.fase_subida),
+        )
+
+    @router.get("/{id_documento}/correcciones")
+    async def correcciones(
+        id_documento: UUID,
+        caso: Annotated[ListarCorrecciones, Depends(casos.listar_correcciones)],
+    ) -> list[CorreccionSalida]:
+        return [_correccion(c) for c in await caso.ejecutar(IdDocumento(id_documento))]
+
     return router
+
+
+def _correccion(correccion: Correccion) -> CorreccionSalida:
+    return CorreccionSalida(
+        id=correccion.id,
+        pagina=correccion.pagina,
+        etiqueta_anterior=correccion.etiqueta_anterior,
+        etiqueta=correccion.etiqueta,
+        fase=correccion.fase,
+        version_modelos=correccion.version_modelos,
+        corregido_en=correccion.corregido_en,
+    )
 
 
 def _documento(documento: Documento, fase: Fase | None) -> DocumentoSalida:
@@ -179,6 +280,7 @@ def _documento(documento: Documento, fase: Fase | None) -> DocumentoSalida:
             confianza=tipo.confianza,
             fase=tipo.fase,
             es_confiable=tipo.es_confiable,
+            fuente=tipo.fuente,
         ),
         fase=FaseSalida(
             subida_en=fase,
@@ -226,7 +328,9 @@ def _pagina(pagina: Pagina) -> PaginaResumen:
         numero=pagina.numero,
         origen=pagina.origen,
         caracteres=len(pagina.texto),
-        tipo=Clasificado(etiqueta=c.etiqueta, confianza=round(c.confianza, 3)) if c else None,
+        tipo=Clasificado(etiqueta=c.etiqueta, confianza=round(c.confianza, 3), fuente=c.fuente)
+        if c
+        else None,
         confianza_ocr=pagina.confianza_ocr,
     )
 

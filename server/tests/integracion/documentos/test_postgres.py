@@ -9,8 +9,12 @@ import pytest
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from axis.compartido.dominio.valores import Fase
-from axis.documentos.adaptadores.salida.postgres import RepositorioDocumentosPostgres
+from axis.documentos.adaptadores.salida.postgres import (
+    RepositorioCorreccionesPostgres,
+    RepositorioDocumentosPostgres,
+)
 from axis.documentos.dominio.entidades import (
+    Correccion,
     Documento,
     EvaluacionEdicion,
     Huella,
@@ -22,6 +26,7 @@ from axis.documentos.dominio.valores import (
     Clasificacion,
     CodigoSenal,
     Etiqueta,
+    IdCorreccion,
     IdDocumento,
     OrigenPagina,
     TipoArchivo,
@@ -116,3 +121,45 @@ async def test_reanalizar_el_mismo_archivo_reemplaza_el_anterior(repositorio):
     actual = await repositorio.buscar_por_hash(hash_contenido)
     assert actual is not None
     assert actual.version_modelos == "v2"
+
+
+@pytest.fixture
+async def correcciones():
+    motor = create_async_engine(URL)
+    try:
+        async with motor.connect():
+            pass
+    except OSError:
+        pytest.skip("Postgres de docker compose no está levantado")
+    yield RepositorioCorreccionesPostgres(motor)
+    await motor.dispose()
+
+
+async def test_las_correcciones_se_listan_por_archivo_en_orden(correcciones):
+    hash_contenido = uuid4().hex
+    base = datetime(2026, 11, 27, 12, tzinfo=UTC)
+    segunda = Correccion(
+        IdCorreccion(uuid4()),
+        hash_contenido,
+        None,
+        Etiqueta("bases"),
+        Etiqueta("tdr"),
+        Fase.SELECCION,
+        "v1",
+        base.replace(minute=5),
+    )
+    primera = Correccion(
+        IdCorreccion(uuid4()),
+        hash_contenido,
+        3,
+        Etiqueta("bases"),
+        Etiqueta("cotizacion"),
+        None,
+        "v1",
+        base,
+    )
+    await correcciones.guardar(segunda)
+    await correcciones.guardar(primera)
+
+    assert await correcciones.listar(hash_contenido) == [primera, segunda]
+    assert await correcciones.listar(uuid4().hex) == []
