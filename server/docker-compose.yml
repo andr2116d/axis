@@ -1,0 +1,76 @@
+# Entorno local con las mismas piezas que AWS:
+#   postgres  → RDS Postgres     almacen → S3     api → ECS Fargate     entrenar → tarea ECS
+name: axis
+
+x-entorno: &entorno
+  AXIS_ENTORNO: local
+  AXIS_BASE_DATOS_URL: postgresql+asyncpg://axis:axis@postgres:5432/axis
+  # Fuera de AWS se apunta a SeaweedFS; en AWS esta variable no existe y se usa S3.
+  AXIS_S3_ENDPOINT: http://almacen:8333
+  AXIS_S3_BUCKET_DOCUMENTOS: axis-documentos
+  AXIS_S3_BUCKET_MODELOS: axis-modelos
+  AWS_ACCESS_KEY_ID: local
+  AWS_SECRET_ACCESS_KEY: local
+  AWS_DEFAULT_REGION: us-east-1
+
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.1-pg17
+    environment:
+      POSTGRES_USER: axis
+      POSTGRES_PASSWORD: axis
+      POSTGRES_DB: axis
+    ports: ["${AXIS_PUERTO_POSTGRES:-5433}:5432"]
+    volumes: [postgres:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U axis"]
+      interval: 2s
+      retries: 30
+
+  almacen:
+    image: chrislusf/seaweedfs:4.54
+    command: server -dir=/data -s3 -s3.port=8333 -ip.bind=0.0.0.0
+    ports: ["8333:8333"]
+    volumes: [almacen:/data]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8333/status || exit 1"]
+      interval: 2s
+      retries: 30
+
+  preparar:
+    build: .
+    image: axis-server:local
+    environment: *entorno
+    command: ["sh", "-c", "python -m herramientas.crear_buckets && alembic upgrade head"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      almacen: {condition: service_healthy}
+
+  api:
+    build: .
+    image: axis-server:local
+    environment:
+      <<: *entorno
+      AXIS_SEGUNDOS_ENTRE_RECARGAS_DE_MODELOS: "10"
+    ports: ["8000:8000"]
+    depends_on:
+      preparar: {condition: service_completed_successfully}
+
+  entrenar:
+    build: .
+    image: axis-server:local
+    profiles: [entrenamiento]
+    environment:
+      <<: *entorno
+      AXIS_DATOS_CRUDOS: /datos
+    volumes:
+      # Los datos de entrenamiento no están en el repo. En AWS vendrán de un bucket.
+      - ${AXIS_DATOS_CRUDOS:-../../datos-crudos}:/datos:ro
+      - ./.cache:/app/.cache
+    command: ["python", "-m", "herramientas.entrenar_documentos", "--subir"]
+    depends_on:
+      preparar: {condition: service_completed_successfully}
+
+volumes:
+  postgres:
+  almacen:
