@@ -1,0 +1,105 @@
+import random
+from decimal import Decimal
+
+from axis.compartido.dominio.motores import EntradaMotor, PartidaUbicada, Severidad
+from axis.compartido.dominio.partidas import Partida
+from axis.compartido.dominio.valores import Fase
+from axis.motores.precio_atipico.inferencia import MotorPrecioAtipico
+from axis.motores.precio_atipico.modelo import PrecioObservado, Umbrales, actividad, entrenar
+
+
+def base(r=None):
+    """Precios reales simulados: 12 obras, tres partidas con su precio típico y algo de ruido."""
+    r = r or random.Random(1)
+    tipicos = [
+        ("ELIMINACION DE MATERIAL EXCEDENTE CON EQUIPO", "m3", 14.5),
+        ("TRAZO Y REPLANTEO PRELIMINAR", "m2", 1.6),
+        ("ACERO CORRUGADO FY=4200 KG/CM2 GRADO 60", "kg", 6.5),
+    ]
+    return [
+        PrecioObservado(
+            f"{d} {r.choice(['', 'EN PISTAS', 'DE OBRA'])}".strip(),
+            u,
+            p * r.uniform(0.9, 1.1),
+            f"obra-{i}",
+        )
+        for i in range(12)
+        for d, u, p in tipicos
+    ]
+
+
+def motor():
+    modelo = entrenar(
+        base(),
+        distancia_maxima=0.6,
+        minimo_precios=5,
+        minimo_obras=3,
+        similitud_minima=0.5,
+        dispersion_minima=0.1,
+        umbrales=Umbrales(veces_minimas=1.5, desvios_ambar=3.5, desvios_rojo=6.0),
+    )
+    return MotorPrecioAtipico(modelo, "prueba")
+
+
+def partida(descripcion, unidad, precio, cantidad="10", cuadra=True):
+    precio_d, cantidad_d = Decimal(str(precio)), Decimal(cantidad)
+    return Partida(
+        3, "02.01", descripcion, unidad, (), cantidad_d, precio_d, cantidad_d * precio_d, cuadra
+    )
+
+
+async def evaluar(*partidas):
+    entrada = EntradaMotor(
+        "doc",
+        Fase.EXPEDIENTE,
+        None,
+        frozenset({"presupuesto"}),
+        tuple(PartidaUbicada(p, "presupuesto") for p in partidas),
+    )
+    return await motor().evaluar(entrada)
+
+
+async def test_un_precio_tres_veces_mayor_que_lo_usual_es_rojo_y_se_explica():
+    (hallazgo,) = await evaluar(partida("ELIMINACION DE MATERIAL EXCEDENTE", "m3", 45.0))
+
+    assert hallazgo.severidad is Severidad.ROJO
+    assert "más caro" in hallazgo.titulo
+    assert "12 obras" in hallazgo.explicacion
+    assert hallazgo.item == "02.01"
+    assert hallazgo.pagina == 3
+
+
+async def test_un_precio_normal_no_genera_hallazgo():
+    assert await evaluar(partida("ELIMINACION DE MATERIAL EXCEDENTE", "m3", 14.9)) == []
+
+
+async def test_tambien_avisa_si_es_demasiado_barato():
+    (hallazgo,) = await evaluar(partida("TRAZO Y REPLANTEO", "m2", 0.3))
+
+    assert "más barato" in hallazgo.titulo
+
+
+async def test_sin_partidas_parecidas_no_opina():
+    assert await evaluar(partida("SUMINISTRO DE BOMBA SUMERGIBLE", "und", 99999)) == []
+
+
+async def test_con_otra_unidad_no_compara():
+    # El mismo trabajo en otra unidad no es comparable (m3 contra m2).
+    assert await evaluar(partida("ELIMINACION DE MATERIAL EXCEDENTE", "m2", 45.0)) == []
+
+
+async def test_una_fila_que_no_cuadra_no_se_acusa():
+    # Si cantidad × precio no da el parcial, el precio leído puede ser un error de lectura.
+    assert (
+        await evaluar(partida("ELIMINACION DE MATERIAL EXCEDENTE", "m3", 45.0, cuadra=False)) == []
+    )
+
+
+async def test_las_partidas_globales_no_se_comparan():
+    assert await evaluar(partida("MOVILIZACION Y DESMOVILIZACION DE EQUIPOS", "glb", 99000)) == []
+
+
+def test_la_actividad_es_la_primera_palabra_con_contenido():
+    assert actividad("REMOCIÓN DE CARPETA ASFÁLTICA") == "remocion"
+    assert actividad("Nes 04 ELIMINACIÓN DE MATERIAL") == "eliminacion"
+    assert actividad("CARPETA ASFALTICA EN CALIENTE") == "carpeta"
