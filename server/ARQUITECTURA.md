@@ -18,8 +18,9 @@ server/
     aprendizaje/     obra terminada o paralizada → pruebas nuevas → reentrenar → promover
     arranque/        crea la API y el worker; el único lugar que conecta todo
   tests/             unitarias, contrato, integracion, api, modelos
+  herramientas/      entrenamiento, datos sintéticos, preparación local (no van en la API)
   migraciones/       Alembic
-  infra/             AWS CDK
+  infra/             Terraform (AWS)
 ```
 
 Cada contexto, salvo `motores`, `compartido` y `arranque`, es un hexágono con tres capas:
@@ -76,3 +77,27 @@ motores/<id_motor>/
   entrenamiento.py    solo en el worker: entrena, exporta a ONNX, devuelve métricas
   evaluacion/         conjunto dorado sintético y umbrales mínimos (los datos reales viven en S3)
 ```
+
+## Local hoy, AWS mañana
+
+Una sola imagen Docker sirve para todo. Cada pieza local tiene su par en AWS, y el código solo ve variables `AXIS_*`, así que pasar a AWS es cambiar valores, no código.
+
+| Local (`docker compose`) | AWS (Terraform) | Qué cambia |
+|---|---|---|
+| `api` (Granian + FastAPI) | ECS Fargate detrás de un ALB | nada; la misma imagen desde ECR |
+| `postgres` (pgvector 0.8.1, pg17) | RDS Postgres + RDS Proxy | `AXIS_BASE_DATOS_URL` |
+| `almacen` (SeaweedFS, API de S3) | S3: `axis-documentos`, `axis-modelos` | se quita `AXIS_S3_ENDPOINT` |
+| `preparar` (buckets + `alembic upgrade head`) | tarea ECS única en cada despliegue | Terraform crea los buckets |
+| `entrenar` | tarea ECS programada, en Spot | lee los datos de un bucket en vez de un volumen |
+| Tesseract dentro de la imagen | Textract | otro adaptador del puerto `MotorOcr` |
+| credenciales `local` | rol IAM de la tarea | ninguna clave en el código |
+
+## Cómo se lee un documento (`documentos/`)
+
+1. **Huella** (sin modelos, milisegundos). Se calcula el hash del archivo; si ya se analizó con los modelos vigentes, se devuelve el resultado guardado. Se reconoce el tipo real por el contenido, se leen los metadatos (programas, fechas, revisiones, firmas) y se decide si cada página es digital, escaneada, mixta o vacía.
+2. **Texto.** Las páginas digitales se leen directo. Solo las escaneadas pasan por OCR, en paralelo.
+3. **Partes.** Un modelo clasifica cada página por su tipo (memoria, metrados, valorización…), y las páginas seguidas del mismo tipo forman una parte.
+4. **Qué es.** Otro modelo mira la composición de partes y dice qué es el archivo completo y a qué fase pertenece. Si no coincide con la fase en la que se subió, la API avisa.
+5. **¿Fue editado?** Se reportan hechos observables, cada uno con su explicación y sus páginas. Además, un modelo de anomalías dice qué tan raro es el archivo frente a ~1 200 documentos reales de SEACE.
+
+Los modelos se entrenan con `herramientas/entrenar_documentos.py`, que usa documentos reales y sintéticos. El nombre del archivo sirve como etiqueta débil solo durante el entrenamiento. La API nunca mira el nombre.
