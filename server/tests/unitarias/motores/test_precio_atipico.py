@@ -1,17 +1,21 @@
+import math
 import random
 from decimal import Decimal
 
 from axis.compartido.dominio.motores import EntradaMotor, PartidaUbicada, Severidad
 from axis.compartido.dominio.partidas import Partida
 from axis.compartido.dominio.valores import Fase
-from axis.motores.precio_atipico.inferencia import MotorPrecioAtipico
+from axis.motores.precio_atipico.inferencia import MotorPrecioAtipico, severidad_de
 from axis.motores.precio_atipico.modelo import (
+    Comparacion,
+    Grupo,
     PrecioObservado,
     Umbrales,
     actividad,
     alcance,
     entrenar,
     medida,
+    objeto,
 )
 
 
@@ -169,3 +173,19 @@ def test_un_modelo_guardado_con_el_esquema_anterior_sigue_encontrando_sus_grupos
     del viejo.__dict__["esquema_clave"]
 
     assert viejo.comparar("TRAZO Y REPLANTEO PRELIMINAR", "m2", 1.6) is not None
+
+
+def test_el_objeto_salta_los_verbos_de_alcance():
+    assert objeto("SUMINISTRO E INSTALACION DE SEÑAL VERTICAL") == "senal"
+    assert objeto("SUMINISTRO Y COLOCACIÓN DE TUBERIA PVC") == "tuberia"
+    assert objeto("CURADO DE CONCRETO") == "curado"
+
+
+def test_con_un_parecido_debil_un_precio_muy_distinto_es_ambar_no_rojo():
+    grupo = Grupo("und", "SEÑAL DE SALIDA", 61, 7, math.log(9.56), 0.2, 8.6, 25.9)
+    umbrales = Umbrales(veces_minimas=2.5, desvios_ambar=3.0, desvios_rojo=5.0)
+    lejano = Comparacion(grupo, similitud=0.47, desvios=17.4, veces=32.2)
+    cercano = Comparacion(grupo, similitud=0.9, desvios=17.4, veces=32.2)
+
+    assert severidad_de(lejano, umbrales) is Severidad.AMBAR
+    assert severidad_de(cercano, umbrales) is Severidad.ROJO

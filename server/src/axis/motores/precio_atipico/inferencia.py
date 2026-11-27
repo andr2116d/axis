@@ -77,10 +77,15 @@ class MotorPrecioAtipico:
         )
 
 
+SIMILITUD_PARA_ROJO = 0.65
+
+
 def severidad_de(c: Comparacion, umbrales: Umbrales) -> Severidad | None:
     if max(c.veces, 1 / c.veces) < umbrales.veces_minimas:
         return None
-    if abs(c.desvios) >= umbrales.desvios_rojo:
+    # Rojo solo si la partida comparada es claramente la misma: con un parecido débil
+    # (una señal de tránsito frente a una señal de evacuación) la diferencia es una pregunta.
+    if abs(c.desvios) >= umbrales.desvios_rojo and c.similitud >= SIMILITUD_PARA_ROJO:
         return Severidad.ROJO
     if abs(c.desvios) >= umbrales.desvios_ambar:
         return Severidad.AMBAR

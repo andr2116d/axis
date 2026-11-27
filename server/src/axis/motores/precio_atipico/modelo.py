@@ -107,12 +107,28 @@ def medida(descripcion: str) -> str:
     return ""
 
 
+# El alcance ya va aparte en la clave: estas palabras no dicen qué objeto es la partida.
+_VERBOS_DE_ALCANCE = frozenset(
+    {"suministro", "instalacion", "colocacion", "provision", "montaje", "tendido", "inc", "incl"}
+)
+
+
+def objeto(descripcion: str) -> str:
+    """La primera palabra que dice qué es: "senal" en "SUMINISTRO E INSTALACION DE SEÑAL"."""
+    for palabra in _PALABRA.findall(normalizar_descripcion(descripcion)):
+        if palabra not in _VACIAS and palabra not in _VERBOS_DE_ALCANCE:
+            return str(palabra)
+    return actividad(descripcion)
+
+
 def clave_de_grupo(unidad: str, descripcion: str, esquema: int) -> str:
-    """Esquema 1: unidad y actividad. Esquema 2: además, alcance y medida."""
-    base = f"{unidad}|{actividad(descripcion)}"
+    """Esquema 1: unidad y actividad. 2: además, alcance y medida. 3: el objeto en vez de la
+    primera palabra, que en "suministro e instalación de…" no dice qué se compara."""
     if esquema == 1:
-        return base
-    return f"{base}|{alcance(descripcion)}|{medida(descripcion)}"
+        return f"{unidad}|{actividad(descripcion)}"
+    if esquema == 2:  # noqa: PLR2004
+        return f"{unidad}|{actividad(descripcion)}|{alcance(descripcion)}|{medida(descripcion)}"
+    return f"{unidad}|{objeto(descripcion)}|{alcance(descripcion)}|{medida(descripcion)}"
 
 
 def normalizar_descripcion(texto: str) -> str:

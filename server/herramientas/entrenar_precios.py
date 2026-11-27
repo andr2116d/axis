@@ -51,8 +51,8 @@ CANDIDATOS = [
     for v in (1.5, 2.0, 2.5)
 ]
 TOLERANCIA_PROMOCION = 0.02
-# Agrupa también por alcance (suministro, instalación) y medida (DN, f'c, espesor).
-ESQUEMA_CLAVE = 2
+# Agrupa por objeto, alcance (suministro, instalación) y medida (DN, f'c, espesor).
+ESQUEMA_CLAVE = 3
 
 type Metricas = dict[str, Any]
 
