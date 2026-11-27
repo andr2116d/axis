@@ -26,7 +26,7 @@ export function CargaExpediente({ subidaDirecta }: { subidaDirecta: boolean }) {
 
   return (
     <div className="upload-section" id="cargar" tabIndex={-1}>
-      <div className="section-heading"><h2>Sube un expediente</h2><p>Agrupa los documentos de una obra en una sola revisión.</p></div>
+      <div className="section-heading"><h2>Sube un expediente</h2><p>El expediente completo o una parte. Todos los modelos lo revisan y ves qué encontró cada uno.</p></div>
       <SelectorArchivos archivos={archivos} alCambiar={setArchivos} titulo="Arrastra tus archivos aquí" ayuda="PDF, Excel o Word" />
       {error && <p className="form-error" role="alert">{error}</p>}
       {archivos.length > 0 && (

@@ -10,6 +10,7 @@ const SECCIONES: { href: string; texto: string; fase?: string; icono: NombreIcon
   { href: '/seleccion', texto: 'Selección', fase: '2', icono: 'user', activa: (r) => r.startsWith('/seleccion') },
   { href: '/ejecucion', texto: 'Ejecución', fase: '3', icono: 'building', activa: (r) => r.startsWith('/ejecucion') },
   { href: '/obras', texto: 'Aprendizaje', icono: 'layers', activa: (r) => r.startsWith('/obras') || r.startsWith('/pruebas') },
+  { href: '/normativa', texto: 'Normativa', icono: 'file', activa: (r) => r.startsWith('/normativa') },
   { href: '/como-funciona', texto: 'Cómo funciona', icono: 'list', activa: (r) => r.startsWith('/como-funciona') },
 ];
 

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { listarExpedientes, listarObras, listarPruebas } from '@/servidor/almacen';
+import { listarEjecucion, listarExpedientes, listarObras, listarPruebas } from '@/servidor/almacen';
 import { usaBlob } from '@/servidor/respaldo';
 import { RegistroObra } from '@/componentes/obras/RegistroObra';
 import { Icono } from '@/componentes/Icono';
@@ -15,7 +15,11 @@ export default async function PaginaObras({ searchParams }: { searchParams: Prom
   const params = await searchParams;
   const esc = escenarioPorId(params.escenario);
   const demo = esc ? { archivo: esc.obra.archivo, via: esc.original.via, situacion: esc.situacion } : undefined;
-  const [expedientes, obras, pruebas] = await Promise.all([listarExpedientes(), listarObras(), listarPruebas()]);
+  const [expedientes, obras, pruebas, enCurso] = await Promise.all([listarExpedientes(), listarObras(), listarPruebas(), listarEjecucion()]);
+  // Entregables de obras en curso que traen algo que el expediente no previó y aún no se aprendió.
+  const porAprender = esc ? [] : enCurso.flatMap((o) => o.solicitudes
+    .filter((s) => s.aprendizaje?.estado === 'pendiente' || s.aprendizaje?.estado === 'pospuesto')
+    .map((s) => ({ o, s })));
   const porId = new Map(expedientes.map((e) => [e.id, e]));
   const pruebaPorId = new Map(pruebas.map((p) => [p.id, p]));
   // En la demo solo se muestra la obra de quien la recorre.
@@ -40,6 +44,21 @@ export default async function PaginaObras({ searchParams }: { searchParams: Prom
         <li><span>3</span>Generar y validar la prueba</li>
         <li><span>4</span>Aplicarla en nuevas revisiones</li>
       </ol>
+      {porAprender.length > 0 && (
+        <section className="content-panel por-aprender-lista">
+          <h2>Encontrado en obras en ejecución</h2>
+          <p>Entregables que traen algo que su expediente no previó. Puedes convertirlos en prueba ahora, sin esperar el informe final.</p>
+          <ul>
+            {porAprender.map(({ o, s }) => (
+              <li key={s.id}>
+                <Icono nombre="layers" tamano={17} />
+                <span><b>{o.nombre}</b> · solicitud N.° {s.numero}: {s.analisis.condiciones.filter((c) => !c.previsto).map((c) => c.nombre.split(' (')[0].split(':')[0].toLowerCase()).join(', ')}</span>
+                <Link className="btn secondary" href={`/ejecucion/${o.id}#sol-${s.id}`}>Revisar</Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <div className="learn-grid">
         {esc && params.obra ? (
           <section className="content-panel learn-input">

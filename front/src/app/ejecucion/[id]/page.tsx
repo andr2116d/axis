@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { leerEjecucion, leerExpediente } from '@/servidor/almacen';
+import { leerEjecucion, leerExpediente, listarPruebas } from '@/servidor/almacen';
+import { pruebasConocidas } from '@/servidor/aprendizaje/biblioteca';
+import { AvisoAprendizaje } from '@/componentes/ejecucion/Aprendizaje';
 import { usaBlob } from '@/servidor/respaldo';
 import { ESCENARIOS } from '@/servidor/aprendizaje/escenarios';
 import { NuevaSolicitud, TarjetaSolicitud } from '@/componentes/ejecucion/Solicitudes';
@@ -24,6 +26,11 @@ export default async function PaginaObra({ params }: { params: Promise<{ id: str
   const plazos = pendientes.flatMap((s) => s.analisis.plazos.map((p) => ({ ...p, s }))).sort((a, b) => a.vence.localeCompare(b.vence));
   const deficiencias = [...new Set(o.solicitudes.flatMap((s) => s.analisis.deficiencias))];
   const solicitudes = [...o.solicitudes].reverse();
+  const todas = await listarPruebas();
+  const ids = new Set(o.solicitudes.flatMap((s) => s.aprendizaje?.pruebas ?? []));
+  const pruebas = todas.filter((p) => ids.has(p.id));
+  const existentes = pruebasConocidas(todas).filter((x) => x.estado === 'activa').map(({ id, nombre }) => ({ id, nombre }));
+  const porAprender = o.solicitudes.filter((s) => s.aprendizaje?.estado === 'pendiente' || s.aprendizaje?.estado === 'pospuesto').length;
   return (
     <>
       <div className="review-breadcrumb"><Link className="back" href="/ejecucion"><Icono nombre="back" tamano={17} /> Control de obra</Link></div>
@@ -42,6 +49,8 @@ export default async function PaginaObra({ params }: { params: Promise<{ id: str
         <div className="avance"><span>Plazo transcurrido</span><b>{transcurrido} %</b><i style={{ width: `${transcurrido}%` }} /></div>
         <div><span>Solicitudes pendientes</span><b>{pendientes.length}</b></div>
       </div>
+      {porAprender > 0 && <p className="por-aprender-banda"><Icono nombre="layers" tamano={17} /><span><b>{porAprender === 1 ? 'Un entregable trae' : `${porAprender} entregables traen`} algo que el expediente no previó.</b> Conviértelo en prueba desde la solicitud.</span></p>}
+      <AvisoAprendizaje obraId={o.id} solicitudes={o.solicitudes} pruebas={pruebas} existentes={existentes} expediente={e?.clave ?? 'original'} />
 
       {plazos.length > 0 && (
         <section className="bloque">
@@ -62,7 +71,7 @@ export default async function PaginaObra({ params }: { params: Promise<{ id: str
 
       <div className="ejecucion-grid">
         <div className="solicitudes">
-          {solicitudes.length ? solicitudes.map((s) => <TarjetaSolicitud key={s.id} obraId={o.id} s={s} />) : <p className="empty-line">Aún no hay solicitudes. Cuando el contratista anote una ampliación, consulta, adicional o valorización, analízala aquí.</p>}
+          {solicitudes.length ? solicitudes.map((s) => <TarjetaSolicitud key={s.id} obraId={o.id} s={s} pruebas={pruebas} existentes={existentes} />) : <p className="empty-line">Aún no hay solicitudes. Cuando el contratista anote una ampliación, consulta, adicional o valorización, analízala aquí.</p>}
         </div>
         <div>
           <NuevaSolicitud obraId={o.id} subidaDirecta={usaBlob} ejemplos={ejemplos} />
@@ -70,7 +79,7 @@ export default async function PaginaObra({ params }: { params: Promise<{ id: str
             <section className="content-panel lo-no-previsto">
               <h2>Lo que el expediente no previó</h2>
               <ul>{deficiencias.map((d) => <li key={d}>{d}</li>)}</ul>
-              <p>Si se aprueba un adicional por deficiencias del expediente, la entidad debe informarlo al Tribunal y a la Contraloría (Ley 32069, art. 64.5). Al terminar o paralizarse la obra, registra su informe final: Axis aprende de esto para los próximos expedientes.</p>
+              <p>Si se aprueba un adicional por deficiencias del expediente, la entidad debe informarlo al Tribunal y a la Contraloría (Ley 32069, art. 64.5). Axis te ofrece aprender de cada entregable en cuanto lo detecta; al terminar o paralizarse la obra, el informe final completa el aprendizaje.</p>
               <Link className="btn primary" href={`/obras?expediente=${o.expedienteId}`}><Icono nombre="layers" tamano={17} />Registrar el informe final</Link>
             </section>
           )}
