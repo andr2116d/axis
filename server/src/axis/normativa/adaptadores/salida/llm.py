@@ -1,4 +1,6 @@
-"""El LLM, por Amazon Bedrock, lee la norma y elige qué fragmentos aplican al caso.
+"""El LLM lee la norma y elige qué fragmentos aplican al caso.
+
+Sirve igual con la API directa que con Amazon Bedrock: cambia el cliente, no la lectura.
 
 La ley entera va en el prompt de sistema con caché de 1 hora: es el mismo texto en cada
 consulta, así que después de la primera se lee desde la caché (más rápido y ~10 veces más
@@ -11,7 +13,7 @@ from typing import Literal
 import anthropic
 import botocore.exceptions
 import structlog
-from anthropic import AsyncAnthropicBedrockMantle
+from anthropic import AsyncAnthropic, AsyncAnthropicBedrockMantle, omit
 from anthropic.types.beta import BetaTextBlockParam
 from pydantic import BaseModel, Field
 
@@ -60,13 +62,23 @@ class RespuestaLector(BaseModel):
     citas: list[CitaLector] = Field(default_factory=list)
 
 
-class LectorNormativaBedrock:
+class LectorNormativaLLM:
     def __init__(
-        self, cliente: AsyncAnthropicBedrockMantle, *, modelo: str, esfuerzo: Esfuerzo
+        self,
+        cliente: AsyncAnthropic | AsyncAnthropicBedrockMantle,
+        *,
+        modelo: str,
+        esfuerzo: Esfuerzo,
+        respaldo_en_servidor: bool = False,
     ) -> None:
+        """`respaldo_en_servidor`: si el LLM declina, la API reintenta con otro modelo.
+
+        Solo existe en la API directa del proveedor; en Bedrock lo hace el middleware del cliente.
+        """
         self._cliente = cliente
         self._modelo = modelo
         self._esfuerzo = esfuerzo
+        self._respaldo = respaldo_en_servidor
 
     @property
     def nombre(self) -> str:
@@ -82,6 +94,8 @@ class LectorNormativaBedrock:
                 thinking={"type": "adaptive"},
                 output_config={"effort": self._esfuerzo},
                 output_format=RespuestaLector,
+                betas=["server-side-fallback-2026-07-01"] if self._respaldo else omit,
+                fallbacks="default" if self._respaldo else omit,
             )
         except (anthropic.AnthropicError, botocore.exceptions.BotoCoreError) as error:
             raise LectorNoDisponible(f"{type(error).__name__}: {error}"[:300]) from error

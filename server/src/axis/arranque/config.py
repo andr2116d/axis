@@ -30,8 +30,10 @@ class Config(BaseSettings):
     segundos_entre_recargas_de_modelos: int = 60
     log_json: bool = True
 
-    # El LLM de Bedrock lee la normativa. "ninguno": solo búsqueda por palabras.
-    lector_normativa: Literal["bedrock", "ninguno"] = "bedrock"
+    # Quién da acceso al LLM para leer la normativa: la API directa del proveedor
+    # o Amazon Bedrock. "ninguno": solo búsqueda por palabras.
+    lector_normativa: Literal["api", "bedrock", "ninguno"] = "bedrock"
+    modelo_llm_api: str = "claude-opus-5-5"
     bedrock_region: str = "us-east-1"
     # En local, el perfil de ~/.aws; en AWS se deja vacío y se usa el rol de la tarea ECS.
     aws_perfil: str | None = None

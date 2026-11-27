@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 import aioboto3
 import structlog
-from anthropic import AsyncAnthropicBedrockMantle, BetaRefusalFallbackMiddleware
+from anthropic import AsyncAnthropic, AsyncAnthropicBedrockMantle, BetaRefusalFallbackMiddleware
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from axis.arranque.catalogo import CatalogoRecargable
@@ -28,7 +28,7 @@ class Recursos:
     s3: ClienteS3
     modelos_documentos: ProveedorModelosRecargable
     motores: CatalogoRecargable
-    llm: AsyncAnthropicBedrockMantle | None
+    llm: AsyncAnthropic | AsyncAnthropicBedrockMantle | None
     _pila: AsyncExitStack
     _recarga: asyncio.Task[None] | None = None
 
@@ -76,9 +76,12 @@ class Recursos:
         await self._pila.aclose()
 
 
-def _cliente_llm(config: Config) -> AsyncAnthropicBedrockMantle | None:
+def _cliente_llm(config: Config) -> AsyncAnthropic | AsyncAnthropicBedrockMantle | None:
     if config.lector_normativa == "ninguno":
         return None
+    if config.lector_normativa == "api":
+        # La clave sale del entorno: nunca del código ni de los logs.
+        return AsyncAnthropic(timeout=config.segundos_lector_normativa, max_retries=2)
     return AsyncAnthropicBedrockMantle(
         aws_region=config.bedrock_region,
         aws_profile=config.aws_perfil or None,

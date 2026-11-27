@@ -227,7 +227,8 @@ Cómo se lee la estructura:
 **Por hallazgo:** `GET /expedientes/{id}/hallazgos/{clave}/normativa` arma la consulta con el hallazgo (obra, sección, explicación y factores) y devuelve los artículos en los que el evaluador puede apoyar la observación. La ruta vive en `arranque/rutas_compuestas.py`, porque une `expediente` con `normativa`.
 
 **Configuración:**
-- `AXIS_LECTOR_NORMATIVA` (`bedrock` | `ninguno`), `AXIS_MODELO_LLM`, `AXIS_MODELO_LLM_RESPALDO` y `AXIS_ESFUERZO_NORMATIVA` (por defecto `medium`).
+- `AXIS_LECTOR_NORMATIVA` (`api` | `bedrock` | `ninguno`), `AXIS_MODELO_LLM` (Bedrock), `AXIS_MODELO_LLM_API` (API directa del proveedor, `claude-opus-5-5`), `AXIS_MODELO_LLM_RESPALDO` y `AXIS_ESFUERZO_NORMATIVA` (por defecto `medium`).
+- Con `api`, la clave sale del entorno del SDK. En local va en `server/.env.local`, que docker compose lee y git ignora. Si el LLM declina, la API reintenta con otro modelo (`fallbacks: "default"`); en Bedrock eso lo hace el middleware del cliente.
 - En AWS se usa el rol IAM de la tarea.
 - En local, `docker compose` monta `~/.aws`; exporta `AXIS_AWS_PERFIL` con tu perfil SSO.
 

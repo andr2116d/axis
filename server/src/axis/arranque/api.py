@@ -51,7 +51,7 @@ from axis.expediente.aplicacion.casos_de_uso.gestionar import (
 from axis.expediente.aplicacion.casos_de_uso.revisar_hallazgo import RevisarHallazgo
 from axis.normativa.adaptadores.entrada.http import ERRORES_HTTP as ERRORES_NORMATIVA
 from axis.normativa.adaptadores.entrada.http import crear_router as router_normativa
-from axis.normativa.adaptadores.salida.bedrock import LectorNormativaBedrock
+from axis.normativa.adaptadores.salida.llm import LectorNormativaLLM
 from axis.normativa.adaptadores.salida.postgres import (
     CacheRespuestasPostgres,
     RepositorioNormativaPostgres,
@@ -188,9 +188,13 @@ def create_app(config: Config | None = None) -> FastAPI:
 
     def citar_normativa() -> CitarNormativa:
         r = recursos()
+        directo = config.lector_normativa == "api"
         lector = (
-            LectorNormativaBedrock(
-                r.llm, modelo=config.modelo_llm, esfuerzo=config.esfuerzo_normativa
+            LectorNormativaLLM(
+                r.llm,
+                modelo=config.modelo_llm_api if directo else config.modelo_llm,
+                esfuerzo=config.esfuerzo_normativa,
+                respaldo_en_servidor=directo,
             )
             if r.llm is not None
             else None
@@ -232,7 +236,13 @@ def create_app(config: Config | None = None) -> FastAPI:
             "modelos_documentos": modelos.version if modelos else None,
             "motores": ", ".join(f"{m.ficha.id}@{m.ficha.version}" for m in r.motores.motores())
             or None,
-            "lector_normativa": config.modelo_llm if r.llm is not None else None,
+            "lector_normativa": (
+                None
+                if r.llm is None
+                else config.modelo_llm_api
+                if config.lector_normativa == "api"
+                else config.modelo_llm
+            ),
         }
 
     return app

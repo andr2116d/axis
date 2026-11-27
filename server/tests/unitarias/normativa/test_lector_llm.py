@@ -4,9 +4,9 @@ import anthropic
 import httpx
 import pytest
 
-from axis.normativa.adaptadores.salida.bedrock import (
+from axis.normativa.adaptadores.salida.llm import (
     CitaLector,
-    LectorNormativaBedrock,
+    LectorNormativaLLM,
     RespuestaLector,
 )
 from axis.normativa.aplicacion.dto import ConsultaLector
@@ -50,7 +50,7 @@ def respuesta(parada="end_turn", citas=None):
 
 
 def lector(cliente):
-    return LectorNormativaBedrock(cliente, modelo="anthropic.claude-opus-5-5", esfuerzo="medium")
+    return LectorNormativaLLM(cliente, modelo="anthropic.claude-opus-5-5", esfuerzo="medium")
 
 
 async def test_la_ley_va_en_el_sistema_con_cache_y_el_caso_en_el_mensaje():
@@ -101,3 +101,15 @@ async def test_devuelve_las_citas_propuestas():
 async def test_si_no_hay_respuesta_util_avisa_que_el_lector_no_esta(resultado):
     with pytest.raises(LectorNoDisponible):
         await lector(ClienteFalso(resultado)).leer(CONSULTA)
+
+
+async def test_con_la_api_directa_pide_el_respaldo_del_servidor():
+    cliente = ClienteFalso(respuesta(citas=[]))
+
+    await LectorNormativaLLM(
+        cliente, modelo="claude-opus-5-5", esfuerzo="medium", respaldo_en_servidor=True
+    ).leer(CONSULTA)
+
+    pedido = cliente.pedidos[0]
+    assert pedido["fallbacks"] == "default"
+    assert pedido["betas"] == ["server-side-fallback-2026-07-01"]

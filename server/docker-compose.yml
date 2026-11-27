@@ -49,6 +49,10 @@ services:
   api:
     build: .
     image: axis-server:local
+    # Claves y elecciones locales (la clave del LLM, AXIS_LECTOR_NORMATIVA): fuera de git.
+    env_file:
+      - path: .env.local
+        required: false
     environment:
       <<: *entorno
       AXIS_SEGUNDOS_ENTRE_RECARGAS_DE_MODELOS: "10"
