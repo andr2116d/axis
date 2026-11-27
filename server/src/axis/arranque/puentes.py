@@ -3,12 +3,18 @@
 from collections.abc import Mapping, Sequence
 from uuid import UUID
 
-from axis.compartido.dominio.motores import EntradaMotor, PartidaUbicada, ResultadoMotor
+from axis.compartido.dominio.motores import (
+    EntradaMotor,
+    Hallazgo,
+    PartidaUbicada,
+    ResultadoMotor,
+)
 from axis.compartido.dominio.valores import Fase
 from axis.documentos.aplicacion.puertos import RepositorioDocumentos
 from axis.documentos.dominio.valores import IdDocumento
 from axis.expediente.aplicacion.dto import ResultadoDeMotores, ResumenDocumento
 from axis.expediente.dominio.entidades import Expediente, OmisionMotor, Seccion
+from axis.normativa.aplicacion.dto import OrdenCitar
 from axis.orquestador.aplicacion.casos_de_uso.evaluar import EvaluarEntrada
 from axis.orquestador.aplicacion.puertos import CatalogoMotores
 from axis.orquestador.dominio.errores import FuenteNoEncontrada
@@ -129,3 +135,24 @@ class EvaluadorDesdeOrquestador:
             partidas=tuple(partidas),
             firmas={s.etiqueta: s.id_documento for s in secciones},
         )
+
+
+def consulta_de_hallazgo(expediente: Expediente, hallazgo: Hallazgo) -> OrdenCitar:
+    """Lo que el evaluador le preguntaría a un abogado sobre este hallazgo."""
+    factores = "\n".join(f"- {f.nombre}: {f.valor}" for f in hallazgo.factores)
+    contexto = (
+        f"Obra: {expediente.nombre_obra}"
+        + (f" (tipología: {expediente.tipologia})" if expediente.tipologia else "")
+        + "\nFase: expediente técnico, en revisión por la unidad ejecutora."
+        + f"\nSección: {hallazgo.seccion or 'sin sección'}"
+        + f"\nHallazgo: {hallazgo.titulo}\n{hallazgo.explicacion}\n{factores}"
+    )
+    return OrdenCitar(
+        pregunta=(
+            "¿Qué disposiciones de la normativa de contrataciones públicas aplican a este "
+            "hallazgo del expediente técnico, y en qué se apoya el evaluador para observarlo "
+            "o pedir que se corrija o se sustente?"
+        ),
+        contexto=contexto,
+        maximo_citas=4,
+    )

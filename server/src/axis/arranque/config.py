@@ -1,4 +1,5 @@
 import os
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -28,6 +29,17 @@ class Config(BaseSettings):
     segundos_por_motor: float = 10.0
     segundos_entre_recargas_de_modelos: int = 60
     log_json: bool = True
+
+    # El LLM de Bedrock lee la normativa. "ninguno": solo búsqueda por palabras.
+    lector_normativa: Literal["bedrock", "ninguno"] = "bedrock"
+    bedrock_region: str = "us-east-1"
+    # En local, el perfil de ~/.aws; en AWS se deja vacío y se usa el rol de la tarea ECS.
+    aws_perfil: str | None = None
+    modelo_llm: str = "anthropic.claude-opus-5-5"
+    # Si el LLM declina una consulta, la reintenta este modelo (Bedrock no lo hace solo).
+    modelo_llm_respaldo: str = "anthropic.claude-opus-4-8"
+    esfuerzo_normativa: Literal["low", "medium", "high", "xhigh", "max"] = "medium"
+    segundos_lector_normativa: float = 90.0
 
     @property
     def limite_subida_bytes(self) -> int:

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 import aioboto3
 import structlog
+from anthropic import AsyncAnthropicBedrockMantle, BetaRefusalFallbackMiddleware
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from axis.arranque.catalogo import CatalogoRecargable
@@ -27,6 +28,7 @@ class Recursos:
     s3: ClienteS3
     modelos_documentos: ProveedorModelosRecargable
     motores: CatalogoRecargable
+    llm: AsyncAnthropicBedrockMantle | None
     _pila: AsyncExitStack
     _recarga: asyncio.Task[None] | None = None
 
@@ -49,7 +51,10 @@ class Recursos:
             )
         motores = CatalogoRecargable(s3, config.s3_bucket_modelos)
         await motores.refrescar()
-        recursos = cls(config, motor_bd, s3, modelos, motores, pila)
+        llm = _cliente_llm(config)
+        if llm is not None:
+            pila.push_async_callback(llm.close)
+        recursos = cls(config, motor_bd, s3, modelos, motores, llm, pila)
         recursos._recarga = asyncio.create_task(recursos._recargar_periodicamente())
         return recursos
 
@@ -69,3 +74,15 @@ class Recursos:
             with contextlib.suppress(asyncio.CancelledError):
                 await self._recarga
         await self._pila.aclose()
+
+
+def _cliente_llm(config: Config) -> AsyncAnthropicBedrockMantle | None:
+    if config.lector_normativa == "ninguno":
+        return None
+    return AsyncAnthropicBedrockMantle(
+        aws_region=config.bedrock_region,
+        aws_profile=config.aws_perfil or None,
+        timeout=config.segundos_lector_normativa,
+        max_retries=2,
+        middleware=[BetaRefusalFallbackMiddleware([{"model": config.modelo_llm_respaldo}])],
+    )

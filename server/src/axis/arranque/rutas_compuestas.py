@@ -6,14 +6,18 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, UploadFile
 
+from axis.arranque.puentes import consulta_de_hallazgo
 from axis.compartido.dominio.valores import Fase
 from axis.documentos.aplicacion.casos_de_uso.analizar_documento import AnalizarDocumento
 from axis.documentos.aplicacion.dto import OrdenAnalizarDocumento
 from axis.documentos.dominio.errores import ArchivoDemasiadoGrande
 from axis.expediente.adaptadores.entrada.http import ExpedienteSalida, salida_expediente
 from axis.expediente.aplicacion.casos_de_uso.evaluar_expediente import EvaluarExpediente
-from axis.expediente.aplicacion.casos_de_uso.gestionar import AdjuntarDocumento
+from axis.expediente.aplicacion.casos_de_uso.gestionar import AdjuntarDocumento, ObtenerExpediente
 from axis.expediente.dominio.entidades import IdExpediente
+from axis.expediente.dominio.errores import HallazgoNoEncontrado
+from axis.normativa.adaptadores.entrada.http import RespuestaSalida, salida_respuesta
+from axis.normativa.aplicacion.casos_de_uso.citar import CitarNormativa
 
 
 def crear_router(
@@ -42,5 +46,31 @@ def crear_router(
         )
         await adjuntar_caso.ejecutar(IdExpediente(id_expediente), str(analisis.documento.id))
         return salida_expediente(await evaluar_caso.ejecutar(IdExpediente(id_expediente)))
+
+    return router
+
+
+def crear_router_normativa(
+    obtener: Callable[[], ObtenerExpediente], citar: Callable[[], CitarNormativa]
+) -> APIRouter:
+    router = APIRouter(tags=["normativa"])
+
+    @router.get("/expedientes/{id_expediente}/hallazgos/{clave}/normativa")
+    async def normativa_del_hallazgo(
+        id_expediente: UUID,
+        clave: str,
+        obtener_caso: Annotated[ObtenerExpediente, Depends(obtener)],
+        citar_caso: Annotated[CitarNormativa, Depends(citar)],
+    ) -> RespuestaSalida:
+        """Los artículos en los que el evaluador apoya la observación de este hallazgo."""
+        vista = await obtener_caso.ejecutar(IdExpediente(id_expediente))
+        evaluacion = vista.ultima_evaluacion
+        hallazgo = next(
+            (h for h in (evaluacion.hallazgos if evaluacion else ()) if h.clave == clave), None
+        )
+        if hallazgo is None:
+            raise HallazgoNoEncontrado(f"el hallazgo {clave} no está en la última evaluación")
+        orden = consulta_de_hallazgo(vista.expediente, hallazgo)
+        return salida_respuesta(await citar_caso.ejecutar(orden))
 
     return router

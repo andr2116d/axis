@@ -52,6 +52,11 @@ services:
     environment:
       <<: *entorno
       AXIS_SEGUNDOS_ENTRE_RECARGAS_DE_MODELOS: "10"
+      # El LLM de Bedrock con el perfil SSO del equipo (`aws sso login --profile …`).
+      # Sin perfil, la normativa responde solo con búsqueda por palabras.
+      AXIS_AWS_PERFIL: ${AXIS_AWS_PERFIL:-}
+    volumes:
+      - ${HOME}/.aws:/home/axis/.aws:ro
     ports: ["8000:8000"]
     depends_on:
       preparar: {condition: service_completed_successfully}

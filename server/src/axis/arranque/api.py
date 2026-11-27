@@ -15,6 +15,7 @@ from axis.arranque.puentes import (
 )
 from axis.arranque.recursos import Recursos
 from axis.arranque.rutas_compuestas import crear_router as router_compuesto
+from axis.arranque.rutas_compuestas import crear_router_normativa
 from axis.compartido.dominio.errores import ErrorAxis
 from axis.compartido.infraestructura.logs import configurar_logs
 from axis.compartido.infraestructura.reloj import RelojSistema
@@ -48,6 +49,15 @@ from axis.expediente.aplicacion.casos_de_uso.gestionar import (
     ObtenerExpediente,
 )
 from axis.expediente.aplicacion.casos_de_uso.revisar_hallazgo import RevisarHallazgo
+from axis.normativa.adaptadores.entrada.http import ERRORES_HTTP as ERRORES_NORMATIVA
+from axis.normativa.adaptadores.entrada.http import crear_router as router_normativa
+from axis.normativa.adaptadores.salida.bedrock import LectorNormativaBedrock
+from axis.normativa.adaptadores.salida.postgres import (
+    CacheRespuestasPostgres,
+    RepositorioNormativaPostgres,
+)
+from axis.normativa.aplicacion.casos_de_uso.citar import CitarNormativa
+from axis.normativa.aplicacion.casos_de_uso.consultar import ConsultarNormas
 from axis.orquestador.adaptadores.entrada.http import ERRORES_HTTP as ERRORES_ORQUESTADOR
 from axis.orquestador.adaptadores.entrada.http import crear_router as router_orquestador
 from axis.orquestador.aplicacion.casos_de_uso.evaluar import EvaluarDocumento, EvaluarEntrada
@@ -58,6 +68,7 @@ ERRORES_HTTP: dict[type[ErrorAxis], int] = {
     **ERRORES_DOCUMENTOS,
     **ERRORES_ORQUESTADOR,
     **ERRORES_EXPEDIENTE,
+    **ERRORES_NORMATIVA,
 }
 
 
@@ -158,6 +169,34 @@ def create_app(config: Config | None = None) -> FastAPI:
             analizar_documento, adjuntar_documento, evaluar_expediente, config.limite_subida_bytes
         )
     )
+
+    def normas() -> RepositorioNormativaPostgres:
+        return RepositorioNormativaPostgres(recursos().motor_bd)
+
+    def citar_normativa() -> CitarNormativa:
+        r = recursos()
+        lector = (
+            LectorNormativaBedrock(
+                r.llm, modelo=config.modelo_llm, esfuerzo=config.esfuerzo_normativa
+            )
+            if r.llm is not None
+            else None
+        )
+        repositorio = normas()
+        return CitarNormativa(
+            repositorio=repositorio,
+            lector=lector,
+            cache=CacheRespuestasPostgres(r.motor_bd, repositorio),
+        )
+
+    app.include_router(
+        router_normativa(citar_normativa, lambda: ConsultarNormas(repositorio=normas()))
+    )
+    app.include_router(
+        crear_router_normativa(
+            lambda: ObtenerExpediente(repositorio=expedientes()), citar_normativa
+        )
+    )
     _registrar_errores(app)
     _registrar_medicion(app)
 
@@ -170,6 +209,7 @@ def create_app(config: Config | None = None) -> FastAPI:
             "modelos_documentos": modelos.version if modelos else None,
             "motores": ", ".join(f"{m.ficha.id}@{m.ficha.version}" for m in r.motores.motores())
             or None,
+            "lector_normativa": config.modelo_llm if r.llm is not None else None,
         }
 
     return app
