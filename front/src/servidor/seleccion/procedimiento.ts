@@ -1,4 +1,6 @@
 import { fechasEnTexto } from '@/dominio/fechas';
+import { conVias } from '../motores/identidad';
+import { frase } from '../texto';
 
 // Los datos del procedimiento de selección están en las bases (y en parte en cada oferta):
 // entidad, nomenclatura, objeto, valor referencial y fecha de la buena pro.
@@ -34,7 +36,7 @@ export function datosDelProcedimiento(texto: string): DatosProcedimiento {
   const textoBuenaPro = valor(t, /(?:OTORGAMIENTO\s+DE\s+LA\s+BUENA\s+PRO|BUENA\s+PRO)\s*[:：]?\s*([^\n]{6,40})/i);
   const fechaBuenaPro = textoBuenaPro ? fechasEnTexto(textoBuenaPro).find((f) => !f.fecha.startsWith('????'))?.fecha : undefined;
   const procedimiento = /ABREVIADA/i.test(nomenclatura ?? '') || /PROCEDIMIENTO\s*[:：][^\n]*ABREVIADA/i.test(t) ? 'abreviada' : /LICITACI[OÓ]N\s+P[UÚ]BLICA/i.test(t) ? 'licitacion' : undefined;
-  return { nomenclatura, objeto, entidad, valorReferencial, fechaBuenaPro, procedimiento };
+  return { nomenclatura, objeto: objeto && objeto === objeto.toUpperCase() ? conVias(frase(objeto)) : objeto, entidad, valorReferencial, fechaBuenaPro, procedimiento };
 }
 
 /** Combina lo que trae cada documento: gana el primero que trae el dato (las bases van primero). */

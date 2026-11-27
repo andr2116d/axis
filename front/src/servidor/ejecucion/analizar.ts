@@ -198,7 +198,9 @@ function causalEn(texto: string): AnalisisSolicitud['causal'] {
 }
 
 function montoEn(texto: string): number | null {
-  const m = /S\/\.?\s?(\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?|\d{4,}(?:\.\d{1,2})?)/.exec(texto);
+  // Un informe de adicional desglosa partidas y cierra con el total: el total manda.
+  const cifra = String.raw`S\/\.?\s?(\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?|\d{4,}(?:\.\d{1,2})?)`;
+  const m = new RegExp(String.raw`TOTAL[^\n]{0,80}?` + cifra, 'i').exec(texto) ?? new RegExp(cifra).exec(texto);
   if (!m) return null;
   const n = Number(m[1].replace(/,/g, ''));
   return Number.isFinite(n) && n > 0 ? n : null;

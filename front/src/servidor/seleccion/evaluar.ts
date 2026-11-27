@@ -201,7 +201,7 @@ function recomendar(p: Pick<ProcesoSeleccion, 'postores' | 'minimoParticipacion'
     if (delGanador.length) {
       out.push({
         para: 'DEC (dependencia encargada de las contrataciones)',
-        texto: `Dentro de los 10 días hábiles siguientes al consentimiento de la buena pro, iniciar la verificación posterior de la oferta de ${g.nombre}, con prioridad en: ${delGanador.map((s) => s.titulo.replace(`${g.nombre}: `, '').toLowerCase()).join('; ')}. Si se comprueba información inexacta o falsa, se puede declarar la nulidad de la buena pro o del contrato y se comunica al Tribunal.`,
+        texto: `Dentro de los 10 días hábiles siguientes al consentimiento de la buena pro, iniciar la verificación posterior de la oferta de ${g.nombre}, con prioridad en: ${delGanador.map((s) => s.titulo.replace(`${g.nombre}: `, '').replace(/^\p{Lu}(?=\p{Ll})/u, (c) => c.toLowerCase())).join('; ')}. Si se comprueba información inexacta o falsa, se puede declarar la nulidad de la buena pro o del contrato y se comunica al Tribunal.`,
         base: 'Reglamento, art. 83',
       });
     }

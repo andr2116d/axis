@@ -33,7 +33,7 @@ export function Citas({ respuesta }: { respuesta: RespuestaNormativa }) {
       ))}
       <small className="pie-citas">
         {respuesta.leida_por_modelo ? `Leído por ${respuesta.lector}` : 'Búsqueda en el texto oficial'} · {respuesta.desde_cache ? 'respuesta guardada' : `${(respuesta.duracion_ms / 1000).toFixed(1)} s`}
-        {respuesta.descartadas > 0 && ` · ${respuesta.descartadas} cita(s) descartada(s) por no ser literales`}
+        {respuesta.descartadas > 0 && (respuesta.descartadas === 1 ? ' · 1 cita descartada por no ser literal' : ` · ${respuesta.descartadas} citas descartadas por no ser literales`)}
       </small>
     </div>
   );

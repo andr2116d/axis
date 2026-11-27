@@ -22,7 +22,7 @@ const ESTADO_SECCION = {
   rojo: { texto: 'Observar', clase: 'alta' },
   ambar: { texto: 'Revisar', clase: 'media' },
   verde: { texto: 'Conforme', clase: 'confirmed' },
-  sin_revisar: { texto: 'Sin revisar', clase: 'neutral' },
+  sin_revisar: { texto: 'Sin modelo aún', clase: 'neutral' },
 } as const;
 const DECISION = {
   confirmado: { texto: 'Confirmado: se observa', clase: 'alta' },
@@ -30,7 +30,13 @@ const DECISION = {
   justificado: { texto: 'Justificado', clase: 'confirmed' },
 } as const;
 
-const legible = (etiqueta: string) => etiqueta.replaceAll('_', ' ').replace(/^./, (c) => c.toUpperCase());
+const NOMBRES: Record<string, string> = {
+  analisis_costos_unitarios: 'Análisis de costos unitarios', caratula: 'Carátula', cotizacion: 'Cotización',
+  especificaciones_tecnicas: 'Especificaciones técnicas', estudio_suelos: 'Estudio de suelos', formula_polinomica: 'Fórmula polinómica',
+  indice: 'Índice', memoria_descriptiva: 'Memoria descriptiva', gastos_generales: 'Gastos generales', precio_atipico: 'Precio atípico',
+  metrados: 'Metrados', planos: 'Planos', cronograma: 'Cronograma', presupuesto: 'Presupuesto',
+};
+const legible = (etiqueta: string) => NOMBRES[etiqueta.toLowerCase()] ?? etiqueta.replaceAll('_', ' ').replace(/^./, (c) => c.toUpperCase());
 
 async function vincular(expedienteId: string, motorId: string) {
   await fetch(`/api/expedientes/${expedienteId}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ motorId }) });
@@ -141,7 +147,7 @@ export function PanelEntrenados({ expedienteId, nombre, documentos, motorId: ini
           <Semaforo estado={datos.semaforo ? SEMAFORO_FRONT[datos.semaforo] : 'gris'} />
           <div>
             <strong>{datos.semaforo === 'rojo' ? 'Hay observaciones que revisar' : datos.semaforo === 'ambar' ? 'Hay puntos que mirar' : datos.semaforo === 'verde' ? 'Conforme en lo que revisaron los modelos' : 'Ningún modelo pudo revisar estas partes todavía'}</strong>
-            <small>{ev ? `Evaluación ${ev.numero}, en ${ev.duracion_ms} ms. ${ev.sin_revisar ? `${ev.sin_revisar} hallazgo(s) esperan tu decisión.` : 'Revisaste todos los hallazgos.'}` : 'Sube las partes que leen los modelos (presupuesto, metrados).'}</small>
+            <small>{ev ? `Evaluación ${ev.numero}, en ${ev.duracion_ms} ms. ${ev.sin_revisar ? `${ev.sin_revisar === 1 ? '1 hallazgo espera' : `${ev.sin_revisar} hallazgos esperan`} tu decisión.` : 'Revisaste todos los hallazgos.'}` : 'Sube las partes que leen los modelos (presupuesto, metrados).'}</small>
           </div>
         </div>
         <dl>

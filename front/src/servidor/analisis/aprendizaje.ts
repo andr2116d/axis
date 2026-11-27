@@ -108,7 +108,9 @@ export interface SugerenciaCausa { causa: string; fuente: 'regla de campo' | 'mo
 export function sugerirCausaHallazgo(m: Pick<ModeloClasificador, 'tipo' | 'clases' | 'sesgo' | 'pesos' | 'idf' | 'temperatura'>, texto: string): SugerenciaCausa {
   const p = clasificar(m, texto);
   const n = normalizar(texto);
-  const regla = REGLAS_CAMPO.find(([re]) => re.test(n));
+  // Gana la regla con más indicios en el texto (un subdrenaje con tubería sigue siendo un problema de napa).
+  const indicios = (re: RegExp) => n.match(new RegExp(re.source, 'g'))?.length ?? 0;
+  const regla = REGLAS_CAMPO.map((r) => ({ r, k: indicios(r[0]) })).filter((x) => x.k > 0).sort((a, b) => b.k - a.k)[0]?.r;
   const alternativas = [{ causa: p.causa, probabilidad: p.probabilidad }, ...p.alternativas];
   if (regla) return { causa: regla[1], fuente: 'regla de campo', motivo: regla[2], alternativas: alternativas.filter((a) => a.causa !== regla[1]).slice(0, 2) };
   return { causa: p.causa, fuente: 'modelo', motivo: p.porque.length ? `palabras que más pesaron: ${p.porque.join(', ')}` : 'sin palabras conocidas', probabilidad: p.probabilidad, alternativas: p.alternativas };

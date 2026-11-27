@@ -115,7 +115,7 @@ export default async function PaginaProceso({ params }: { params: Promise<{ id: 
             </div>
             {p.verificacion && (
               <div className="content-panel resultado-contrato">
-                <h3>{p.verificacion.senales.filter((s) => s.nivel === 'alta').length ? `${p.verificacion.senales.filter((s) => s.nivel === 'alta').length} posible(s) información inexacta` : p.verificacion.senales.length ? 'Puntos que verificar' : 'Sin observaciones en los documentos'}</h3>
+                <h3>{p.verificacion.senales.filter((s) => s.nivel === 'alta').length ? (() => { const n = p.verificacion.senales.filter((s) => s.nivel === 'alta').length; return n === 1 ? '1 posible caso de información inexacta' : `${n} posibles casos de información inexacta`; })() : p.verificacion.senales.length ? 'Puntos que verificar' : 'Sin observaciones en los documentos'}</h3>
                 <p className="empty-line">{p.verificacion.documentos.map((d) => `${d.nombre} (${d.paginas} pág.)`).join(' · ')}</p>
                 {p.verificacion.filas.length > 0 && (
                   <table className="tabla-orden tabla-experiencia">

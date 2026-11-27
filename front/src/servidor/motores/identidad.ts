@@ -49,7 +49,7 @@ function esTitulo(texto: string): boolean {
 }
 
 /** «… en la calle los almendros, desde la av.husares» → «… en la Calle Los Almendros, desde la Av. Husares». */
-function conVias(texto: string): string {
+export function conVias(texto: string): string {
   return texto.replace(VIA, (_, via: string, nombre: string) => `${nombrePropio(via.replace(/\.(?=\S)/, '. '))} ${nombrePropio(nombre)}`.replace(/\.\s*$/, '.'));
 }
 
