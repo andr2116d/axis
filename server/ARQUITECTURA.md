@@ -115,3 +115,18 @@ El generador sintético sirve para arrancar, pero el modelo solo conoce las form
   - la exactitud en **correcciones que el modelo no vio** (la medida honesta);
   - cuántas correcciones **reproduce** el modelo final (verifica que las aprendió);
   - la exactitud en sintéticos (que sola no dice nada).
+
+## Partidas: tablas leídas por posición
+
+Casi todos los motores leen partidas (precios, metrados, valorizaciones). Se extraen una sola vez, al analizar el documento, de **todas** las páginas. Como es barato, una corrección del tipo de página no obliga a releer el archivo.
+
+- **No se lee el texto línea por línea.** En un presupuesto S10 real, el texto plano separa las descripciones de los números. Se usan palabras con su posición:
+  - en un PDF digital, cajas de carácter "holgadas" de pdfium (con la altura de la fuente, para que un punto no parta la fila);
+  - en un escaneo, las líneas que reconoce Tesseract (endereza la hoja torcida);
+  - en un Excel, la columna y la fila de cada celda.
+- Cada fila se interpreta como ítem, descripción, unidad y números, y trae **su propio control: cantidad × precio ≈ parcial**. Una fila sin unidad es un título con su subtotal.
+- **Medido sobre presupuestos reales de SEACE:**
+  - digitales: 998 de 1010 filas verificables cuadran, en milisegundos por documento;
+  - escaneado: 58 de 60 en uno de 7 páginas, en 2,8 s con OCR.
+- **El LLM de Bedrock no se usa aquí todavía.** La API marca las `paginas_dudosas` (menos de la mitad cuadra). Esas serían las candidatas a una segunda lectura con el LLM, y se conecta solo si el volumen lo justifica.
+- La clave de caché incluye `VERSION_LECTURA`: si cambia el extractor, el mismo archivo se vuelve a leer.
