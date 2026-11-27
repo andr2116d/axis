@@ -15,6 +15,7 @@ que hizo otro generador.
 
 import argparse
 import asyncio
+import hashlib
 import json
 import os
 import random
@@ -46,13 +47,15 @@ from axis.documentos.adaptadores.salida.modelos.sklearn import ArtefactoDocument
 from axis.documentos.dominio.entidades import Pagina
 from axis.documentos.dominio.servicios import clasificar_origen, segmentar
 from axis.documentos.dominio.valores import Clasificacion, Etiqueta, OrigenPagina, TipoArchivo
-from herramientas import corpus_real, sintetico
+from herramientas import corpus_real, correcciones, sintetico
 from herramientas.taxonomia import FASES, RECETAS
 
 # Métricas en forma de JSON: se guardan tal cual junto al artefacto.
 type Metricas = dict[str, Any]
 
 MAX_PAGINAS_REALES_POR_TIPO = 3000
+# Una corrección del evaluador pesa como varias páginas: es la única etiqueta real segura.
+PESO_CORRECCION = 5.0
 MAX_PAGINAS_POR_DOCUMENTO_REAL = 40
 # Una versión nueva no se publica si empeora más que esto frente a la publicada.
 TOLERANCIA_PROMOCION = 0.01
@@ -78,17 +81,27 @@ def main() -> None:
         f"({sum(1 for d in reales if d.tipo)} con etiqueta débil)"
     )
 
-    paginas = _dataset_paginas(r, vocabulario, reales, argumentos.docs_por_tipo)
+    corregidas = correcciones.cargar()
+    print(
+        f"Correcciones del evaluador: {len(corregidas.paginas)} páginas, "
+        f"{len(corregidas.documentos)} documentos"
+    )
+    reales = _sin_etiqueta_debil_si_hay_correccion(reales, corregidas)
+    paginas = _dataset_paginas(r, vocabulario, reales, corregidas, argumentos.docs_por_tipo)
     modelo_eval, metricas_paginas, grupos_prueba = _evaluar_paginas(paginas, argumentos.semilla)
     modelo_paginas = _modelo_paginas().fit(
-        [normalizar_texto(t) for t in paginas["textos"]], paginas["etiquetas"]
+        [normalizar_texto(t) for t in paginas["textos"]],
+        paginas["etiquetas"],
+        clasificador__sample_weight=_pesos(paginas["origen"]),
     )
     etiquetas_pagina = tuple(str(c) for c in modelo_paginas.classes_)
+    metricas_paginas["correcciones_reproducidas"] = _reproducidas(modelo_paginas, corregidas)
 
     modelo_documentos, metricas_documentos = _entrenar_documentos(
         r,
         vocabulario,
         reales,
+        corregidas,
         grupos_prueba,
         modelo_paginas,
         modelo_eval,
@@ -115,7 +128,8 @@ def main() -> None:
         clasificador_paginas=modelo_paginas,
         clasificador_documentos=modelo_documentos,
         etiquetas_pagina=etiquetas_pagina,
-        fases_documento=dict(FASES),
+        fases_documento=dict(FASES)
+        | {d.etiqueta: d.fase for d in corregidas.documentos if d.etiqueta not in FASES},
         medidor_rareza=medidor,
         puntajes_corpus=puntajes,
         metricas=metricas,
@@ -149,7 +163,11 @@ def _argumentos() -> argparse.Namespace:
 
 
 def _dataset_paginas(
-    r: random.Random, v: sintetico.Vocabulario, reales: list[corpus_real.DocumentoReal], n: int
+    r: random.Random,
+    v: sintetico.Vocabulario,
+    reales: list[corpus_real.DocumentoReal],
+    corregidas: correcciones.Correcciones,
+    n: int,
 ) -> dict[str, list[str]]:
     textos: list[str] = []
     etiquetas: list[str] = []
@@ -174,10 +192,53 @@ def _dataset_paginas(
             etiquetas.append(documento.tipo)
             grupos.append(f"real:{documento.ruta}")
             origen.append("real")
+    for corregida in corregidas.paginas:
+        textos.append(corregida.texto)
+        etiquetas.append(corregida.etiqueta)
+        grupos.append(f"correccion:{corregida.hash_contenido}")
+        origen.append("correccion")
     print(
         f"Páginas: {len(textos)} ({origen.count('real')} reales). Reales por tipo: {dict(por_tipo)}"
     )
     return {"textos": textos, "etiquetas": etiquetas, "grupos": grupos, "origen": origen}
+
+
+def _sin_etiqueta_debil_si_hay_correccion(
+    reales: list[corpus_real.DocumentoReal], corregidas: correcciones.Correcciones
+) -> list[corpus_real.DocumentoReal]:
+    """Si el evaluador corrigió un archivo del corpus, su etiqueta por nombre ya no vale."""
+    hashes = {c.hash_contenido for c in corregidas.paginas} | {
+        d.hash_contenido for d in corregidas.documentos
+    }
+    if not hashes:
+        return reales
+    salida = []
+    for documento in reales:
+        ruta = Path(documento.ruta)
+        corregido = (
+            documento.tipo is not None
+            and ruta.suffix.lower() == ".pdf"
+            and ruta.exists()
+            and hashlib.sha256(ruta.read_bytes()).hexdigest() in hashes
+        )
+        if corregido:
+            print(f"  etiqueta débil descartada por corrección: {ruta.name}")
+        salida.append(replace(documento, tipo=None) if corregido else documento)
+    return salida
+
+
+def _pesos(origen: list[str] | np.ndarray) -> np.ndarray:
+    return np.array([PESO_CORRECCION if o == "correccion" else 1.0 for o in origen])
+
+
+def _reproducidas(modelo: Pipeline, corregidas: correcciones.Correcciones) -> Metricas:
+    """Cuántas correcciones reproduce el modelo final. Las vio al entrenar: no es una prueba,
+    es la verificación de que las aprendió."""
+    if not corregidas.paginas:
+        return {"paginas": 0}
+    predichas = modelo.predict([normalizar_texto(c.texto) for c in corregidas.paginas])
+    aciertos = sum(p == c.etiqueta for p, c in zip(predichas, corregidas.paginas, strict=True))
+    return {"paginas": len(corregidas.paginas), "proporcion": round(aciertos / len(predichas), 4)}
 
 
 def _modelo_paginas() -> Pipeline:
@@ -214,15 +275,27 @@ def _evaluar_paginas(
     x = np.array(normalizados, dtype=object)
     y = np.array(paginas["etiquetas"])
     origen = np.array(paginas["origen"])
-    modelo = _modelo_paginas().fit(x[entrenamiento], y[entrenamiento])
+    modelo = _modelo_paginas().fit(
+        x[entrenamiento],
+        y[entrenamiento],
+        clasificador__sample_weight=_pesos(origen[entrenamiento]),
+    )
     predichas = modelo.predict(x[prueba])
     reales = origen[prueba] == "real"
+    corregidas = origen[prueba] == "correccion"
     metricas = {
         "exactitud": round(float(np.mean(predichas == y[prueba])), 4),
         "exactitud_reales": round(float(np.mean(predichas[reales] == y[prueba][reales])), 4)
         if reales.any()
         else None,
         "exactitud_sinteticas": round(float(np.mean(predichas[~reales] == y[prueba][~reales])), 4),
+        # Páginas corregidas por el evaluador que el modelo no vio: la medida más honesta.
+        "exactitud_correcciones": round(
+            float(np.mean(predichas[corregidas] == y[prueba][corregidas])), 4
+        )
+        if corregidas.any()
+        else None,
+        "paginas_prueba_correcciones": int(corregidas.sum()),
         "paginas_prueba": len(prueba),
         "paginas_prueba_reales": int(reales.sum()),
         "por_tipo": {
@@ -267,6 +340,7 @@ def _entrenar_documentos(  # noqa: PLR0913, PLR0917 - todo lo que el paso necesi
     r: random.Random,
     v: sintetico.Vocabulario,
     reales: list[corpus_real.DocumentoReal],
+    corregidas: correcciones.Correcciones,
     grupos_prueba: set[str],
     modelo_paginas: Pipeline,
     modelo_eval: Pipeline,
@@ -294,12 +368,30 @@ def _entrenar_documentos(  # noqa: PLR0913, PLR0917 - todo lo que el paso necesi
         x.append(rasgos_documento(_clasificar_paginas(modelo_eval, documento.paginas), etiquetas))
         y.append(documento.tipo)
         origen.append("real")
+    # Documentos cuyo tipo corrigió el evaluador; sus páginas corregidas entran tal cual.
+    for corregido in corregidas.documentos:
+        paginas = tuple(
+            replace(
+                p,
+                clasificacion=Clasificacion(
+                    Etiqueta(corregido.etiquetas_corregidas[p.numero]), 1.0
+                ),
+            )
+            if p.numero in corregido.etiquetas_corregidas
+            else p
+            for p in _clasificar_paginas(modelo_paginas, corregido.paginas)
+        )
+        x.append(rasgos_documento(paginas, etiquetas))
+        y.append(corregido.etiqueta)
+        origen.append("correccion")
     xa, ya, oa = np.array(x), np.array(y), np.array(origen)
+    # Un tipo nuevo con un solo ejemplo no se puede repartir entre entrenamiento y prueba.
+    estratificar = ya if min(Counter(ya).values()) >= 2 else None
     entrenamiento, prueba = train_test_split(
-        np.arange(len(ya)), test_size=0.25, random_state=semilla, stratify=ya
+        np.arange(len(ya)), test_size=0.25, random_state=semilla, stratify=estratificar
     )
     modelo = LogisticRegression(C=2.0, max_iter=3000, class_weight="balanced")
-    modelo.fit(xa[entrenamiento], ya[entrenamiento])
+    modelo.fit(xa[entrenamiento], ya[entrenamiento], sample_weight=_pesos(oa[entrenamiento]))
     predichos = modelo.predict(xa[prueba])
     reales_prueba = oa[prueba] == "real"
     metricas = {
@@ -312,7 +404,8 @@ def _entrenar_documentos(  # noqa: PLR0913, PLR0917 - todo lo que el paso necesi
         "documentos_prueba": len(prueba),
         "documentos_prueba_reales": int(reales_prueba.sum()),
     }
-    return LogisticRegression(C=2.0, max_iter=3000, class_weight="balanced").fit(xa, ya), metricas
+    final = LogisticRegression(C=2.0, max_iter=3000, class_weight="balanced")
+    return final.fit(xa, ya, sample_weight=_pesos(oa)), metricas
 
 
 # ---------- 3. Rareza ----------
@@ -425,6 +518,11 @@ def _imprimir_resumen(metricas: Metricas, destino: Path, tamano: int) -> None:
     print(
         f"Documentos exactitud {d['exactitud']}  reales {d['exactitud_reales']}"
         f"  ({d['documentos_prueba']} de prueba, {d['documentos_prueba_reales']} reales)"
+    )
+    print(
+        f"Correcciones: {p['paginas_prueba_correcciones']} de prueba, exactitud "
+        f"{p['exactitud_correcciones']}; el modelo final reproduce "
+        f"{p['correcciones_reproducidas']}"
     )
     print(f"Rareza     {metricas['rareza']}")
     for e in metricas["expedientes_de_prueba"]:
