@@ -264,8 +264,37 @@ export interface Postor {
   mypeDiscapacidad?: boolean;
   domicilio?: string;
   representante?: string;
+  telefono?: string;
+  /** Apoderados que firman por cada integrante (vigencia de poder). */
+  apoderados?: string[];
   /** Personal clave ofrecido (nombres). */
   personal: string[];
+  /** Archivo de la oferta del que se leyeron los datos. */
+  archivo?: string;
+}
+
+/** Una obra que el ganador declara como experiencia (Anexo 11) y lo que la respalda. */
+export interface FilaExperiencia {
+  n: number;
+  cliente: string;
+  contrato: string;
+  fecha?: string;
+  conformidad?: string;
+  integrante: string;
+  monto: number;
+  /** Constancia o acta que la respalda, si llegó. */
+  constancia?: { monto?: number; contratista?: string; fuente: Fuente };
+  /** Cotejo con el SEACE (OCDS), si el contrato es una nomenclatura conocida. */
+  seace?: { coincide: boolean; detalle: string };
+}
+
+export interface VerificacionGanador {
+  creada: string;
+  documentos: { nombre: string; paginas: number }[];
+  filas: FilaExperiencia[];
+  totalDeclarado?: number;
+  senales: SenalSeleccion[];
+  ejecucion: EjecucionMotor[];
 }
 
 export type NivelSenal = 'alta' | 'media' | 'info';
@@ -311,6 +340,8 @@ export interface ProcesoSeleccion {
   postores: Postor[];
   creado: string;
   resultado: ResultadoSeleccion;
+  /** Documentos del ganador para la suscripción del contrato (art. 83 y 88). */
+  verificacion?: VerificacionGanador;
 }
 
 // ── Fase 3 · Control de la obra en ejecución ─────────────────

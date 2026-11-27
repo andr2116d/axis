@@ -1,14 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icono } from '../Icono';
+import { SelectorArchivos, enviar as enviarArchivos } from '../SelectorArchivos';
 
 // Datos del procedimiento de selección: los que publica el SEACE en el acta de
 // otorgamiento de la buena pro y los que declara cada postor en su oferta.
 
 interface IntegranteForm { nombre: string; ruc: string; participacion: string; experiencia: string; inicio: string }
-interface PostorForm { nombre: string; oferta: string; puntajeTotal: string; puntajeTecnico: string; mype: boolean; domicilio: string; representante: string; personal: string; integrantes: IntegranteForm[] }
+interface PostorForm { nombre: string; oferta: string; puntajeTotal: string; puntajeTecnico: string; mype: boolean; domicilio: string; representante: string; personal: string; integrantes: IntegranteForm[]; telefono?: string; apoderados?: string[]; archivo?: string; avisos?: string[] }
 interface ProcesoForm { nomenclatura: string; objeto: string; entidad: string; expedienteId: string; procedimiento: 'abreviada' | 'licitacion'; valorReferencial: string; fechaBuenaPro: string; minimoParticipacion: string; postores: PostorForm[] }
 
 const integranteVacio = (): IntegranteForm => ({ nombre: '', ruc: '', participacion: '100', experiencia: '', inicio: '' });
@@ -38,14 +39,54 @@ export function ejemploProceso(objeto: string, expedienteId = ''): ProcesoForm {
   };
 }
 
-export function FormProceso({ expedientes, inicial }: { expedientes: { id: string; clave: string; nombre: string }[]; inicial?: { expedienteId: string; ejemplo: boolean } }) {
+/** Las ofertas de ejemplo en PDF (empresas ficticias) que se suben como lo haría el comité. */
+export const OFERTAS_EJEMPLO = ['OFERTA-1_consorcio-vias-del-norte.pdf', 'OFERTA-2_constructora-moche.pdf', 'OFERTA-3_ingenieria-chimu.pdf', 'OFERTA-4_obras-generales-trujillo.pdf'].map((a) => `/demo/seleccion/${a}`);
+
+async function archivosDe(urls: string[]) {
+  return Promise.all(urls.map(async (u) => new File([await (await fetch(u)).blob()], u.split('/').pop()!, { type: 'application/pdf' })));
+}
+
+interface OfertaLeida { postor: { nombre: string; oferta: number; puntajeTotal?: number; mype: boolean; domicilio?: string; representante?: string; telefono?: string; apoderados?: string[]; archivo?: string; integrantes: { nombre: string; ruc: string; participacion: number; inicio?: string }[] }; avisos: string[] }
+
+export function FormProceso({ expedientes, inicial, subidaDirecta = false }: { expedientes: { id: string; clave: string; nombre: string }[]; inicial?: { expedienteId: string; ejemplo: boolean }; subidaDirecta?: boolean }) {
   const router = useRouter();
   const base = expedientes.find((x) => x.id === inicial?.expedienteId);
-  const [f, setF] = useState<ProcesoForm>(() => inicial?.ejemplo ? ejemploProceso(base?.nombre ?? 'Mejoramiento de pistas y veredas', base?.id) : {
-    nomenclatura: '', objeto: base?.nombre ?? '', entidad: '', expedienteId: base?.id ?? '', procedimiento: 'abreviada', valorReferencial: '', fechaBuenaPro: '', minimoParticipacion: '', postores: [postorVacio()],
+  const datosEjemplo = (objeto: string, expedienteId = '') => ({ ...ejemploProceso(objeto, expedienteId), postores: [] as PostorForm[] });
+  const [f, setF] = useState<ProcesoForm>(() => inicial?.ejemplo ? datosEjemplo(base?.nombre ?? 'Mejoramiento de pistas y veredas', base?.id) : {
+    nomenclatura: '', objeto: base?.nombre ?? '', entidad: '', expedienteId: base?.id ?? '', procedimiento: 'abreviada', valorReferencial: '', fechaBuenaPro: '', minimoParticipacion: '', postores: [],
   });
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
+  const [ofertas, setOfertas] = useState<File[]>([]);
+  const [leyendo, setLeyendo] = useState('');
+  const [manual, setManual] = useState(false);
+
+  // En la demo, las cuatro ofertas de ejemplo quedan listas para subir.
+  useEffect(() => { if (inicial?.ejemplo) archivosDe(OFERTAS_EJEMPLO).then(setOfertas).catch(() => {}); }, [inicial?.ejemplo]);
+
+  const cargarEjemplo = async () => {
+    setF(datosEjemplo(f.objeto || base?.nombre || 'Mejoramiento de pistas y veredas', f.expedienteId));
+    setOfertas(await archivosDe(OFERTAS_EJEMPLO));
+  };
+  const leerOfertas = async () => {
+    setError('');
+    try {
+      const { ofertas: leidas } = await enviarArchivos<{ ofertas: OfertaLeida[] }>('/api/procesos/ofertas', ofertas, { valorReferencial: f.valorReferencial }, subidaDirecta, setLeyendo);
+      setF((x) => ({
+        ...x,
+        postores: leidas.map(({ postor: p, avisos }) => ({
+          nombre: p.nombre, oferta: p.oferta ? p.oferta.toFixed(2) : '', puntajeTotal: p.puntajeTotal != null ? String(p.puntajeTotal) : '', puntajeTecnico: '',
+          mype: p.mype, domicilio: p.domicilio ?? '', representante: p.representante ?? '', personal: '', telefono: p.telefono, apoderados: p.apoderados, archivo: p.archivo, avisos,
+          integrantes: p.integrantes.map((m) => ({ nombre: m.nombre, ruc: m.ruc, participacion: String(m.participacion), experiencia: '', inicio: m.inicio ?? '' })),
+        })),
+      }));
+      setOfertas([]);
+    } catch (x) {
+      setError((x as Error).message);
+    } finally {
+      setLeyendo('');
+    }
+  };
 
   const cambiar = (c: Partial<ProcesoForm>) => setF((x) => ({ ...x, ...c }));
   const cambiarPostor = (i: number, c: Partial<PostorForm>) => setF((x) => ({ ...x, postores: x.postores.map((p, j) => (j === i ? { ...p, ...c } : p)) }));
@@ -84,7 +125,7 @@ export function FormProceso({ expedientes, inicial }: { expedientes: { id: strin
     <section className="content-panel form-proceso" aria-labelledby="titulo-form">
       <div className="form-proceso-head">
         <div><h2 id="titulo-form">Datos del procedimiento</h2><p>Del acta de buena pro y de las ofertas publicadas en el SEACE.</p></div>
-        <button type="button" className="btn secondary" onClick={() => setF(ejemploProceso(f.objeto || base?.nombre || 'Mejoramiento de pistas y veredas', f.expedienteId))}><Icono nombre="files" tamano={17} />Cargar ejemplo</button>
+        <button type="button" className="btn secondary" onClick={cargarEjemplo}><Icono nombre="files" tamano={17} />Cargar ejemplo</button>
       </div>
       <div className="campos">
         {campo('Nomenclatura', f.nomenclatura, (v) => cambiar({ nomenclatura: v }))}
@@ -108,12 +149,23 @@ export function FormProceso({ expedientes, inicial }: { expedientes: { id: strin
         {campo('% mínimo por consorciado en las bases', f.minimoParticipacion, (v) => cambiar({ minimoParticipacion: v }), { tipo: 'number', ayuda: 'Solo si las bases lo fijaron (art. 72.3 d).' })}
       </div>
 
-      <h3 className="form-subtitulo">Postores <span>{f.postores.length}</span></h3>
+      <h3 className="form-subtitulo">Ofertas de los postores</h3>
+      <p className="form-ayuda">Sube la oferta de cada postor tal como llegó por el SEACE (un PDF por postor). Axis lee el Anexo 1, la vigencia de poder, la promesa de consorcio (Anexo 4) y la oferta económica (Anexo 6).</p>
+      <SelectorArchivos archivos={ofertas} alCambiar={setOfertas} titulo="Arrastra las ofertas aquí" ayuda="Un PDF o Word por postor" />
+      {ofertas.length > 0 && (
+        <div className="upload-actions">
+          <button type="button" className="btn primary" disabled={!!leyendo} onClick={leerOfertas}><Icono nombre={leyendo ? 'clock' : 'files'} tamano={18} />{leyendo || `Leer ${ofertas.length} oferta${ofertas.length > 1 ? 's' : ''}`}</button>
+        </div>
+      )}
+      {!f.postores.length && !manual && <button type="button" className="text-link" onClick={() => { setManual(true); cambiar({ postores: [postorVacio()] }); }}>O ingresa los postores a mano</button>}
+
+      {f.postores.length > 0 && <h3 className="form-subtitulo">Postores <span>{f.postores.length}</span>{f.postores.some((p) => p.archivo) && <small>Leídos de las ofertas: revisa y corrige si hace falta.</small>}</h3>}
       <ol className="postores-form">
         {f.postores.map((p, i) => (
           <li key={i}>
+            {p.avisos && p.avisos.length > 0 && <ul className="avisos-oferta">{p.avisos.map((a) => <li key={a}><Icono nombre="alert" tamano={14} />{a}</li>)}</ul>}
             <div className="postor-form-head">
-              <strong>Postor {i + 1}</strong>
+              <strong>Postor {i + 1}{p.archivo && <small className="mono"> · {p.archivo}</small>}</strong>
               {f.postores.length > 1 && <button type="button" className="text-link" onClick={() => cambiar({ postores: f.postores.filter((_, j) => j !== i) })}>Quitar</button>}
             </div>
             <div className="campos">
@@ -124,7 +176,8 @@ export function FormProceso({ expedientes, inicial }: { expedientes: { id: strin
               <label className="campo campo-check"><input type="checkbox" checked={p.mype} onChange={(x) => cambiarPostor(i, { mype: x.target.checked })} /><span>Micro o pequeña empresa</span></label>
               {campo('Domicilio declarado', p.domicilio, (v) => cambiarPostor(i, { domicilio: v }))}
               {campo('Representante legal', p.representante, (v) => cambiarPostor(i, { representante: v }))}
-              {campo('Personal clave (separado por comas)', p.personal, (v) => cambiarPostor(i, { personal: v }), { ancho: true })}
+              {campo('Teléfono', p.telefono ?? '', (v) => cambiarPostor(i, { telefono: v }))}
+              {campo('Apoderados (vigencia de poder)', (p.apoderados ?? []).join(', '), (v) => cambiarPostor(i, { apoderados: v.split(',').map((x) => x.trim()).filter(Boolean) }))}
             </div>
             <table className="integrantes">
               <caption>{p.integrantes.length > 1 ? 'Integrantes del consorcio' : 'Empresa (agrega integrantes si es consorcio)'}</caption>
@@ -146,10 +199,10 @@ export function FormProceso({ expedientes, inicial }: { expedientes: { id: strin
           </li>
         ))}
       </ol>
-      <button type="button" className="btn secondary" onClick={() => cambiar({ postores: [...f.postores, postorVacio()] })}><Icono nombre="plus" tamano={17} />Agregar postor</button>
+      {f.postores.length > 0 && <button type="button" className="btn secondary" onClick={() => cambiar({ postores: [...f.postores, postorVacio()] })}><Icono nombre="plus" tamano={17} />Agregar postor</button>}
       {error && <p className="form-error" role="alert">{error}</p>}
       <div className="upload-actions">
-        <button type="button" className="btn primary" disabled={enviando} onClick={enviar}><Icono nombre={enviando ? 'clock' : 'arrow'} tamano={18} />{enviando ? 'Analizando postores…' : 'Analizar postores'}</button>
+        <button type="button" className="btn primary" disabled={enviando || !f.postores.length} onClick={enviar}><Icono nombre={enviando ? 'clock' : 'arrow'} tamano={18} />{enviando ? 'Analizando postores…' : 'Analizar postores'}</button>
       </div>
       <p className="inline-note"><Icono nombre="lock" tamano={15} /> Las sanciones y penalidades se cruzan con los datos abiertos del OECE (10,627 proveedores con antecedentes) y el historial con 1,410 obras de La Libertad (OCDS).</p>
     </section>
