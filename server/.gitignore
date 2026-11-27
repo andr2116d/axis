@@ -12,3 +12,4 @@ datos/
 cdk.out/
 .cache/
 .cache_entrenamiento.log
+.cache_precios.log
