@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from axis.compartido.dominio.motores import Hallazgo, Severidad
+from axis.compartido.dominio.motores import Hallazgo, ResultadoMotor, semaforo_de
 from axis.compartido.dominio.valores import Semaforo
 from axis.orquestador.dominio.plan import Plan
 
@@ -16,15 +16,18 @@ class FallaMotor:
 @dataclass(frozen=True, slots=True)
 class Evaluacion:
     plan: Plan
-    hallazgos: tuple[Hallazgo, ...]
+    resultados: tuple[ResultadoMotor, ...]
     fallas: tuple[FallaMotor, ...]
     duracion_ms: int
 
     @property
+    def hallazgos(self) -> tuple[Hallazgo, ...]:
+        return tuple(h for r in self.resultados for h in r.hallazgos)
+
+    @property
     def semaforo(self) -> Semaforo:
-        severidades = {h.severidad for h in self.hallazgos}
-        if Severidad.ROJO in severidades:
-            return Semaforo.ROJO
-        if Severidad.AMBAR in severidades or self.fallas:
-            return Semaforo.AMBAR
-        return Semaforo.VERDE
+        return semaforo_de(self.hallazgos, bool(self.fallas))
+
+    @property
+    def reutilizados(self) -> tuple[str, ...]:
+        return tuple(r.id_motor for r in self.resultados if r.reutilizado)

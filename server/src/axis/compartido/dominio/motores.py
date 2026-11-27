@@ -3,13 +3,14 @@
 Vive en el núcleo compartido porque lo usan tres lados que no se conocen entre sí.
 """
 
-from collections.abc import Sequence
+import hashlib
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Protocol
 
 from axis.compartido.dominio.partidas import Partida
-from axis.compartido.dominio.valores import Fase
+from axis.compartido.dominio.valores import Fase, Semaforo
 
 
 class Severidad(StrEnum):
@@ -35,10 +36,11 @@ class FichaMotor:
 
 @dataclass(frozen=True, slots=True)
 class PartidaUbicada:
-    """Una partida con el tipo de la página donde está (presupuesto, metrados, ACU…)."""
+    """Una partida con el documento y el tipo de página donde está (presupuesto, metrados…)."""
 
     partida: Partida
     tipo_pagina: str | None
+    id_documento: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,9 +52,18 @@ class EntradaMotor:
     tipologia: str | None
     partes_presentes: frozenset[str]
     partidas: tuple[PartidaUbicada, ...] = ()
+    # Qué versión de cada parte se está leyendo (por ejemplo, el id del documento vigente).
+    # Si las partes que lee un motor no cambiaron, su resultado anterior sigue valiendo.
+    firmas: Mapping[str, str] = field(default_factory=dict)
 
-    def partidas_de(self, tipo_pagina: str) -> tuple[Partida, ...]:
-        return tuple(p.partida for p in self.partidas if p.tipo_pagina == tipo_pagina)
+    def partidas_de(self, tipo_pagina: str) -> tuple[PartidaUbicada, ...]:
+        return tuple(p for p in self.partidas if p.tipo_pagina == tipo_pagina)
+
+    def firma_para(self, ficha: FichaMotor) -> str:
+        """Cambia si cambia el motor o alguna de las partes que lee; si no, se puede reutilizar."""
+        partes = "|".join(f"{p}={self.firmas.get(p, '')}" for p in sorted(ficha.partes_requeridas))
+        base = f"{ficha.id}@{ficha.version}#{self.fase}#{self.tipologia}#{partes}"
+        return hashlib.sha256(base.encode()).hexdigest()[:16]
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,6 +85,8 @@ class Hallazgo:
     factores: tuple[Factor, ...]
     pagina: int | None = None
     item: str | None = None
+    id_documento: str | None = None
+    seccion: str | None = None  # tipo de parte donde está: presupuesto, metrados…
     metadatos: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -82,6 +95,26 @@ class Hallazgo:
         # Un hallazgo que no se puede explicar no se muestra.
         if not self.factores or not self.explicacion:
             raise ValueError("un hallazgo necesita explicación y factores")
+
+
+@dataclass(frozen=True, slots=True)
+class ResultadoMotor:
+    """Lo que dijo un motor sobre una versión concreta de las partes que lee."""
+
+    id_motor: str
+    version_motor: str
+    firma: str
+    hallazgos: tuple[Hallazgo, ...]
+    reutilizado: bool = False  # True: sus partes no cambiaron y no se volvió a correr
+
+
+def semaforo_de(hallazgos: Sequence[Hallazgo], hay_fallas: bool = False) -> Semaforo:
+    severidades = {h.severidad for h in hallazgos}
+    if Severidad.ROJO in severidades:
+        return Semaforo.ROJO
+    if Severidad.AMBAR in severidades or hay_fallas:
+        return Semaforo.AMBAR
+    return Semaforo.VERDE
 
 
 class Motor(Protocol):

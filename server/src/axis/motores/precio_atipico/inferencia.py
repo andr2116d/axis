@@ -7,9 +7,9 @@ from axis.compartido.dominio.motores import (
     Factor,
     FichaMotor,
     Hallazgo,
+    PartidaUbicada,
     Severidad,
 )
-from axis.compartido.dominio.partidas import Partida
 from axis.motores.precio_atipico.ficha import ficha
 from axis.motores.precio_atipico.modelo import Comparacion, ModeloPrecios, Umbrales
 
@@ -26,9 +26,10 @@ class MotorPrecioAtipico:
     async def evaluar(self, entrada: EntradaMotor) -> Sequence[Hallazgo]:
         return await asyncio.to_thread(self._evaluar, entrada.partidas_de("presupuesto"))
 
-    def _evaluar(self, partidas: Sequence[Partida]) -> list[Hallazgo]:
+    def _evaluar(self, ubicadas: Sequence[PartidaUbicada]) -> list[Hallazgo]:
         hallazgos = []
-        for partida in partidas:
+        for ubicada in ubicadas:
+            partida = ubicada.partida
             # Solo filas que cuadran: si cantidad × precio no da el parcial, el precio leído
             # puede estar mal y no se acusa a nadie por un error de lectura.
             if not partida.cuadra or partida.unidad is None or partida.precio_unitario is None:
@@ -39,10 +40,11 @@ class MotorPrecioAtipico:
                 continue
             severidad = severidad_de(comparacion, self._modelo.umbrales)
             if severidad is not None:
-                hallazgos.append(self._hallazgo(partida, comparacion, severidad))
+                hallazgos.append(self._hallazgo(ubicada, comparacion, severidad))
         return hallazgos
 
-    def _hallazgo(self, partida: Partida, c: Comparacion, severidad: Severidad) -> Hallazgo:
+    def _hallazgo(self, ubicada: PartidaUbicada, c: Comparacion, severidad: Severidad) -> Hallazgo:
+        partida = ubicada.partida
         g = c.grupo
         direccion = "más caro" if c.veces > 1 else "más barato"
         veces = c.veces if c.veces > 1 else 1 / c.veces
@@ -69,6 +71,8 @@ class MotorPrecioAtipico:
             ),
             pagina=partida.pagina,
             item=partida.item,
+            id_documento=ubicada.id_documento,
+            seccion=ubicada.tipo_pagina,
             metadatos={"veces": f"{c.veces:.3f}", "desvios": f"{c.desvios:.2f}"},
         )
 

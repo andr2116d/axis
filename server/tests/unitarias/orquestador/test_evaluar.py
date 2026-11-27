@@ -1,4 +1,5 @@
 import asyncio
+from dataclasses import replace
 from decimal import Decimal
 
 from axis.compartido.dominio.motores import (
@@ -11,7 +12,11 @@ from axis.compartido.dominio.motores import (
 )
 from axis.compartido.dominio.partidas import Partida
 from axis.compartido.dominio.valores import Fase, Semaforo
-from axis.orquestador.aplicacion.casos_de_uso.evaluar import EvaluarDocumento, OrdenEvaluar
+from axis.orquestador.aplicacion.casos_de_uso.evaluar import (
+    EvaluarDocumento,
+    EvaluarEntrada,
+    OrdenEvaluar,
+)
 from axis.orquestador.dominio.plan import OrigenActivacion, planificar_por_ficha
 
 
@@ -121,3 +126,25 @@ async def test_sin_hallazgos_ni_fallas_el_semaforo_es_verde():
     )
 
     assert (await caso.ejecutar(OrdenEvaluar("doc-1"))).semaforo is Semaforo.VERDE
+
+
+async def test_si_las_partes_que_lee_un_motor_no_cambiaron_se_reutiliza_su_resultado():
+    precios = MotorDePrueba(ficha("precios", partes=("presupuesto",)), (hallazgo("precios"),))
+    metrados = MotorDePrueba(ficha("metrados", partes=("metrados",)))
+    caso = EvaluarEntrada(catalogo=Catalogo(precios, metrados), limite_segundos=1)
+    base = replace(
+        entrada(partes=("presupuesto", "metrados")),
+        firmas={"presupuesto": "doc-a", "metrados": "doc-b"},
+    )
+    primera = await caso.ejecutar(base)
+    previos = {r.id_motor: r for r in primera.resultados}
+
+    # Se sube una versión nueva solo de los metrados.
+    segunda = await caso.ejecutar(
+        replace(base, firmas={"presupuesto": "doc-a", "metrados": "doc-c"}), previos
+    )
+
+    assert precios.llamadas == 1  # el presupuesto no cambió: no se volvió a correr
+    assert metrados.llamadas == 2
+    assert segunda.reutilizados == ("precios",)
+    assert [h.id_motor for h in segunda.hallazgos] == ["precios"]
