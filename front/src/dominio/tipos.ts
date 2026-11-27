@@ -137,6 +137,8 @@ export interface Expediente {
   versionDe?: string;
   version?: number;
   elaboradoPor?: ElaboradoPor;
+  /** Expediente en el servidor de modelos entrenados (API de Axis), si ya se le envió. */
+  motorId?: string;
 }
 
 /** «en ejecución»: la prueba se aprendió de un entregable de una obra que sigue en curso. */

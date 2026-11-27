@@ -14,8 +14,9 @@ import { CATEGORIAS, LECTURA, PRIORIDADES, Pill, categoria, tamano } from '../ui
 import { guardarCarta } from './guardar-carta';
 import { SEMAFORO, Semaforo } from '../Semaforo';
 import { PanelPorModelo } from './PorModelo';
+import { PanelEntrenados } from '../motor/PanelEntrenados';
 
-type Pestana = 'hallazgos' | 'pruebas' | 'modelos' | 'documentos' | 'territorio';
+type Pestana = 'hallazgos' | 'entrenados' | 'pruebas' | 'modelos' | 'documentos' | 'territorio';
 type Orden = 'prioridad' | 'categoria' | 'titulo';
 const RANGO: Record<Prioridad, number> = { alta: 0, media: 1, confirmar: 2 };
 
@@ -63,7 +64,7 @@ export function Revision({ expediente, comparacion, anterior, subidaDirecta = fa
   const verHallazgo = (id: string) => { setCat('todos'); setFiltro('todos'); setElegido(id); setPestana('hallazgos'); };
 
   const pestanas: [Pestana, string, NombreIcono][] = [
-    ['hallazgos', 'Hallazgos', 'list'], ['pruebas', e.pruebas ? `Pruebas (${e.pruebas.aplicadas} de ${e.pruebas.total})` : 'Pruebas', 'check'], ['modelos', 'Por modelo', 'layers'], ['documentos', 'Documentos', 'files'], ['territorio', 'Territorio', 'map'],
+    ['hallazgos', 'Hallazgos', 'list'], ['entrenados', 'Modelos entrenados', 'coins'], ['pruebas', e.pruebas ? `Pruebas (${e.pruebas.aplicadas} de ${e.pruebas.total})` : 'Pruebas', 'check'], ['modelos', 'Por modelo', 'layers'], ['documentos', 'Documentos', 'files'], ['territorio', 'Territorio', 'map'],
   ];
 
   return (
@@ -204,6 +205,11 @@ export function Revision({ expediente, comparacion, anterior, subidaDirecta = fa
           </section>
         ))}
 
+      {e.semaforo !== 'gris' && (
+        <div hidden={pestana !== 'entrenados'}>
+          <PanelEntrenados expedienteId={e.id} nombre={e.nombre} documentos={e.documentos.map(({ id, nombre }) => ({ id, nombre }))} motorId={e.motorId} versionDe={e.versionDe} />
+        </div>
+      )}
       {pestana === 'pruebas' && <PanelPruebas e={e} alVerHallazgo={verHallazgo} />}
       {pestana === 'modelos' && <PanelPorModelo e={e} alVerHallazgo={verHallazgo} />}
     </>

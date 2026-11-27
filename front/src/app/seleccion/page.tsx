@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { listarExpedientes, listarProcesos } from '@/servidor/almacen';
 import { FormProceso } from '@/componentes/seleccion/FormProceso';
+import { BuscarProcesoSeace } from '@/componentes/seleccion/BuscarProcesoSeace';
 import { Icono } from '@/componentes/Icono';
 import { fecha } from '@/componentes/ui';
 import { usaBlob } from '@/servidor/respaldo';
@@ -19,6 +20,8 @@ export default async function PaginaSeleccion({ searchParams }: { searchParams: 
         <h1>¿A quién le corresponde la obra y qué revisar de él?</h1>
         <p>Sube las ofertas que llegaron por el SEACE. Axis las lee y aplica la ley tal cual: admite las ofertas válidas, ordena por puntaje y resuelve los empates. Ese resultado no lo cambia. Después revisa a cada postor con datos del OECE y del SEACE y te dice qué verificar, quién debe hacerlo y con qué base legal. Cuando el ganador entrega sus documentos para el contrato, Axis coteja su experiencia.</p>
       </section>
+      <BuscarProcesoSeace />
+      <h2 className="titulo-seccion-seleccion">O analiza las ofertas que llegaron</h2>
       <div className="seleccion-grid">
         <FormProceso key={q.expediente ?? ''} subidaDirecta={usaBlob} expedientes={opciones} inicial={q.expediente ? { expedienteId: q.expediente } : undefined} />
         <aside className="content-panel lado-seleccion">

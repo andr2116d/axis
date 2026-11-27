@@ -1023,3 +1023,48 @@ li.vencido{border-left:4px solid var(--high)!important;background:var(--high-bg)
 .articulo-nav{display:flex;justify-content:space-between;gap:16px;margin-top:26px;padding-top:14px;border-top:1px solid var(--line);font-size:.86rem}
 .articulo-nav a{text-decoration:none;display:inline-flex;align-items:center;gap:6px;max-width:48%}
 @media (max-width:640px){.articulo-nav{flex-direction:column}.articulo-nav a{max-width:100%}}
+
+/* Modelos entrenados (API de Axis) */
+.panel-entrenados{display:grid;gap:14px}
+.entrenados-cabecera{display:flex;justify-content:space-between;gap:20px;align-items:flex-start}
+.entrenados-cabecera p{color:var(--muted);max-width:760px;margin-top:6px}
+.avance-vivo{margin:0;padding:0;list-style:none;display:grid;gap:4px;font-size:.86rem;max-height:340px;overflow:auto}
+.avance-vivo li{display:flex;gap:10px;padding:6px 10px;border-radius:8px;background:var(--paper)}
+.avance-vivo li .mono{color:var(--muted);min-width:0;max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.avance-vivo .avance-error{background:var(--high-bg);color:var(--high)}
+.secciones-motor{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.secciones-motor li{display:grid;gap:3px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface)}
+.secciones-motor small{color:var(--muted)}
+.hallazgos-motor{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.hallazgo-motor{display:grid;gap:8px;border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--surface)}
+.hallazgo-motor.revisado{background:var(--paper)}
+.hallazgo-motor-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:.8rem;color:var(--muted)}
+.hallazgo-motor-meta .mono{margin-left:auto}
+.factores-motor{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 14px;font-size:.84rem}
+.factores-motor dt{color:var(--muted)}
+.factores-motor dd{font-weight:650}
+.motivo-revision{font-size:.88rem;color:var(--muted)}
+.acciones-hallazgo{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.acciones-hallazgo .btn{padding:6px 12px;font-size:.86rem}
+.citas-motor{display:grid;gap:10px;border-top:1px dashed var(--line);padding-top:10px}
+.cita-motor{display:grid;gap:6px}
+.cita-motor figcaption{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.cita-motor figcaption small{color:var(--muted)}
+.cita-motor blockquote{border-left:3px solid var(--action);padding:4px 12px;background:var(--warm);border-radius:0 8px 8px 0;font-style:italic}
+.cita-motor details p{font-size:.86rem;margin-top:6px}
+.ubicacion-norma,.pie-citas{color:var(--muted);font-size:.78rem}
+.aviso-busqueda{display:flex;gap:6px;font-size:.84rem;color:var(--medium);background:var(--medium-bg);padding:6px 10px;border-radius:8px}
+.hero-acciones{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin-top:22px}
+@media (max-width:720px){.entrenados-cabecera{flex-direction:column}.hallazgo-motor-meta .mono{margin-left:0}}
+.buscar-seace{display:grid;gap:12px;margin-bottom:28px}
+.buscar-seace input{width:100%;padding:12px 14px;border:1px solid var(--line-strong);border-radius:10px;background:var(--white);font-size:1rem}
+.resultados-seace li{display:grid;gap:2px}
+.titulo-seccion-seleccion{margin:8px 0 14px}
+.postores-seace{list-style:none;margin:18px 0;padding:0;display:grid;gap:12px}
+.postores-seace>li{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--surface);display:grid;gap:10px}
+.postores-seace>li.es-ganador{border-color:var(--good);box-shadow:0 0 0 1px var(--good)}
+.postor-seace-cabecera{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.postor-seace-cabecera .mono{margin-left:auto;color:var(--muted);font-size:.8rem}
+.sin-antecedentes{display:flex;gap:6px;color:var(--good);font-size:.88rem}
+.pregunta-normativa{display:grid;gap:12px;margin-bottom:24px}
+.pregunta-normativa input,.pregunta-normativa textarea{width:100%;padding:10px 12px;border:1px solid var(--line-strong);border-radius:10px;background:var(--white)}

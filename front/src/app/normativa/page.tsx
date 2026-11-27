@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { norma } from '@/servidor/normativa';
 import { hrefArticulo } from '@/dominio/normativa';
 import { BuscarArticulo } from '@/componentes/normativa/BuscarArticulo';
+import { PreguntaNormativa } from '@/componentes/normativa/PreguntaNormativa';
 
 export const metadata = { title: 'Normativa' };
 
@@ -14,6 +15,7 @@ export default function PaginaNormativa() {
         <h1>Normativa</h1>
         <p>El texto oficial de la Ley 32069 y su Reglamento con el que Axis fundamenta cada observación, plazo y recomendación. Cada cita en Axis abre aquí el artículo exacto.</p>
       </section>
+      <PreguntaNormativa />
       <BuscarArticulo articulos={normas.flatMap((x) => x.articulos.map((a) => ({ norma: x.id, n: a.n, titulo: a.titulo })))} />
       <div className="normas">
         {normas.map((x) => (

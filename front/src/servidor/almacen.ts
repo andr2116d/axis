@@ -113,6 +113,11 @@ export async function guardarArchivo(coleccion: Coleccion, id: string, docId: st
   await respaldo.escribir(`${base(coleccion, id)}/archivos/${docId}`, datos);
 }
 
+export function leerArchivo(coleccion: Coleccion, id: string, docId: string) {
+  if (!/^[a-z0-9-]+$/i.test(docId)) throw new Error('Identificador no válido');
+  return respaldo.leer(`${base(coleccion, id)}/archivos/${docId}`);
+}
+
 /** Texto por página de un documento (índice 0 = página 1). */
 export async function guardarTexto(coleccion: Coleccion, id: string, docId: string, paginas: string[]) {
   await escribirJSON(`${base(coleccion, id)}/texto/${docId}.json`, paginas);

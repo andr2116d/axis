@@ -67,6 +67,8 @@ const DATOS: [string, string][] = [
   ['377 adicionales y ampliaciones', 'Resoluciones publicadas en contratos OCDS, leídas con OCR'],
   ['1,410 obras licitadas', 'OECE · Contrataciones Abiertas, cruzadas con el MEF por CUI'],
   ['10,627 proveedores con antecedentes', 'Inhabilitaciones, multas y penalidades (OECE, datos abiertos)'],
+  ['25,133 precios unitarios reales', 'Presupuestos de 130 procesos de obra (SEACE), solo filas que cuadran: entrenan el modelo de precios'],
+  ['553 artículos y disposiciones', 'Ley 32069 y su Reglamento, texto oficial consolidado: de ahí sale cada cita'],
   ['Territorio', 'OpenStreetMap, Copernicus GLO-30, INGEMMET, ANA e INEI'],
 ];
 
