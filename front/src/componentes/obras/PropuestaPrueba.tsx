@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import type { PruebaAprendida } from '@/dominio/tipos';
 import { Icono } from '../Icono';
 import { useAviso } from '../Aviso';
-import { avanzarDemo } from '../demo/estado';
 
 /** Prueba que el modelo propone a partir de una obra: el evaluador la compara con las existentes y la acepta o rechaza. */
 export function PropuestaPrueba({ prueba, existentes }: { prueba: PruebaAprendida; existentes: { id: string; nombre: string }[] }) {
@@ -20,7 +19,6 @@ export function PropuestaPrueba({ prueba, existentes }: { prueba: PruebaAprendid
     setEnviando(false);
     if (!r.ok) { avisar('No se pudo guardar la decisión.'); return; }
     avisar(decision === 'aceptar' ? `Prueba ${p.id} aceptada: ya corre en las revisiones.` : `Prueba ${p.id} rechazada.`);
-    if (decision === 'aceptar') avanzarDemo({ paso: 5 });
     router.refresh();
   };
 

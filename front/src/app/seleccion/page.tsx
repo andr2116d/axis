@@ -8,7 +8,7 @@ import { usaBlob } from '@/servidor/respaldo';
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Selección del contratista' };
 
-export default async function PaginaSeleccion({ searchParams }: { searchParams: Promise<{ expediente?: string; ejemplo?: string }> }) {
+export default async function PaginaSeleccion({ searchParams }: { searchParams: Promise<{ expediente?: string }> }) {
   const q = await searchParams;
   const [expedientes, procesos] = await Promise.all([listarExpedientes(), listarProcesos()]);
   const opciones = expedientes.filter((e) => e.estado === 'analizado' && e.semaforo !== 'gris').map(({ id, clave, nombre }) => ({ id, clave, nombre }));
@@ -20,7 +20,7 @@ export default async function PaginaSeleccion({ searchParams }: { searchParams: 
         <p>Sube las ofertas que llegaron por el SEACE. Axis las lee y aplica la ley tal cual: admite las ofertas válidas, ordena por puntaje y resuelve los empates. Ese resultado no lo cambia. Después revisa a cada postor con datos del OECE y del SEACE y te dice qué verificar, quién debe hacerlo y con qué base legal. Cuando el ganador entrega sus documentos para el contrato, Axis coteja su experiencia.</p>
       </section>
       <div className="seleccion-grid">
-        <FormProceso key={`${q.expediente ?? ''}${q.ejemplo ?? ''}`} subidaDirecta={usaBlob} expedientes={opciones} inicial={q.expediente || q.ejemplo ? { expedienteId: q.expediente ?? '', ejemplo: q.ejemplo === '1' } : undefined} />
+        <FormProceso key={q.expediente ?? ''} subidaDirecta={usaBlob} expedientes={opciones} inicial={q.expediente ? { expedienteId: q.expediente } : undefined} />
         <aside className="content-panel lado-seleccion">
           <h2>Qué revisa Axis</h2>
           <ul className="lista-ley">

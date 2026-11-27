@@ -7,7 +7,6 @@ import { diasEntre, fechaCorta, hoyIso } from '@/dominio/fechas';
 import { Icono } from '../Icono';
 import { useAviso } from '../Aviso';
 import { SelectorArchivos, enviar } from '../SelectorArchivos';
-import type { EjemploSolicitud } from './ejemplos';
 import { AprendizajeEnSolicitud } from './Aprendizaje';
 import { Cita } from '../Cita';
 
@@ -16,7 +15,7 @@ const TIPOS: [string, string][] = [
   ['adicional', 'Prestación adicional'], ['valorizacion', 'Valorización'], ['otro', 'Otra anotación'],
 ];
 
-export function NuevaSolicitud({ obraId, subidaDirecta, ejemplos }: { obraId: string; subidaDirecta: boolean; ejemplos: EjemploSolicitud[] }) {
+export function NuevaSolicitud({ obraId, subidaDirecta }: { obraId: string; subidaDirecta: boolean }) {
   const router = useRouter();
   const [texto, setTexto] = useState('');
   const [fecha, setFecha] = useState(hoyIso());
@@ -25,7 +24,6 @@ export function NuevaSolicitud({ obraId, subidaDirecta, ejemplos }: { obraId: st
   const [progreso, setProgreso] = useState('');
   const [error, setError] = useState('');
 
-  const usar = (x: EjemploSolicitud) => { setTexto(x.texto); setFecha(x.fecha); setTipo(x.tipo); };
   const analizar = async () => {
     setError('');
     setProgreso('Leyendo la solicitud…');
@@ -44,9 +42,6 @@ export function NuevaSolicitud({ obraId, subidaDirecta, ejemplos }: { obraId: st
     <section className="content-panel nueva-solicitud" aria-labelledby="titulo-nueva">
       <h2 id="titulo-nueva">Llegó una solicitud del contratista</h2>
       <p>Pega el asiento del cuaderno de incidencias o sube el documento. Axis la clasifica, calcula tus plazos y la coteja con el expediente.</p>
-      {ejemplos.length > 0 && (
-        <div className="ejemplos"><span>Probar con un ejemplo:</span>{ejemplos.map((x) => <button key={x.etiqueta} type="button" className="chip-boton" onClick={() => usar(x)}>{x.etiqueta}</button>)}</div>
-      )}
       <label className="campo campo-ancho"><span>Texto de la anotación</span><textarea rows={6} value={texto} onChange={(x) => setTexto(x.target.value)} placeholder="ASIENTO N.° … DEL RESIDENTE: se solicita…" /></label>
       <div className="campos">
         <label className="campo"><span>Fecha de la anotación o presentación</span><input type="date" value={fecha} onChange={(x) => setFecha(x.target.value)} /></label>

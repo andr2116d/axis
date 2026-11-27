@@ -111,7 +111,7 @@ export default async function PaginaProceso({ params }: { params: Promise<{ id: 
           <h2>Documentos del ganador para el contrato</h2>
           <div className="contrato-grid">
             <div className="content-panel">
-              <VerificarContrato procesoId={p.id} ganador={ganador.nombre} subidaDirecta={usaBlob} hecho={!!p.verificacion} ejemplo={/EJEMPLO/.test(p.nomenclatura) ? '/demo/seleccion/CONTRATO_consorcio-vias-del-norte.pdf' : undefined} />
+              <VerificarContrato procesoId={p.id} ganador={ganador.nombre} subidaDirecta={usaBlob} hecho={!!p.verificacion} />
             </div>
             {p.verificacion && (
               <div className="content-panel resultado-contrato">

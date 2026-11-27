@@ -4,9 +4,7 @@ import { leerEjecucion, leerExpediente, listarPruebas } from '@/servidor/almacen
 import { pruebasConocidas } from '@/servidor/aprendizaje/biblioteca';
 import { AvisoAprendizaje } from '@/componentes/ejecucion/Aprendizaje';
 import { usaBlob } from '@/servidor/respaldo';
-import { ESCENARIOS } from '@/servidor/aprendizaje/escenarios';
 import { NuevaSolicitud, TarjetaSolicitud } from '@/componentes/ejecucion/Solicitudes';
-import { ejemplosSolicitud } from '@/componentes/ejecucion/ejemplos';
 import { Icono } from '@/componentes/Icono';
 import { diasEntre, fechaCorta, hoyIso, sumarDias } from '@/dominio/fechas';
 
@@ -19,9 +17,6 @@ export default async function PaginaObra({ params }: { params: Promise<{ id: str
   const fin = sumarDias(o.inicio, o.plazoDias, false);
   const hoy = hoyIso();
   const transcurrido = Math.min(100, Math.max(0, Math.round((diasEntre(o.inicio, hoy, false) / o.plazoDias) * 100)));
-  // La condición del escenario de demostración, si el expediente es uno de ellos.
-  const escenario = ESCENARIOS.find((x) => e?.documentos.some((d) => x.original.archivo.endsWith(d.nombre)));
-  const ejemplos = ejemplosSolicitud(o.inicio, escenario?.condicion ?? 'napa', o.contratista, o.montoContrato);
   const pendientes = o.solicitudes.filter((s) => s.estado === 'pendiente');
   const plazos = pendientes.flatMap((s) => s.analisis.plazos.map((p) => ({ ...p, s }))).sort((a, b) => a.vence.localeCompare(b.vence));
   const deficiencias = [...new Set(o.solicitudes.flatMap((s) => s.analisis.deficiencias))];
@@ -74,7 +69,7 @@ export default async function PaginaObra({ params }: { params: Promise<{ id: str
           {solicitudes.length ? solicitudes.map((s) => <TarjetaSolicitud key={s.id} obraId={o.id} s={s} pruebas={pruebas} existentes={existentes} />) : <p className="empty-line">Aún no hay solicitudes. Cuando el contratista anote una ampliación, consulta, adicional o valorización, analízala aquí.</p>}
         </div>
         <div>
-          <NuevaSolicitud obraId={o.id} subidaDirecta={usaBlob} ejemplos={ejemplos} />
+          <NuevaSolicitud obraId={o.id} subidaDirecta={usaBlob} />
           {deficiencias.length > 0 && (
             <section className="content-panel lo-no-previsto">
               <h2>Lo que el expediente no previó</h2>

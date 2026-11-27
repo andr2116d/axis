@@ -1,22 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icono } from '../Icono';
 import { SelectorArchivos, enviar } from '../SelectorArchivos';
 
 // Documentos que el ganador presenta para firmar el contrato (experiencia, constancias).
 
-export function VerificarContrato({ procesoId, ganador, subidaDirecta, ejemplo, hecho }: { procesoId: string; ganador: string; subidaDirecta: boolean; ejemplo?: string; hecho: boolean }) {
+export function VerificarContrato({ procesoId, ganador, subidaDirecta, hecho }: { procesoId: string; ganador: string; subidaDirecta: boolean; hecho: boolean }) {
   const router = useRouter();
   const [archivos, setArchivos] = useState<File[]>([]);
   const [progreso, setProgreso] = useState('');
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (!ejemplo || hecho) return;
-    fetch(ejemplo).then((r) => r.blob()).then((b) => setArchivos([new File([b], ejemplo.split('/').pop()!, { type: 'application/pdf' })])).catch(() => {});
-  }, [ejemplo, hecho]);
 
   const verificar = async () => {
     setError('');

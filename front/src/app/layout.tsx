@@ -2,8 +2,6 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { Encabezado } from '@/componentes/Encabezado';
 import { ProveedorAviso } from '@/componentes/Aviso';
-import { GuiaDemo } from '@/componentes/demo/GuiaDemo';
-import { usaBlob } from '@/servidor/respaldo';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -29,7 +27,6 @@ export default function Layout({ children }: { children: ReactNode }) {
               <span>Revisión de expedientes técnicos de obra</span>
             </div>
           </footer>
-          <GuiaDemo subidaDirecta={usaBlob} />
         </ProveedorAviso>
       </body>
     </html>

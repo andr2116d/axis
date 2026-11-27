@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icono } from '../Icono';
 import { SelectorArchivos, enviar as enviarArchivos } from '../SelectorArchivos';
@@ -15,59 +15,20 @@ interface ProcesoForm { nomenclatura: string; objeto: string; entidad: string; e
 const integranteVacio = (): IntegranteForm => ({ nombre: '', ruc: '', participacion: '100', experiencia: '', inicio: '' });
 const postorVacio = (): PostorForm => ({ nombre: '', oferta: '', puntajeTotal: '', puntajeTecnico: '', mype: false, domicilio: '', representante: '', personal: '', integrantes: [integranteVacio()] });
 
-/** Proceso de ejemplo con empresas ficticias (RUC inventados): muestra cada señal sin señalar a nadie real. */
-export function ejemploProceso(objeto: string, expedienteId = ''): ProcesoForm {
-  const vr = 1284500;
-  const of = (pct: number) => (Math.round(vr * pct * 100) / 100).toFixed(2);
-  const pts = (pct: number) => (Math.round((0.95 / pct) * 10000) / 100).toFixed(2);
-  return {
-    nomenclatura: 'LP-ABR-7-2026-EJEMPLO/CS-1', objeto, entidad: 'Entidad de demostración', expedienteId,
-    procedimiento: 'abreviada', valorReferencial: vr.toFixed(2), fechaBuenaPro: '2026-09-15', minimoParticipacion: '',
-    postores: [
-      { nombre: 'Consorcio Vías del Norte (ficticio)', oferta: of(0.95), puntajeTotal: pts(0.95), puntajeTecnico: '', mype: false, domicilio: 'Jr. Pizarro 410, Trujillo', representante: 'Rosa Mendoza Lara', personal: 'Ing. Carlos Rivas Soto, Ing. Elena Paz Ruiz',
-        integrantes: [
-          { nombre: 'Inversiones Kallpa SAC (ficticia)', ruc: '20612345671', participacion: '90', experiencia: '0', inicio: '2026-02-10' },
-          { nombre: 'Constructora Andina Norte SAC (ficticia)', ruc: '20481234567', participacion: '10', experiencia: '6200000', inicio: '2009-05-04' },
-        ] },
-      { nombre: 'Constructora Moche SAC (ficticia)', oferta: of(1.0), puntajeTotal: pts(1.0), puntajeTecnico: '', mype: true, domicilio: 'Av. España 1250, Of. 302, Trujillo', representante: 'Julio Vega Castro', personal: 'Ing. Mario Linares Díaz',
-        integrantes: [{ nombre: 'Constructora Moche SAC (ficticia)', ruc: '20530987651', participacion: '100', experiencia: '3400000', inicio: '2015-08-20' }] },
-      { nombre: 'Ingeniería Chimú EIRL (ficticia)', oferta: of(1.10), puntajeTotal: pts(1.10), puntajeTecnico: '', mype: true, domicilio: 'Av. España 1250 Of. 302 Trujillo', representante: 'Ana Torres Gil', personal: 'Ing. Mario Linares Díaz',
-        integrantes: [{ nombre: 'Ingeniería Chimú EIRL (ficticia)', ruc: '20600111221', participacion: '100', experiencia: '1900000', inicio: '2018-01-15' }] },
-      { nombre: 'Obras Generales Trujillo SAC (ficticia)', oferta: of(1.099), puntajeTotal: pts(1.099), puntajeTecnico: '', mype: false, domicilio: 'Calle Bolívar 233, Trujillo', representante: 'Luis Rojas Peña', personal: 'Ing. Diana Cruz Mori',
-        integrantes: [{ nombre: 'Obras Generales Trujillo SAC (ficticia)', ruc: '20477889901', participacion: '100', experiencia: '4100000', inicio: '2011-03-02' }] },
-    ],
-  };
-}
-
-/** Las ofertas de ejemplo en PDF (empresas ficticias) que se suben como lo haría el comité. */
-export const OFERTAS_EJEMPLO = ['OFERTA-1_consorcio-vias-del-norte.pdf', 'OFERTA-2_constructora-moche.pdf', 'OFERTA-3_ingenieria-chimu.pdf', 'OFERTA-4_obras-generales-trujillo.pdf'].map((a) => `/demo/seleccion/${a}`);
-
-async function archivosDe(urls: string[]) {
-  return Promise.all(urls.map(async (u) => new File([await (await fetch(u)).blob()], u.split('/').pop()!, { type: 'application/pdf' })));
-}
-
 interface OfertaLeida { postor: { nombre: string; oferta: number; puntajeTotal?: number; mype: boolean; domicilio?: string; representante?: string; telefono?: string; apoderados?: string[]; archivo?: string; integrantes: { nombre: string; ruc: string; participacion: number; inicio?: string }[] }; avisos: string[] }
 
-export function FormProceso({ expedientes, inicial, subidaDirecta = false }: { expedientes: { id: string; clave: string; nombre: string }[]; inicial?: { expedienteId: string; ejemplo: boolean }; subidaDirecta?: boolean }) {
+export function FormProceso({ expedientes, inicial, subidaDirecta = false }: { expedientes: { id: string; clave: string; nombre: string }[]; inicial?: { expedienteId: string }; subidaDirecta?: boolean }) {
   const router = useRouter();
   const base = expedientes.find((x) => x.id === inicial?.expedienteId);
-  const datosEjemplo = (objeto: string, expedienteId = '') => ({ ...ejemploProceso(objeto, expedienteId), postores: [] as PostorForm[] });
-  const [f, setF] = useState<ProcesoForm>(() => inicial?.ejemplo ? datosEjemplo(base?.nombre ?? 'Mejoramiento de pistas y veredas', base?.id) : {
+  const [f, setF] = useState<ProcesoForm>(() => ({
     nomenclatura: '', objeto: base?.nombre ?? '', entidad: '', expedienteId: base?.id ?? '', procedimiento: 'abreviada', valorReferencial: '', fechaBuenaPro: '', minimoParticipacion: '', postores: [],
-  });
+  }));
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
   const [ofertas, setOfertas] = useState<File[]>([]);
   const [leyendo, setLeyendo] = useState('');
   const [manual, setManual] = useState(false);
 
-  // En la demo, las cuatro ofertas de ejemplo quedan listas para subir.
-  useEffect(() => { if (inicial?.ejemplo) archivosDe(OFERTAS_EJEMPLO).then(setOfertas).catch(() => {}); }, [inicial?.ejemplo]);
-
-  const cargarEjemplo = async () => {
-    setF(datosEjemplo(f.objeto || base?.nombre || 'Mejoramiento de pistas y veredas', f.expedienteId));
-    setOfertas(await archivosDe(OFERTAS_EJEMPLO));
-  };
   const leerOfertas = async () => {
     setError('');
     try {
@@ -125,7 +86,6 @@ export function FormProceso({ expedientes, inicial, subidaDirecta = false }: { e
     <section className="content-panel form-proceso" aria-labelledby="titulo-form">
       <div className="form-proceso-head">
         <div><h2 id="titulo-form">Datos del procedimiento</h2><p>Del acta de buena pro y de las ofertas publicadas en el SEACE.</p></div>
-        <button type="button" className="btn secondary" onClick={cargarEjemplo}><Icono nombre="files" tamano={17} />Cargar ejemplo</button>
       </div>
       <div className="campos">
         {campo('Nomenclatura', f.nomenclatura, (v) => cambiar({ nomenclatura: v }))}

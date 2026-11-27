@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { SituacionObra } from '@/dominio/tipos';
 import { Icono } from '../Icono';
@@ -9,7 +9,7 @@ import { SelectorArchivos, enviar } from '../SelectorArchivos';
 
 export interface OpcionExpediente { id: string; clave: string; nombre: string }
 
-export function RegistroObra({ expedientes, subidaDirecta, demo, preseleccion }: { expedientes: OpcionExpediente[]; subidaDirecta: boolean; demo?: { archivo: string; via: string; situacion: SituacionObra }; preseleccion?: string }) {
+export function RegistroObra({ expedientes, subidaDirecta, preseleccion }: { expedientes: OpcionExpediente[]; subidaDirecta: boolean; preseleccion?: string }) {
   const router = useRouter();
   const avisar = useAviso();
   const [expedienteId, setExpedienteId] = useState(expedientes.find((e) => e.id === preseleccion)?.id ?? expedientes[0]?.id ?? '');
@@ -18,20 +18,6 @@ export function RegistroObra({ expedientes, subidaDirecta, demo, preseleccion }:
   const [enviando, setEnviando] = useState(false);
   const [progreso, setProgreso] = useState('');
   const [error, setError] = useState('');
-
-  // Desde la demo: precarga el documento de la obra y elige el expediente de esa calle (el más reciente).
-  const precargado = useRef(false);
-  useEffect(() => {
-    // Solo una vez: después de registrar, la página se refresca y no debe volver a cargarlo.
-    if (precargado.current || !demo?.archivo.startsWith('/demo/')) return;
-    precargado.current = true;
-    fetch(demo.archivo).then((r) => r.blob()).then((b) => setArchivos([new File([b], decodeURIComponent(demo.archivo.split('/').pop()!), { type: 'application/pdf' })]));
-    const plano = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
-    const via = plano(demo.via).replace(/^(CALLE|JIRON|AVENIDA|PASAJE)\s+/, '');
-    const suyo = expedientes.find((e) => plano(e.nombre).includes(via));
-    if (suyo) setExpedienteId(suyo.id);
-    setSituacion(demo.situacion);
-  }, [demo, expedientes]);
 
   if (!expedientes.length) {
     return (
@@ -47,12 +33,10 @@ export function RegistroObra({ expedientes, subidaDirecta, demo, preseleccion }:
     setEnviando(true);
     setError('');
     try {
-      const { id } = await enviar<{ id: string }>('/api/obras', archivos, { expedienteId, situacion }, subidaDirecta, setProgreso);
+      await enviar<{ id: string }>('/api/obras', archivos, { expedienteId, situacion }, subidaDirecta, setProgreso);
       setArchivos([]);
       avisar('Obra registrada.');
-      // En la demo se muestra solo la obra recién registrada.
-      if (demo) router.push(`/obras?escenario=${encodeURIComponent(new URLSearchParams(window.location.search).get('escenario') ?? '')}&obra=${id}`);
-      else router.refresh();
+      router.refresh();
     } catch (e) {
       setError((e as Error).message);
     } finally {
