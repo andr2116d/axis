@@ -106,6 +106,9 @@ PARTES: tuple[str, ...] = tuple(sorted({t.parte for r in RECETAS.values() for t 
 # Etiqueta débil a partir del nombre del archivo, SOLO para armar el corpus real de entrenamiento.
 # En la API nunca se mira el nombre del archivo. El orden importa: lo más específico primero.
 NOMBRE_A_TIPO: tuple[tuple[str, str], ...] = (
+    # TDR va primero: "TDR ... ADAPTADA A LA ABSOLUCION" es un TDR, no una absolución.
+    ("TDR", "tdr"),
+    ("TERMINOS DE REFERENCIA", "tdr"),
     ("ABSOLUCION", "absolucion_consultas"),
     ("PLIEGO ABSOLUTORIO", "absolucion_consultas"),
     ("ANALISIS DE COSTO", "analisis_costos_unitarios"),
@@ -117,8 +120,6 @@ NOMBRE_A_TIPO: tuple[tuple[str, str], ...] = (
     ("CRONOGRAMA", "cronograma"),
     ("PLANO", "planos"),
     ("PRESUPUESTO", "presupuesto"),
-    ("TDR", "tdr"),
-    ("TERMINOS DE REFERENCIA", "tdr"),
     ("BASES", "bases"),
     ("ACTA", "acta"),
     ("CONTRATO", "contrato"),
