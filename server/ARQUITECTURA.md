@@ -101,3 +101,17 @@ Una sola imagen Docker sirve para todo. Cada pieza local tiene su par en AWS, y 
 5. **¿Fue editado?** Se reportan hechos observables, cada uno con su explicación y sus páginas. Además, un modelo de anomalías dice qué tan raro es el archivo frente a ~1 200 documentos reales de SEACE.
 
 Los modelos se entrenan con `herramientas/entrenar_documentos.py`, que usa documentos reales y sintéticos. El nombre del archivo sirve como etiqueta débil solo durante el entrenamiento. La API nunca mira el nombre.
+
+## Correcciones: de sintético a real
+
+El generador sintético sirve para arrancar, pero el modelo solo conoce las formas que se le muestran. Lo que lo ancla a la realidad son las correcciones del evaluador.
+
+- `POST /documentos/{id}/correcciones` con `{"pagina": 16, "etiqueta": "cotizacion"}` corrige una página. Sin `pagina`, corrige el tipo del documento completo.
+- La corrección se guarda por **hash del archivo**, no por análisis. Si el archivo se reanaliza con modelos nuevos, la corrección se vuelve a aplicar.
+- Al corregir se rehacen las partes. Si solo se corrigieron páginas, el tipo del documento se recalcula.
+- Una etiqueta que el modelo no conoce se acepta (`es_etiqueta_nueva: true`) y se aprende en el próximo entrenamiento.
+- Al entrenar, cada página corregida pesa 5 veces lo que pesa una sintética. Si el archivo corregido también está en el corpus real, se descarta su etiqueta por nombre.
+- Las métricas separan tres cosas:
+  - la exactitud en **correcciones que el modelo no vio** (la medida honesta);
+  - cuántas correcciones **reproduce** el modelo final (verifica que las aprendió);
+  - la exactitud en sintéticos (que sola no dice nada).
