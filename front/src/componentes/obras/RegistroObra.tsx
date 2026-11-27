@@ -9,10 +9,10 @@ import { SelectorArchivos, enviar } from '../SelectorArchivos';
 
 export interface OpcionExpediente { id: string; clave: string; nombre: string }
 
-export function RegistroObra({ expedientes, subidaDirecta, demo }: { expedientes: OpcionExpediente[]; subidaDirecta: boolean; demo?: { archivo: string; via: string; situacion: SituacionObra } }) {
+export function RegistroObra({ expedientes, subidaDirecta, demo, preseleccion }: { expedientes: OpcionExpediente[]; subidaDirecta: boolean; demo?: { archivo: string; via: string; situacion: SituacionObra }; preseleccion?: string }) {
   const router = useRouter();
   const avisar = useAviso();
-  const [expedienteId, setExpedienteId] = useState(expedientes[0]?.id ?? '');
+  const [expedienteId, setExpedienteId] = useState(expedientes.find((e) => e.id === preseleccion)?.id ?? expedientes[0]?.id ?? '');
   const [situacion, setSituacion] = useState<SituacionObra>('paralizada');
   const [archivos, setArchivos] = useState<File[]>([]);
   const [enviando, setEnviando] = useState(false);

@@ -1,5 +1,5 @@
 import 'server-only';
-import type { DatosCarta, Documento, EjecucionMotor, Expediente, Hallazgo, Prioridad, ResultadoPrueba, Semaforo, TipoDocumento } from '@/dominio/tipos';
+import type { DatosCarta, Documento, EjecucionMotor, Expediente, Hallazgo, Justificacion, Prioridad, ResultadoPrueba, Semaforo, TipoDocumento } from '@/dominio/tipos';
 import { CAMPOS_CARTA, TIPOS_DOCUMENTO } from '@/dominio/tipos';
 import * as almacen from './almacen';
 import type { ArchivoEntrante } from './http';
@@ -15,6 +15,7 @@ import { frase, nombrePropio } from './texto';
 import { VERIFICADORES } from '@/datos/verificadores';
 import { faltantes } from './aprendizaje/biblioteca';
 import { seleccionarPruebas } from './aprendizaje/seleccion';
+import { claveHallazgo } from '@/dominio/semaforo';
 
 // Servicio del evaluador: recibe un expediente, lo lee y clasifica (paso 1), y
 // después de que la persona confirma los tipos, corre los motores (paso 2).
@@ -35,7 +36,9 @@ async function medir<T>(motor: string, ejecucion: EjecucionMotor[], fn: () => Pr
   }
 }
 
-export async function recibirExpediente(archivos: ArchivoEntrante[]): Promise<Expediente> {
+export async function recibirExpediente(archivos: ArchivoEntrante[], opciones: { versionDe?: string } = {}): Promise<Expediente> {
+  const anterior = opciones.versionDe ? await almacen.leerExpediente(opciones.versionDe) : null;
+  if (opciones.versionDe && !anterior) throw new Error('No se encontró la versión anterior del expediente.');
   const id = almacen.nuevoId();
   const clave = await almacen.siguienteClave('expedientes', 'EXP');
   const ejecucion: EjecucionMotor[] = [];
@@ -76,8 +79,11 @@ export async function recibirExpediente(archivos: ArchivoEntrante[]): Promise<Ex
     documentos,
     hallazgos: [],
     ejecucion: resumir(ejecucion),
-    carta: { incluidos: [], destinatario: '' },
+    carta: anterior ? { ...anterior.carta, incluidos: [] } : { incluidos: [], destinatario: '' },
+    ...(anterior ? { versionDe: anterior.id, version: (anterior.version ?? 1) + 1, elaboradoPor: anterior.elaboradoPor } : {}),
   };
+  // La versión corregida conserva el nombre de la obra si la lectura no lo encontró.
+  if (anterior && expediente.nombre === SIN_NOMBRE) expediente.nombre = anterior.nombre;
   await almacen.guardarExpediente(expediente);
   return expediente;
 }
@@ -188,8 +194,29 @@ export async function analizarExpediente(id: string, tipos: Record<string, strin
   expediente.ejecucion = ejecucion;
   expediente.estado = 'analizado';
   expediente.carta = { ...expediente.carta, incluidos: expediente.hallazgos.map((h) => h.id) };
+  await heredarJustificaciones(expediente);
   await almacen.guardarExpediente(expediente);
   return expediente;
+}
+
+/**
+ * En una versión corregida, las alertas que siguen y que el evaluador ya había justificado
+ * (y Axis aceptado) conservan esa justificación: no se pide dos veces lo mismo.
+ */
+async function heredarJustificaciones(e: Expediente) {
+  if (!e.versionDe) return;
+  const anterior = await almacen.leerExpediente(e.versionDe);
+  if (!anterior?.justificaciones?.length) return;
+  const porClave = new Map(anterior.hallazgos.map((h) => [claveHallazgo(h), h.id]));
+  const heredadas: Justificacion[] = [];
+  for (const h of e.hallazgos) {
+    const previo = porClave.get(claveHallazgo(h));
+    const j = previo ? anterior.justificaciones.find((x) => x.hallazgo === previo && x.evaluacion.veredicto === 'aceptada') : undefined;
+    if (!j) continue;
+    heredadas.push({ ...j, hallazgo: h.id, documento: undefined, evaluacion: { ...j.evaluacion, razones: [...j.evaluacion.razones, `Aceptada en la versión ${anterior.version ?? 1} (${anterior.clave}).`] } });
+  }
+  e.justificaciones = heredadas;
+  e.carta.incluidos = e.carta.incluidos.filter((id) => !heredadas.some((j) => j.hallazgo === id));
 }
 
 /** Datos de un expediente que necesitan las pruebas aprendidas. */
@@ -214,9 +241,10 @@ function semaforo(e: Expediente): Semaforo {
   return 'verde';
 }
 
-export async function actualizarCarta(id: string, cambios: Partial<DatosCarta>) {
+export async function actualizarCarta(id: string, cambios: Partial<DatosCarta> & { elaboradoPor?: string }) {
   const expediente = await almacen.leerExpediente(id);
   if (!expediente) throw new Error('Expediente no encontrado');
+  if (cambios.elaboradoPor === 'entidad' || cambios.elaboradoPor === 'consultor') expediente.elaboradoPor = cambios.elaboradoPor;
   const validos = new Set(expediente.hallazgos.map((h) => h.id));
   if (cambios.incluidos) expediente.carta.incluidos = cambios.incluidos.filter((h) => validos.has(h));
   for (const campo of CAMPOS_CARTA) {
@@ -224,6 +252,7 @@ export async function actualizarCarta(id: string, cambios: Partial<DatosCarta>) 
     if (typeof v === 'string') expediente.carta[campo] = v.slice(0, 200);
   }
   if (typeof cambios.plazo === 'number' && cambios.plazo >= 1 && cambios.plazo <= 60) expediente.carta.plazo = Math.round(cambios.plazo);
+  if (typeof cambios.plazoEntregable === 'number' && cambios.plazoEntregable >= 1 && cambios.plazoEntregable <= 720) expediente.carta.plazoEntregable = Math.round(cambios.plazoEntregable);
   await almacen.guardarExpediente(expediente);
   return expediente;
 }

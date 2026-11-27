@@ -11,7 +11,7 @@ import { escenarioPorId } from '@/servidor/aprendizaje/escenarios';
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Obras terminadas y paralizadas' };
 
-export default async function PaginaObras({ searchParams }: { searchParams: Promise<{ escenario?: string; obra?: string }> }) {
+export default async function PaginaObras({ searchParams }: { searchParams: Promise<{ escenario?: string; obra?: string; expediente?: string }> }) {
   const params = await searchParams;
   const esc = escenarioPorId(params.escenario);
   const demo = esc ? { archivo: esc.obra.archivo, via: esc.original.via, situacion: esc.situacion } : undefined;
@@ -28,7 +28,9 @@ export default async function PaginaObras({ searchParams }: { searchParams: Prom
 
   return (
     <>
+      <nav className="subnav" aria-label="Aprendizaje"><Link href="/obras" aria-current="page">Obras terminadas y paralizadas</Link><Link href="/pruebas">Pruebas aprendidas</Link></nav>
       <section className="page-lead">
+        <span className="fase-etiqueta">Cierre · Aprendizaje</span>
         <h1>Obras terminadas y paralizadas</h1>
         <p>Lo que pasó en una obra es la mejor prueba de lo que le faltó a su expediente. Axis lee los documentos de la obra, encuentra lo que el expediente no previó y lo convierte en una prueba que corre en las revisiones siguientes.</p>
       </section>
@@ -45,7 +47,7 @@ export default async function PaginaObras({ searchParams }: { searchParams: Prom
             <h2>{esc.original.via} · obra {esc.situacion}</h2>
             <p>Axis leyó la {esc.obra.tipo.toLowerCase()}, la comparó con el expediente original y te muestra a la derecha lo que encontró y la prueba que propone.</p>
           </section>
-        ) : <RegistroObra expedientes={opciones} subidaDirecta={usaBlob} demo={demo} />}
+        ) : <RegistroObra expedientes={opciones} subidaDirecta={usaBlob} demo={demo} preseleccion={params.expediente} />}
         <section className="content-panel learn-validation">
           <h2>{esc ? 'Lo que Axis encontró en la obra' : 'Lo que Axis aprendió'}</h2>
           {visibles.length ? (

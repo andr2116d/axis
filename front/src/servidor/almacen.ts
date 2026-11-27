@@ -1,12 +1,12 @@
 import 'server-only';
 import { randomUUID } from 'node:crypto';
-import type { Expediente, PruebaAprendida, RegistroObra } from '@/dominio/tipos';
+import type { Expediente, ObraEjecucion, ProcesoSeleccion, PruebaAprendida, RegistroObra } from '@/dominio/tipos';
 import { respaldo } from './respaldo';
 
 // Almacén de Axis: expedientes, registros de obra, archivos y texto leído.
 // Todo acceso pasa por aquí; el soporte físico (Blob o disco) está en respaldo.ts.
 
-type Coleccion = 'expedientes' | 'obras' | 'pruebas';
+type Coleccion = 'expedientes' | 'obras' | 'pruebas' | 'procesos' | 'ejecucion';
 
 function base(coleccion: Coleccion, id: string) {
   if (!/^[a-z0-9-]+$/i.test(id)) throw new Error('Identificador no válido');
@@ -77,6 +77,34 @@ export function leerObra(id: string) {
 export async function listarObras() {
   const todos = await listar<RegistroObra>('obras', 'obra.json');
   return todos.sort((a, b) => b.creado.localeCompare(a.creado));
+}
+
+// ── Procesos de selección ────────────────────────────────────
+
+export async function guardarProceso(p: ProcesoSeleccion) {
+  await escribirJSON(`${base('procesos', p.id)}/proceso.json`, p);
+}
+
+export function leerProceso(id: string) {
+  return leerJSON<ProcesoSeleccion>(`${base('procesos', id)}/proceso.json`);
+}
+
+export async function listarProcesos() {
+  return (await listar<ProcesoSeleccion>('procesos', 'proceso.json')).sort((a, b) => b.creado.localeCompare(a.creado));
+}
+
+// ── Obras en ejecución ───────────────────────────────────────
+
+export async function guardarEjecucion(o: ObraEjecucion) {
+  await escribirJSON(`${base('ejecucion', o.id)}/obra.json`, o);
+}
+
+export function leerEjecucion(id: string) {
+  return leerJSON<ObraEjecucion>(`${base('ejecucion', id)}/obra.json`);
+}
+
+export async function listarEjecucion() {
+  return (await listar<ObraEjecucion>('ejecucion', 'obra.json')).sort((a, b) => b.creado.localeCompare(a.creado));
 }
 
 // ── Archivos y texto leído ───────────────────────────────────

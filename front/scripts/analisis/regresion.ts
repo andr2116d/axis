@@ -13,6 +13,9 @@ import { clasificar } from '../../src/servidor/analisis/clasificador';
 import { cuencaAportante, elevacion, perfil, trazoDeVia } from '../../src/servidor/analisis/terreno';
 import { seccionTipica, verificarSeccion } from '../../src/servidor/analisis/seccion';
 import { evaluarPertinencia } from '../../src/servidor/analisis/pertinencia';
+import { evaluarProceso } from '../../src/servidor/seleccion/evaluar';
+import { detectarTipo } from '../../src/servidor/ejecucion/analizar';
+import { diasEntre, fechasEnTexto, sumarDias } from '../../src/dominio/fechas';
 
 let fallos = 0, total = 0;
 function ok(cond: boolean, nombre: string, detalle = '') {
@@ -170,6 +173,32 @@ async function main() {
   ok(clasificar(modelo, 'El metrado de la carpeta asfáltica en el presupuesto no coincide con la planilla de metrados').causa === 'Metrados', 'Observación de postor → Metrados (modelo)');
   ok(clasificar(modelo, 'Se solicita reducir la experiencia del personal clave residente de obra').causa === 'Bases y procedimiento', 'Consulta sobre bases → Bases y procedimiento (modelo)');
 
+  console.log('\nFases: selección y ejecución');
+  ok(sumarDias('2026-09-25', 10, true) === '2026-10-12', 'diez días hábiles saltan el feriado del 8 de octubre');
+  ok(diasEntre('2026-11-18', '2026-11-22', true) === 2, 'días hábiles entre dos fechas');
+  ok(fechasEnTexto('desde el 2 de setiembre hasta el 8 de setiembre de 2026').map((f) => f.fecha).join() === '2026-09-02,2026-09-08', 'fechas en texto, año tomado de la vecina');
+  ok(detectarTipo('Se solicita AMPLIACIÓN DE PLAZO N° 1') === 'ampliacion' && detectarTipo('PRESTACIÓN ADICIONAL DE OBRA N° 2') === 'adicional' && detectarTipo('CONSULTA N° 3: precisar') === 'consulta', 'tipo de solicitud');
+  {
+    const idx = JSON.parse(fs.readFileSync('src/datos/real/proveedores.json', 'utf8'));
+    const comp = JSON.parse(fs.readFileSync('src/datos/real/competencia_la_libertad.json', 'utf8'));
+    const sancionado = '20600147464';
+    const postor = (id: string, oferta: number, puntajeTotal: number, integrantes: any[], extra: any = {}) => ({ id, nombre: id, oferta, puntajeTotal, personal: [], integrantes, ...extra });
+    const r = evaluarProceso({
+      nomenclatura: 'X', objeto: 'X', procedimiento: 'abreviada', valorReferencial: 1000000, fechaBuenaPro: '2026-09-15',
+      postores: [
+        postor('A', 950000, 100, [{ nombre: 'Nueva', ruc: '20612345671', participacion: 90, experiencia: 0, inicio: '2026-03-01' }, { nombre: 'Experta', ruc: '20481234567', participacion: 10, experiencia: 5e6 }], { domicilio: 'Jr. Uno 1' }),
+        postor('B', 960000, 100, [{ nombre: 'Sancionada', ruc: sancionado, participacion: 100, experiencia: 1e6 }]),
+        postor('C', 1000000, 95, [{ nombre: 'C', ruc: '20530987651', participacion: 100, experiencia: 1e6 }], { domicilio: 'JR UNO 1' }),
+        postor('D', 1200000, 80, [{ nombre: 'D', ruc: '20477889901', participacion: 100, experiencia: 1e6 }]),
+      ],
+    }, { idx, comp });
+    ok(r.orden.find((o) => o.postor === 'B')?.admitida === false, 'un inhabilitado vigente no se admite (Ley, art. 30)');
+    ok(r.orden.find((o) => o.postor === 'D')?.admitida === false, 'oferta sobre 110 % del valor referencial no se admite');
+    ok(r.ganador === 'A', 'el ganador es el de mejor puntaje entre los admitidos');
+    ok(r.senales.some((x) => x.postor === 'A' && /socio con 10/.test(x.titulo)), 'consorcio con la experiencia en un socio de 10 %');
+    ok(r.senales.some((x) => /comparten/.test(x.titulo)), 'vínculo por domicilio compartido');
+    ok(r.recomendaciones.some((x) => x.base === 'Reglamento, art. 83'), 'recomienda la verificación posterior del ganador');
+  }
   console.log(`\n${total - fallos}/${total} pruebas pasan`);
   if (fallos) process.exit(1);
 }

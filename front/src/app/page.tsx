@@ -9,6 +9,13 @@ import { BotonDemo } from '@/componentes/KitDemo';
 
 export const dynamic = 'force-dynamic';
 
+const FASES = [
+  { n: '1', titulo: 'Expediente técnico', href: '#cargar', texto: 'Sube cada parte, corrige hasta el verde y justifica lo que tenga razón técnica.', quien: 'Unidad ejecutora · equipo revisor' },
+  { n: '2', titulo: 'Selección', href: '/seleccion', texto: 'El ganador según la ley y qué verificar de él: sanciones, consorcios, vínculos.', quien: 'Comité u oficial de compra · DEC' },
+  { n: '3', titulo: 'Ejecución', href: '/ejecucion', texto: 'Cada solicitud del contratista cotejada con el expediente, con tus plazos.', quien: 'Unidad ejecutora · supervisión' },
+  { n: '↻', titulo: 'Cierre y aprendizaje', href: '/obras', texto: 'Lo que pasó en la obra se vuelve una prueba para el siguiente expediente.', quien: 'Quien registra la obra terminada o paralizada' },
+];
+
 export default async function Inicio() {
   const aprendidas = await listarPruebas();
   const pruebas = pruebasConocidas(aprendidas).filter((p) => p.estado === 'activa').length;
@@ -17,12 +24,23 @@ export default async function Inicio() {
     <>
       <section className="hero">
         <div className="hero-copy">
+          <span className="fase-etiqueta">Fase 1 · Expediente técnico</span>
           <h1>Revisa expedientes<br className="desktop-br" /> antes de construir.</h1>
-          <p>Axis ya aprendió {pruebas} pruebas de errores reales en obras de La Libertad y aprende una nueva con cada obra terminada o paralizada. Da un semáforo, la evidencia de cada observación y la carta lista para enviar.</p>
+          <p>Axis ya aprendió {pruebas} pruebas de errores reales en obras de La Libertad y aprende una nueva con cada obra terminada o paralizada. Da un semáforo, la evidencia de cada observación, acepta tu juicio de experto si está bien sustentado y arma la carta para el consultor.</p>
           <BotonDemo subidaDirecta={usaBlob} actual={escenarios.actual} lista={escenarios.lista} />
           <a className="text-link" href="#cargar">O sube tu propio expediente <Icono nombre="chevron" tamano={15} /></a>
         </div>
         <div className="cover-territory"><MapaPortada clave="incas" lugar="El Porvenir, La Libertad" /></div>
+      </section>
+      <section className="fases" aria-label="Las fases en que actúa Axis">
+        {FASES.map((f) => (
+          <a key={f.titulo} href={f.href} className="fase">
+            <span className="fase-num">{f.n}</span>
+            <strong>{f.titulo}</strong>
+            <span>{f.texto}</span>
+            <small>{f.quien}</small>
+          </a>
+        ))}
       </section>
       <section className="start-grid" aria-label="Cómo iniciar una revisión">
         <CargaExpediente subidaDirecta={usaBlob} />
