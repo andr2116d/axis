@@ -1,3 +1,4 @@
+import { usaBlob } from '@/servidor/respaldo';
 import Link from 'next/link';
 import { listarEjecucion, listarExpedientes, leerProceso } from '@/servidor/almacen';
 import { RegistrarObra } from '@/componentes/ejecucion/RegistrarObra';
@@ -22,7 +23,7 @@ export default async function PaginaEjecucion({ searchParams }: { searchParams: 
         <p>Ampliaciones de plazo, consultas, adicionales y valorizaciones: Axis calcula cuánto tiempo tiene la entidad para responder —en varios casos el silencio aprueba lo pedido—, revisa si lo que se alega ya estaba en el expediente y redacta el pronunciamiento con su base legal.</p>
       </section>
       <div className="seleccion-grid">
-        <RegistrarObra key={q.expediente ?? ''} expedientes={opciones} inicial={{ expedienteId: q.expediente, procesoId: proceso?.id, contratista: ganador?.nombre, monto: ganador?.oferta }} />
+        <RegistrarObra key={q.expediente ?? ''} subidaDirecta={usaBlob} expedientes={opciones} inicial={{ expedienteId: q.expediente, procesoId: proceso?.id, contratista: ganador?.nombre, monto: ganador?.oferta }} />
         <aside className="content-panel lado-seleccion">
           <h2>Obras en ejecución</h2>
           {obras.length ? (

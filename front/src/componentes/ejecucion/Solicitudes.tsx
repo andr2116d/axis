@@ -18,7 +18,7 @@ const TIPOS: [string, string][] = [
 export function NuevaSolicitud({ obraId, subidaDirecta }: { obraId: string; subidaDirecta: boolean }) {
   const router = useRouter();
   const [texto, setTexto] = useState('');
-  const [fecha, setFecha] = useState(hoyIso());
+  const [fecha, setFecha] = useState('');
   const [tipo, setTipo] = useState('');
   const [archivos, setArchivos] = useState<File[]>([]);
   const [progreso, setProgreso] = useState('');
@@ -44,7 +44,7 @@ export function NuevaSolicitud({ obraId, subidaDirecta }: { obraId: string; subi
       <p>Pega el asiento del cuaderno de incidencias o sube el documento. Axis la clasifica, calcula tus plazos y la coteja con el expediente.</p>
       <label className="campo campo-ancho"><span>Texto de la anotación</span><textarea rows={6} value={texto} onChange={(x) => setTexto(x.target.value)} placeholder="ASIENTO N.° … DEL RESIDENTE: se solicita…" /></label>
       <div className="campos">
-        <label className="campo"><span>Fecha de la anotación o presentación</span><input type="date" value={fecha} onChange={(x) => setFecha(x.target.value)} /></label>
+        <label className="campo"><span>Fecha de la anotación o presentación</span><input type="date" value={fecha} onChange={(x) => setFecha(x.target.value)} /><small>Si subes el documento, se toma su fecha. Sin documento, vale hoy.</small></label>
         <label className="campo"><span>Tipo</span><select value={tipo} onChange={(x) => setTipo(x.target.value)}>{TIPOS.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select></label>
       </div>
       <SelectorArchivos archivos={archivos} alCambiar={setArchivos} titulo="O sube el documento (opcional)" ayuda="Solicitud, valorización o informe en PDF, Word o Excel" />

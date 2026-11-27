@@ -50,7 +50,8 @@ const DOCUMENTOS = [
 ];
 
 // Documentos de obra de los escenarios del servidor.
-const ESCENARIOS = JSON.parse(fs.readFileSync(new URL('../../src/datos/escenarios-demo.json', import.meta.url), 'utf8'));
+const rutaEscenarios = new URL('../../src/datos/escenarios-demo.json', import.meta.url);
+const ESCENARIOS = fs.existsSync(rutaEscenarios) ? JSON.parse(fs.readFileSync(rutaEscenarios, 'utf8')) : [];
 for (const e of ESCENARIOS.filter((x) => x.obra.secciones)) {
   DOCUMENTOS.push({ archivo: `public${e.obra.archivo}`, oficina: e.obra.oficina, titulo: e.obra.titulo, fecha: e.obra.fecha, secciones: e.obra.secciones });
 }

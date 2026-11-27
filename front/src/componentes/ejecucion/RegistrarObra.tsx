@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icono } from '../Icono';
 import { hoyIso, iso, fechaDe } from '@/dominio/fechas';
+import { SelectorArchivos, enviar as enviarArchivos } from '../SelectorArchivos';
 
 /** Por defecto, una obra que empezó hace un mes: así los plazos de los ejemplos corren hoy. */
 const haceUnMes = () => { const d = fechaDe(hoyIso()); d.setUTCDate(d.getUTCDate() - 30); return iso(d); };
@@ -11,9 +12,10 @@ const haceUnMes = () => { const d = fechaDe(hoyIso()); d.setUTCDate(d.getUTCDate
 // Alta de una obra en ejecución: se enlaza al expediente aprobado (con el que se
 // cotejará todo lo que pida el contratista) y, si existe, al proceso de selección.
 
-export function RegistrarObra({ expedientes, inicial }: {
+export function RegistrarObra({ expedientes, inicial, subidaDirecta = false }: {
   expedientes: { id: string; clave: string; nombre: string }[];
   inicial?: { expedienteId?: string; procesoId?: string; contratista?: string; monto?: number };
+  subidaDirecta?: boolean;
 }) {
   const router = useRouter();
   const [expedienteId, setExpedienteId] = useState(inicial?.expedienteId ?? expedientes[0]?.id ?? '');
@@ -24,6 +26,29 @@ export function RegistrarObra({ expedientes, inicial }: {
   const [monto, setMonto] = useState(inicial?.monto ? inicial.monto.toFixed(2) : '');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
+  const [documentos, setDocumentos] = useState<File[]>([]);
+  const [leyendo, setLeyendo] = useState('');
+  const [leido, setLeido] = useState('');
+
+  // El contrato y el acta de inicio traen los datos: Axis los lee y la persona solo confirma.
+  const leerDocumentos = async () => {
+    setError('');
+    try {
+      const d = await enviarArchivos<{ contratista?: string; supervisor?: string; inicio?: string; plazoDias?: number; monto?: number }>('/api/ejecucion/datos', documentos, {}, subidaDirecta, setLeyendo);
+      if (d.contratista) setContratista(d.contratista);
+      if (d.supervisor) setSupervisor(d.supervisor);
+      if (d.inicio) setInicio(d.inicio);
+      if (d.plazoDias) setPlazoDias(String(d.plazoDias));
+      if (d.monto) setMonto(d.monto.toFixed(2));
+      const faltan = [!d.contratista && 'contratista', !d.supervisor && 'supervisor', !d.inicio && 'fecha de inicio', !d.plazoDias && 'plazo', !d.monto && 'monto'].filter(Boolean);
+      setLeido(faltan.length ? `Leído de ${documentos.length > 1 ? 'los documentos' : documentos[0].name}. Completa: ${faltan.join(', ')}.` : `Todo leído de ${documentos.length > 1 ? 'los documentos' : documentos[0].name}. Revisa y registra.`);
+      setDocumentos([]);
+    } catch (x) {
+      setError((x as Error).message);
+    } finally {
+      setLeyendo('');
+    }
+  };
 
   if (!expedientes.length) {
     return (
@@ -54,7 +79,14 @@ export function RegistrarObra({ expedientes, inicial }: {
   return (
     <section className="content-panel form-proceso" aria-labelledby="titulo-registro">
       <h2 id="titulo-registro">Registrar la obra en ejecución</h2>
-      <p>Del contrato y del acta de inicio de obra.</p>
+      <p>Sube el contrato y el acta de entrega de terreno o de inicio de obra: Axis lee los datos y tú solo los confirmas.</p>
+      <SelectorArchivos archivos={documentos} alCambiar={setDocumentos} titulo="Arrastra el contrato o el acta de inicio" ayuda="PDF, Word o Excel" />
+      {documentos.length > 0 && (
+        <div className="upload-actions">
+          <button type="button" className="btn primary" disabled={!!leyendo} onClick={leerDocumentos}><Icono nombre={leyendo ? 'clock' : 'files'} tamano={18} />{leyendo || 'Leer los datos de la obra'}</button>
+        </div>
+      )}
+      {leido && <p className="inline-note"><Icono nombre="check" tamano={15} /> {leido}</p>}
       <div className="campos">
         <label className="campo campo-ancho"><span>Expediente técnico aprobado</span>
           <select value={expedienteId} onChange={(x) => setExpedienteId(x.target.value)}>

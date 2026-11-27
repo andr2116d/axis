@@ -4,6 +4,7 @@ import { hoyIso } from '@/dominio/fechas';
 import * as almacen from '../almacen';
 import type { ArchivoEntrante } from '../http';
 import { leerDocumento } from '../motores/lectura';
+import { fechaDelDocumento } from './contrato-obra';
 import { clasificador } from '../analisis/datos';
 import { aprenderDeHechos, buscarEvidencia } from '../obras';
 import { CONDICIONES } from '../aprendizaje/condiciones';
@@ -62,7 +63,8 @@ export async function agregarSolicitud(id: string, entrada: { campos: Record<str
   if (pegado) paginas = [...paginas, pegado];
   if (!paginas.join('').trim()) throw new Error('Pega el texto de la anotación o sube el documento de la solicitud.');
 
-  const fecha = /^\d{4}-\d{2}-\d{2}$/.test(entrada.campos.fecha ?? '') ? entrada.campos.fecha : hoyIso();
+  // Sin fecha indicada, vale la del documento (la del asiento o la de presentación).
+  const fecha = /^\d{4}-\d{2}-\d{2}$/.test(entrada.campos.fecha ?? '') ? entrada.campos.fecha : (archivo ? fechaDelDocumento(paginas) : undefined) ?? hoyIso();
   const tipo = TIPOS.includes(entrada.campos.tipo as TipoSolicitud) ? entrada.campos.tipo as TipoSolicitud : undefined;
   const textosExpediente = await Promise.all(expediente.documentos.map((d) => almacen.leerTexto('expedientes', expediente.id, d.id)));
   const analisis = analizarSolicitud({
