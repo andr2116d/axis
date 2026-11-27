@@ -5,7 +5,8 @@ from dataclasses import dataclass, replace
 
 import structlog
 
-from axis.compartido.dominio.motores import EntradaMotor, Motor, ResultadoMotor
+from axis.compartido.dominio.avance import Avance, Avisador, sin_aviso
+from axis.compartido.dominio.motores import EntradaMotor, Hallazgo, Motor, ResultadoMotor
 from axis.compartido.dominio.valores import Fase
 from axis.orquestador.aplicacion.puertos import CatalogoMotores, FuenteEntradas
 from axis.orquestador.dominio.evaluacion import Evaluacion, FallaMotor
@@ -29,7 +30,10 @@ class EvaluarEntrada:
         self._limite = limite_segundos
 
     async def ejecutar(
-        self, entrada: EntradaMotor, previos: Mapping[str, ResultadoMotor] | None = None
+        self,
+        entrada: EntradaMotor,
+        previos: Mapping[str, ResultadoMotor] | None = None,
+        avisar: Avisador = sin_aviso,
     ) -> Evaluacion:
         inicio = time.perf_counter()
         previos = previos or {}
@@ -45,7 +49,25 @@ class EvaluarEntrada:
                 reutilizables.append(replace(anterior, reutilizado=True))
             else:
                 por_correr.append(motor)
-        corridos = await asyncio.gather(*(self._correr(m, entrada) for m in por_correr))
+        await avisar(
+            Avance(
+                "plan",
+                f"Se activan {len(plan.motores)} motores; {len(plan.omisiones)} no aplican aún.",
+                {
+                    "activados": ", ".join(plan.motores),
+                    "reutilizados": ", ".join(r.id_motor for r in reutilizables),
+                    "omitidos": len(plan.omisiones),
+                },
+            )
+        )
+        for reutilizado in reutilizables:
+            await _avisar_resultado(avisar, reutilizado)
+        # Cada motor se avisa apenas termina: el más rápido no espera al más lento.
+        corridos: list[ResultadoMotor | FallaMotor] = []
+        for tarea in asyncio.as_completed([self._correr(m, entrada) for m in por_correr]):
+            corrido = await tarea
+            corridos.append(corrido)
+            await _avisar_resultado(avisar, corrido)
         resultados = tuple(reutilizables) + tuple(
             r for r in corridos if isinstance(r, ResultadoMotor)
         )
@@ -65,6 +87,48 @@ class EvaluarEntrada:
         return ResultadoMotor(
             motor.ficha.id, motor.ficha.version, entrada.firma_para(motor.ficha), hallazgos
         )
+
+
+async def _avisar_resultado(avisar: Avisador, resultado: ResultadoMotor | FallaMotor) -> None:
+    if isinstance(resultado, FallaMotor):
+        await avisar(
+            Avance(
+                "motor",
+                f"El motor {resultado.id_motor} falló: {resultado.razon}",
+                {"motor": resultado.id_motor, "falla": resultado.razon},
+            )
+        )
+        return
+    await avisar(
+        Avance(
+            "motor",
+            f"{resultado.id_motor}: {len(resultado.hallazgos)} hallazgos.",
+            {
+                "motor": resultado.id_motor,
+                "version": resultado.version_motor,
+                "hallazgos": len(resultado.hallazgos),
+                "reutilizado": resultado.reutilizado,
+            },
+        )
+    )
+    for hallazgo in resultado.hallazgos:
+        await avisar(_avance_hallazgo(hallazgo))
+
+
+def _avance_hallazgo(h: Hallazgo) -> Avance:
+    return Avance(
+        "hallazgo",
+        h.titulo,
+        {
+            "clave": h.clave,
+            "motor": h.id_motor,
+            "severidad": h.severidad.value,
+            "seccion": h.seccion,
+            "pagina": h.pagina,
+            "item": h.item,
+            "confianza": h.confianza,
+        },
+    )
 
 
 class EvaluarDocumento:

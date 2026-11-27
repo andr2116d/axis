@@ -148,3 +148,31 @@ async def test_si_las_partes_que_lee_un_motor_no_cambiaron_se_reutiliza_su_resul
     assert metrados.llamadas == 2
     assert segunda.reutilizados == ("precios",)
     assert [h.id_motor for h in segunda.hallazgos] == ["precios"]
+
+
+class Anotador:
+    """Guarda los avisos en el orden en que llegan."""
+
+    def __init__(self):
+        self.avisos = []
+
+    async def __call__(self, avance):
+        self.avisos.append(avance)
+
+
+async def test_cada_motor_se_avisa_apenas_termina_con_sus_hallazgos():
+    rapido = MotorDePrueba(ficha("rapido"), (hallazgo("rapido", Severidad.ROJO),))
+    lento = MotorDePrueba(ficha("lento"), demora=0.1)
+    roto = MotorDePrueba(ficha("roto"), error=RuntimeError("se cayó"))
+    anotador = Anotador()
+
+    await EvaluarEntrada(catalogo=Catalogo(lento, rapido, roto), limite_segundos=1).ejecutar(
+        entrada(), avisar=anotador
+    )
+
+    etapas = [(a.etapa, a.datos.get("motor")) for a in anotador.avisos]
+    assert etapas[0] == ("plan", None)
+    assert etapas.index(("motor", "rapido")) < etapas.index(("motor", "lento"))
+    assert ("hallazgo", "rapido") in etapas
+    falla = next(a for a in anotador.avisos if a.datos.get("motor") == "roto")
+    assert "se cayó" in falla.datos["falla"]
