@@ -96,6 +96,17 @@ class Hallazgo:
         if not self.factores or not self.explicacion:
             raise ValueError("un hallazgo necesita explicación y factores")
 
+    @property
+    def clave(self) -> str:
+        """Identifica el mismo hallazgo entre evaluaciones y versiones del motor.
+
+        No usa el título ni la versión: traen números que cambian al reentrenar, y la decisión
+        del evaluador tiene que seguir valiendo. Si cambia el documento, el hallazgo es otro.
+        """
+        donde = self.item if self.item is not None else self.titulo
+        base = f"{self.id_motor}|{self.id_documento}|{self.seccion}|{self.pagina}|{donde}"
+        return hashlib.sha256(base.encode()).hexdigest()[:16]
+
 
 @dataclass(frozen=True, slots=True)
 class ResultadoMotor:
