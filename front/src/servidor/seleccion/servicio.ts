@@ -1,3 +1,4 @@
+import { combinar, datosDelProcedimiento, esDocumentoDeBases, type DatosProcedimiento } from './procedimiento';
 import 'server-only';
 import type { Postor, ProcesoSeleccion } from '@/dominio/tipos';
 import * as almacen from '../almacen';
@@ -69,14 +70,22 @@ export async function crearProceso(datos: Omit<ProcesoSeleccion, 'resultado' | '
 /** Lee las ofertas subidas (un archivo por postor) y devuelve los postores para revisar. */
 export async function leerOfertas(archivos: ArchivoEntrante[], valorReferencial: number) {
   const leidas = [];
+  const deBases: DatosProcedimiento[] = [];
+  const deOfertas: DatosProcedimiento[] = [];
   for (const a of archivos) {
     const l = await leerDocumento(a.nombre, a.datos);
+    const texto = l.paginas.join('\n');
+    // Las bases no son un postor: aportan los datos del procedimiento.
+    if (esDocumentoDeBases(texto)) { deBases.push(datosDelProcedimiento(texto)); continue; }
+    deOfertas.push(datosDelProcedimiento(texto));
     const o = leerOferta(l.paginas, a.nombre);
     if (l.estado !== 'leido') o.avisos.push(l.estado === 'escaneado' ? 'Es un escaneo sin texto: hay que completar los datos a mano.' : 'No se pudo leer completo.');
     leidas.push(o);
   }
-  const puntajes = valorReferencial > 0 ? puntajePorPrecio(leidas.map((o) => o.postor.oferta), valorReferencial) : [];
-  return leidas.map((o, i) => ({ ...o, postor: { ...o.postor, puntajeTotal: puntajes[i] } }));
+  const procedimiento = combinar([...deBases, ...deOfertas]);
+  const vr = valorReferencial > 0 ? valorReferencial : procedimiento.valorReferencial ?? 0;
+  const puntajes = vr > 0 ? puntajePorPrecio(leidas.map((o) => o.postor.oferta), vr) : [];
+  return { procedimiento, ofertas: leidas.map((o, i) => ({ ...o, postor: { ...o.postor, puntajeTotal: puntajes[i] } })) };
 }
 
 /** Documentos del ganador para firmar el contrato: los lee y los coteja (art. 83). */

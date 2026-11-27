@@ -10,5 +10,5 @@ export async function POST(request: Request) {
   const entrada = await leerPeticion(request).catch((e: Error) => e.message);
   if (typeof entrada === 'string') return error(entrada);
   const vr = Number((entrada.campos.valorReferencial ?? '').replace(/[^\d.]/g, ''));
-  return NextResponse.json({ ofertas: await leerOfertas(entrada.archivos, vr) });
+  return NextResponse.json(await leerOfertas(entrada.archivos, vr));
 }

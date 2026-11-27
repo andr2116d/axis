@@ -15,6 +15,18 @@ interface ProcesoForm { nomenclatura: string; objeto: string; entidad: string; e
 const integranteVacio = (): IntegranteForm => ({ nombre: '', ruc: '', participacion: '100', experiencia: '', inicio: '' });
 const postorVacio = (): PostorForm => ({ nombre: '', oferta: '', puntajeTotal: '', puntajeTecnico: '', mype: false, domicilio: '', representante: '', personal: '', integrantes: [integranteVacio()] });
 
+interface Procedimiento { nomenclatura?: string; objeto?: string; entidad?: string; valorReferencial?: number; fechaBuenaPro?: string; procedimiento?: 'abreviada' | 'licitacion' }
+
+const palabras = (t: string) => new Set(t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().split(/[^A-Z0-9]+/).filter((w) => w.length >= 4));
+/** El expediente revisado cuya obra comparte más palabras con el objeto del procedimiento. */
+function expedienteDe(objeto: string | undefined, expedientes: { id: string; nombre: string }[]) {
+  if (!objeto) return '';
+  const buscadas = palabras(objeto);
+  const puntaje = (nombre: string) => [...palabras(nombre)].filter((w) => buscadas.has(w)).length;
+  const mejor = [...expedientes].sort((a, b) => puntaje(b.nombre) - puntaje(a.nombre))[0];
+  return mejor && puntaje(mejor.nombre) >= 3 ? mejor.id : '';
+}
+
 interface OfertaLeida { postor: { nombre: string; oferta: number; puntajeTotal?: number; mype: boolean; domicilio?: string; representante?: string; telefono?: string; apoderados?: string[]; archivo?: string; integrantes: { nombre: string; ruc: string; participacion: number; inicio?: string }[] }; avisos: string[] }
 
 export function FormProceso({ expedientes, inicial, subidaDirecta = false }: { expedientes: { id: string; clave: string; nombre: string }[]; inicial?: { expedienteId: string }; subidaDirecta?: boolean }) {
@@ -32,9 +44,17 @@ export function FormProceso({ expedientes, inicial, subidaDirecta = false }: { e
   const leerOfertas = async () => {
     setError('');
     try {
-      const { ofertas: leidas } = await enviarArchivos<{ ofertas: OfertaLeida[] }>('/api/procesos/ofertas', ofertas, { valorReferencial: f.valorReferencial }, subidaDirecta, setLeyendo);
+      const { ofertas: leidas, procedimiento: d } = await enviarArchivos<{ ofertas: OfertaLeida[]; procedimiento: Procedimiento }>('/api/procesos/ofertas', ofertas, { valorReferencial: f.valorReferencial }, subidaDirecta, setLeyendo);
+      // Lo que ya escribió la persona se respeta; lo vacío se llena con lo leído.
       setF((x) => ({
         ...x,
+        nomenclatura: x.nomenclatura || d.nomenclatura || '',
+        objeto: x.objeto || d.objeto || '',
+        entidad: x.entidad || d.entidad || '',
+        valorReferencial: x.valorReferencial || (d.valorReferencial ? d.valorReferencial.toFixed(2) : ''),
+        fechaBuenaPro: x.fechaBuenaPro || d.fechaBuenaPro || '',
+        procedimiento: d.procedimiento ?? x.procedimiento,
+        expedienteId: x.expedienteId || expedienteDe(d.objeto ?? x.objeto, expedientes),
         postores: leidas.map(({ postor: p, avisos }) => ({
           nombre: p.nombre, oferta: p.oferta ? p.oferta.toFixed(2) : '', puntajeTotal: p.puntajeTotal != null ? String(p.puntajeTotal) : '', puntajeTecnico: '',
           mype: p.mype, domicilio: p.domicilio ?? '', representante: p.representante ?? '', personal: '', telefono: p.telefono, apoderados: p.apoderados, archivo: p.archivo, avisos,
@@ -85,7 +105,7 @@ export function FormProceso({ expedientes, inicial, subidaDirecta = false }: { e
   return (
     <section className="content-panel form-proceso" aria-labelledby="titulo-form">
       <div className="form-proceso-head">
-        <div><h2 id="titulo-form">Datos del procedimiento</h2><p>Del acta de buena pro y de las ofertas publicadas en el SEACE.</p></div>
+        <div><h2 id="titulo-form">Datos del procedimiento</h2><p>Se llenan solos al leer las bases y las ofertas de abajo. Corrígelos si hace falta.</p></div>
       </div>
       <div className="campos">
         {campo('Nomenclatura', f.nomenclatura, (v) => cambiar({ nomenclatura: v }))}
@@ -110,11 +130,11 @@ export function FormProceso({ expedientes, inicial, subidaDirecta = false }: { e
       </div>
 
       <h3 className="form-subtitulo">Ofertas de los postores</h3>
-      <p className="form-ayuda">Sube la oferta de cada postor tal como llegó por el SEACE (un PDF por postor). Axis lee el Anexo 1, la vigencia de poder, la promesa de consorcio (Anexo 4) y la oferta económica (Anexo 6).</p>
-      <SelectorArchivos archivos={ofertas} alCambiar={setOfertas} titulo="Arrastra las ofertas aquí" ayuda="Un PDF o Word por postor" />
+      <p className="form-ayuda">Sube las bases y la oferta de cada postor tal como llegaron por el SEACE (un PDF por postor). De las bases, Axis toma los datos del procedimiento; de cada oferta, el Anexo 1, la vigencia de poder, la promesa de consorcio (Anexo 4) y la oferta económica (Anexo 6).</p>
+      <SelectorArchivos archivos={ofertas} alCambiar={setOfertas} titulo="Arrastra las bases y las ofertas aquí" ayuda="Las bases y un PDF o Word por postor" />
       {ofertas.length > 0 && (
         <div className="upload-actions">
-          <button type="button" className="btn primary" disabled={!!leyendo} onClick={leerOfertas}><Icono nombre={leyendo ? 'clock' : 'files'} tamano={18} />{leyendo || `Leer ${ofertas.length} oferta${ofertas.length > 1 ? 's' : ''}`}</button>
+          <button type="button" className="btn primary" disabled={!!leyendo} onClick={leerOfertas}><Icono nombre={leyendo ? 'clock' : 'files'} tamano={18} />{leyendo || `Leer ${ofertas.length} documento${ofertas.length > 1 ? 's' : ''}`}</button>
         </div>
       )}
       {!f.postores.length && !manual && <button type="button" className="text-link" onClick={() => { setManual(true); cambiar({ postores: [postorVacio()] }); }}>O ingresa los postores a mano</button>}

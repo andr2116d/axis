@@ -114,6 +114,31 @@ for (const p of POSTORES) {
   doc.end();
 }
 
+// Bases del procedimiento: de aquí salen los datos que el comité ya no tiene que digitar.
+{
+  const doc = nuevo('2_seleccion', 'BASES_datos-del-procedimiento.pdf');
+  doc.addPage();
+  marca(doc, 'BASES SINTÉTICAS · Documento de prueba para Axis · No es un documento oficial');
+  doc.font('Helvetica-Bold').fontSize(12).text('BASES INTEGRADAS', { align: 'center' });
+  doc.font('Helvetica-Bold').fontSize(11).text(PROCESO, { align: 'center' }).moveDown(1);
+  doc.font('Helvetica-Bold').fontSize(10.5).text('CAPÍTULO I · GENERALIDADES').moveDown(0.4);
+  linea(doc, 'ENTIDAD', ENTIDAD);
+  linea(doc, 'NOMENCLATURA', 'LP-ABR-3-2026-MDLE/CS-1');
+  linea(doc, 'PROCEDIMIENTO', 'Licitación pública abreviada');
+  linea(doc, 'OBJETO DE LA CONVOCATORIA', OBRA);
+  linea(doc, 'VALOR REFERENCIAL', `S/ ${soles(VALOR_REFERENCIAL)} (incluye IGV), según el expediente técnico aprobado`);
+  linea(doc, 'SISTEMA DE CONTRATACIÓN', 'Precios unitarios');
+  linea(doc, 'PLAZO DE EJECUCIÓN', '75 días calendario');
+  doc.moveDown(0.6);
+  doc.font('Helvetica-Bold').fontSize(10.5).text('CRONOGRAMA DEL PROCEDIMIENTO').moveDown(0.4);
+  linea(doc, 'Convocatoria', '8 de setiembre de 2026');
+  linea(doc, 'Presentación de ofertas', '22 de setiembre de 2026');
+  linea(doc, 'Otorgamiento de la buena pro', '30 de setiembre de 2026');
+  doc.moveDown(0.6);
+  parrafo(doc, 'Las ofertas válidas deben estar entre el 95 % y el 110 % del valor referencial. El puntaje se asigna por precio y el empate se resuelve según el artículo 81 del Reglamento de la Ley N° 32069.');
+  doc.end();
+}
+
 // Documentos del ganador para la firma del contrato. A propósito: un monto que no coincide con
 // su constancia, una obra sin constancia y otra anterior a la constitución del integrante.
 {
