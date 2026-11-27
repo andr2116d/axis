@@ -230,3 +230,26 @@ Cómo se lee la estructura:
 - `AXIS_LECTOR_NORMATIVA` (`bedrock` | `ninguno`), `AXIS_MODELO_LLM`, `AXIS_MODELO_LLM_RESPALDO` y `AXIS_ESFUERZO_NORMATIVA` (por defecto `medium`).
 - En AWS se usa el rol IAM de la tarea.
 - En local, `docker compose` monta `~/.aws`; exporta `AXIS_AWS_PERFIL` con tu perfil SSO.
+
+## Avance en vivo (SSE, implementado)
+
+`POST /expedientes/{id}/archivos/en-vivo` hace lo mismo que `/archivos`, pero transmite por Server-Sent Events cada etapa apenas ocurre. Usa el SSE nativo de FastAPI, que manda keep-alive para que un OCR largo no corte la conexión.
+
+| evento | cuándo | datos |
+|---|---|---|
+| `recibido` | al llegar el archivo | bytes |
+| `ya_analizado` | el mismo archivo ya estaba analizado | — |
+| `lectura` | páginas leídas | páginas, escaneadas |
+| `ocr` | cada página que termina el OCR | página, hechas, total |
+| `documento` | tipo, partes y partidas | id_documento, tipo, partes, partidas |
+| `plan` | qué motores se activan | activados, reutilizados, omitidos |
+| `motor` | cada motor apenas termina (el rápido no espera al lento) | motor, versión, hallazgos o falla |
+| `hallazgo` | cada hallazgo | clave, severidad, sección, página, ítem |
+| `listo` | fin | el expediente completo, igual que `/archivos` |
+| `error` | un error de dominio | error, detalle, código HTTP equivalente |
+
+- **Cómo avisan los casos de uso.** Usan el puerto `Avisador` de `compartido`. Por defecto no avisan, así que las rutas que responden de una vez no cambian.
+- **Si el cliente se desconecta,** el trabajo a medias se cancela.
+- **Primera prueba real** (relación de insumos escaneada, 5 páginas): el evaluador ve la lectura a los 70 ms y el OCR página por página, y el resultado llega a los 6 s.
+
+**Semáforo vacío.** Si ningún motor revisó ninguna sección, el semáforo global es `null`, no verde. Verde quiere decir "se revisó y está bien".
