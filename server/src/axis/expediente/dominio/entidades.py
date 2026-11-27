@@ -99,7 +99,10 @@ class EvaluacionExpediente:
         """Los hallazgos que el evaluador no descartó ni justificó."""
         return tuple(h for h in self.hallazgos if h.clave not in cerrados)
 
-    def semaforo(self, cerrados: frozenset[str] = frozenset()) -> Semaforo:
+    def semaforo(self, cerrados: frozenset[str] = frozenset()) -> Semaforo | None:
+        """None si ningún motor revisó nada: verde es "se revisó y está bien", no "nadie miró"."""
+        if not self.secciones_revisadas and not self.fallas:
+            return None
         return semaforo_de(self.abiertos(cerrados), hay_fallas=bool(self.fallas))
 
     def de_seccion(self, seccion: Seccion) -> tuple[Hallazgo, ...]:

@@ -2,6 +2,7 @@
 
 from collections.abc import Callable, Mapping, Sequence
 
+from axis.compartido.dominio.avance import Avisador
 from axis.compartido.dominio.motores import ResultadoMotor
 from axis.expediente.aplicacion.dto import ResultadoDeMotores, ResumenDocumento
 from axis.expediente.dominio.entidades import (
@@ -64,6 +65,7 @@ class EvaluadorPorFuncion:
         expediente: Expediente,
         secciones: Sequence[Seccion],
         previos: Mapping[str, ResultadoMotor],
+        avisar: Avisador,
     ) -> ResultadoDeMotores:
         self.llamadas.append((tuple(secciones), dict(previos)))
         return self._funcion(expediente, secciones, previos)

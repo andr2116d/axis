@@ -1,5 +1,6 @@
 from uuid import uuid4
 
+from axis.compartido.dominio.avance import Avisador, sin_aviso
 from axis.compartido.dominio.reloj import Reloj
 from axis.expediente.aplicacion.casos_de_uso.gestionar import armar_vista
 from axis.expediente.aplicacion.dto import VistaExpediente
@@ -18,7 +19,9 @@ class EvaluarExpediente:
         self._evaluador = evaluador
         self._reloj = reloj
 
-    async def ejecutar(self, id_expediente: IdExpediente) -> VistaExpediente:
+    async def ejecutar(
+        self, id_expediente: IdExpediente, avisar: Avisador = sin_aviso
+    ) -> VistaExpediente:
         expediente = await self._repositorio.obtener(id_expediente)
         if expediente is None:
             raise ExpedienteNoEncontrado(f"no existe el expediente {id_expediente}")
@@ -27,7 +30,7 @@ class EvaluarExpediente:
             raise ExpedienteSinDocumentos("el expediente todavía no tiene documentos")
         anterior = await self._repositorio.ultima_evaluacion(id_expediente)
         previos = {r.id_motor: r for r in anterior.resultados} if anterior else {}
-        resultado = await self._evaluador.evaluar(expediente, secciones, previos)
+        resultado = await self._evaluador.evaluar(expediente, secciones, previos, avisar)
         evaluacion = EvaluacionExpediente(
             id=IdEvaluacion(uuid4()),
             id_expediente=id_expediente,

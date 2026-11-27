@@ -1,6 +1,7 @@
 from collections.abc import Mapping, Sequence
 from typing import Protocol
 
+from axis.compartido.dominio.avance import Avisador
 from axis.compartido.dominio.motores import ResultadoMotor
 from axis.expediente.aplicacion.dto import ResultadoDeMotores, ResumenDocumento
 from axis.expediente.dominio.entidades import (
@@ -37,4 +38,5 @@ class EvaluadorMotores(Protocol):
         expediente: Expediente,
         secciones: Sequence[Seccion],
         previos: Mapping[str, ResultadoMotor],
+        avisar: Avisador,
     ) -> ResultadoDeMotores: ...

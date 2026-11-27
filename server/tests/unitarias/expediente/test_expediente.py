@@ -273,3 +273,21 @@ async def test_el_historial_se_ordena_por_fecha_aunque_llegue_desordenado(sistem
     vista = await sistema["obtener"].ejecutar(id_expediente)
 
     assert vista.revisiones[rojo.clave].decision == DecisionHallazgo.CONFIRMADO
+
+
+async def test_si_ningun_motor_reviso_nada_no_hay_semaforo():
+    repositorio = RepositorioExpedientesEnMemoria()
+    reloj = Reloj()
+    sin_motores = EvaluadorPorFuncion(lambda *_: ResultadoDeMotores((), (), (), frozenset(), 1))
+    expediente = await CrearExpediente(repositorio=repositorio, reloj=reloj).ejecutar(
+        OrdenCrearExpediente("Pistas")
+    )
+    await AdjuntarDocumento(
+        repositorio=repositorio, documentos=DocumentosFijos(DOCUMENTOS), reloj=reloj
+    ).ejecutar(expediente.id, "metrados-v2")
+
+    vista = await EvaluarExpediente(
+        repositorio=repositorio, evaluador=sin_motores, reloj=reloj
+    ).ejecutar(expediente.id)
+
+    assert vista.ultima_evaluacion.semaforo() is None
