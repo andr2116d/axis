@@ -1,6 +1,6 @@
 """Adaptadores en memoria para pruebas: se comportan como los reales, sin red ni disco."""
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
@@ -61,9 +61,16 @@ class OcrFalso:
         self.paginas_pedidas: list[int] = []
 
     async def reconocer(
-        self, contenido: bytes, tipo_archivo: TipoArchivo, paginas: Sequence[int]
+        self,
+        contenido: bytes,
+        tipo_archivo: TipoArchivo,
+        paginas: Sequence[int],
+        al_leer: Callable[[int], Awaitable[None]] | None = None,
     ) -> Mapping[int, TextoReconocido]:
         self.paginas_pedidas.extend(paginas)
+        for numero in paginas:
+            if al_leer is not None:
+                await al_leer(numero)
         return {n: TextoReconocido(f"{self._texto} {n}", 0.9) for n in paginas}
 
 

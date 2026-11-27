@@ -156,3 +156,34 @@ async def test_si_el_modelo_duda_no_avisa_de_fase():
 
     assert not resultado.documento.tipo.es_confiable
     assert resultado.documento.corresponde_a(Fase.EXPEDIENTE) is None
+
+
+class Anotador:
+    def __init__(self):
+        self.avisos = []
+
+    async def __call__(self, avance):
+        self.avisos.append(avance)
+
+
+async def test_avisa_la_lectura_cada_pagina_de_ocr_y_el_resultado():
+    caso, *_ = armar(["memoria a", "", "metrados b", ""])
+    anotador = Anotador()
+
+    await caso.ejecutar(orden(), anotador)
+
+    etapas = [a.etapa for a in anotador.avisos]
+    assert etapas == ["lectura", "ocr", "ocr", "documento"]
+    assert anotador.avisos[0].datos == {"paginas": 4, "escaneadas": 2}
+    assert [a.datos["hechas"] for a in anotador.avisos[1:3]] == [1, 2]
+    assert anotador.avisos[-1].datos["partes"] == "memoria, metrados"
+
+
+async def test_un_archivo_ya_analizado_solo_lo_avisa():
+    caso, *_ = armar(["memoria a"])
+    await caso.ejecutar(orden())
+    anotador = Anotador()
+
+    await caso.ejecutar(orden(), anotador)
+
+    assert [a.etapa for a in anotador.avisos] == ["ya_analizado"]

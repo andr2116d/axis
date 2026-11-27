@@ -1,4 +1,4 @@
-from collections.abc import Mapping, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from typing import Protocol
 
 from axis.compartido.dominio.valores import Fase
@@ -43,8 +43,14 @@ class MotorOcr(Protocol):
     """Lee el texto de las páginas que son imagen."""
 
     async def reconocer(
-        self, contenido: bytes, tipo_archivo: TipoArchivo, paginas: Sequence[int]
-    ) -> Mapping[int, TextoReconocido]: ...
+        self,
+        contenido: bytes,
+        tipo_archivo: TipoArchivo,
+        paginas: Sequence[int],
+        al_leer: Callable[[int], Awaitable[None]] | None = None,
+    ) -> Mapping[int, TextoReconocido]:
+        """`al_leer` recibe el número de cada página apenas termina: sirve para avisar avance."""
+        ...
 
 
 class ClasificadorPaginas(Protocol):

@@ -2,7 +2,7 @@
 
 import asyncio
 import io
-from collections.abc import Mapping, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 
 import pypdfium2 as pdfium
 import pytesseract
@@ -24,7 +24,11 @@ class OcrTesseract:
         self._concurrencia = concurrencia
 
     async def reconocer(
-        self, contenido: bytes, tipo_archivo: TipoArchivo, paginas: Sequence[int]
+        self,
+        contenido: bytes,
+        tipo_archivo: TipoArchivo,
+        paginas: Sequence[int],
+        al_leer: Callable[[int], Awaitable[None]] | None = None,
     ) -> Mapping[int, TextoReconocido]:
         resultado: dict[int, TextoReconocido] = {}
         # Se renderiza por tandas para no tener cien imágenes de 4 MB en memoria a la vez.
@@ -32,9 +36,22 @@ class OcrTesseract:
         for inicio in range(0, len(paginas), tanda):
             numeros = list(paginas[inicio : inicio + tanda])
             imagenes = await asyncio.to_thread(self._imagenes, contenido, tipo_archivo, numeros)
-            textos = await asyncio.gather(*(asyncio.to_thread(self._leer, i) for i in imagenes))
+            textos = await asyncio.gather(
+                *(
+                    self._leer_avisando(i, n, al_leer)
+                    for i, n in zip(imagenes, numeros, strict=True)
+                )
+            )
             resultado.update(zip(numeros, textos, strict=True))
         return resultado
+
+    async def _leer_avisando(
+        self, imagen: Image.Image, numero: int, al_leer: Callable[[int], Awaitable[None]] | None
+    ) -> TextoReconocido:
+        texto = await asyncio.to_thread(self._leer, imagen)
+        if al_leer is not None:
+            await al_leer(numero)
+        return texto
 
     def _imagenes(
         self, contenido: bytes, tipo_archivo: TipoArchivo, numeros: list[int]

@@ -5,6 +5,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from uuid import uuid4
 
+from axis.compartido.dominio.avance import Avance, Avisador, sin_aviso
 from axis.compartido.dominio.partidas import Palabra, Partida, extraer_partidas
 from axis.compartido.dominio.reloj import Reloj
 from axis.documentos.aplicacion.dto import (
@@ -60,7 +61,9 @@ class AnalizarDocumento:
         self._modelos = modelos
         self._reloj = reloj
 
-    async def ejecutar(self, orden: OrdenAnalizarDocumento) -> ResultadoAnalisis:
+    async def ejecutar(
+        self, orden: OrdenAnalizarDocumento, avisar: Avisador = sin_aviso
+    ) -> ResultadoAnalisis:
         inicio = time.perf_counter()
         if not orden.contenido:
             raise ArchivoVacio("el archivo está vacío")
@@ -73,17 +76,23 @@ class AnalizarDocumento:
         existente = await self._repositorio.buscar_por_hash(hash_contenido)
         version = _version(modelos)
         if existente is not None and existente.version_modelos == version:
+            await avisar(Avance("ya_analizado", "Este archivo ya se había analizado."))
             return ResultadoAnalisis(existente, desde_cache=True, duracion_ms=_ms(inicio))
 
-        documento = await self._analizar(orden, hash_contenido, modelos)
+        documento = await self._analizar(orden, hash_contenido, modelos, avisar)
         # Lo que el evaluador ya corrigió de este archivo no se pierde con un modelo nuevo.
         correcciones = await self._correcciones.listar(hash_contenido)
         documento = await aplicar_correcciones(documento, correcciones, modelos)
         await self._repositorio.guardar(documento)
+        await avisar(_avance_documento(documento))
         return ResultadoAnalisis(documento, desde_cache=False, duracion_ms=_ms(inicio))
 
     async def _analizar(
-        self, orden: OrdenAnalizarDocumento, hash_contenido: str, modelos: ModelosDocumentos
+        self,
+        orden: OrdenAnalizarDocumento,
+        hash_contenido: str,
+        modelos: ModelosDocumentos,
+        avisar: Avisador,
     ) -> Documento:
         tipo_archivo = self._lector.detectar_tipo(orden.contenido)
         if tipo_archivo is TipoArchivo.DESCONOCIDO:
@@ -94,7 +103,7 @@ class AnalizarDocumento:
             self._lector.leer(orden.contenido, tipo_archivo),
             self._almacen.guardar(_clave(hash_contenido), orden.contenido, tipo_archivo),
         )
-        paginas, palabras = await self._leer_paginas(orden.contenido, tipo_archivo, lectura)
+        paginas, palabras = await self._leer_paginas(orden.contenido, tipo_archivo, lectura, avisar)
         # Clasificar y extraer partidas no dependen uno del otro: van en paralelo.
         paginas, partidas = await asyncio.gather(
             self._clasificar_paginas(paginas, modelos),
@@ -120,7 +129,11 @@ class AnalizarDocumento:
         )
 
     async def _leer_paginas(
-        self, contenido: bytes, tipo_archivo: TipoArchivo, lectura: LecturaArchivo
+        self,
+        contenido: bytes,
+        tipo_archivo: TipoArchivo,
+        lectura: LecturaArchivo,
+        avisar: Avisador,
     ) -> tuple[tuple[Pagina, ...], dict[int, tuple[Palabra, ...]]]:
         origenes = [
             clasificar_origen(len(p.texto.strip()), p.cobertura_imagen) for p in lectura.paginas
@@ -131,9 +144,30 @@ class AnalizarDocumento:
             for p, origen in zip(lectura.paginas, origenes, strict=True)
             if origen is OrigenPagina.ESCANEADA
         ]
+        total, escaneos = len(lectura.paginas), len(escaneadas)
+        await avisar(
+            Avance(
+                "lectura",
+                f"{total} páginas leídas; {escaneos} son escaneos y pasan por OCR.",
+                {"paginas": total, "escaneadas": escaneos},
+            )
+        )
         reconocidos: Mapping[int, TextoReconocido] = {}
         if escaneadas:
-            reconocidos = await self._ocr.reconocer(contenido, tipo_archivo, escaneadas)
+            hechas = 0
+
+            async def al_leer(numero: int) -> None:
+                nonlocal hechas
+                hechas += 1
+                await avisar(
+                    Avance(
+                        "ocr",
+                        f"OCR: {hechas} de {escaneos} páginas.",
+                        {"pagina": numero, "hechas": hechas, "total": escaneos},
+                    )
+                )
+
+            reconocidos = await self._ocr.reconocer(contenido, tipo_archivo, escaneadas, al_leer)
         paginas = tuple(
             _a_pagina(p, origen, reconocidos.get(p.numero))
             for p, origen in zip(lectura.paginas, origenes, strict=True)
@@ -151,6 +185,22 @@ class AnalizarDocumento:
         clasificaciones = await modelos.paginas.clasificar([p.texto for p in con_texto])
         por_numero = {p.numero: c for p, c in zip(con_texto, clasificaciones, strict=True)}
         return tuple(replace(p, clasificacion=por_numero.get(p.numero)) for p in paginas)
+
+
+def _avance_documento(documento: Documento) -> Avance:
+    partes = sorted({p.etiqueta for p in documento.partes})
+    cuadran = sum(1 for p in documento.partidas if p.cuadra)
+    return Avance(
+        "documento",
+        f"Es {documento.tipo.etiqueta}: {len(partes)} partes y {len(documento.partidas)} partidas.",
+        {
+            "id_documento": str(documento.id),
+            "tipo": str(documento.tipo.etiqueta),
+            "partes": ", ".join(partes),
+            "partidas": len(documento.partidas),
+            "partidas_que_cuadran": cuadran,
+        },
+    )
 
 
 def _a_pagina(
