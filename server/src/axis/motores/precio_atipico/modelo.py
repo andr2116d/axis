@@ -186,9 +186,18 @@ def _agrupar(
     matriz = normalize(
         vectorizador.transform([normalizar_descripcion(o.descripcion) for o in lista])
     )
+    # Distancia coseno desde el producto disperso (n × n): densificar la matriz de n-gramas
+    # (n × decenas de miles de columnas) costaba minutos con grupos de miles de partidas.
+    similitudes = matriz @ matriz.T
+    distancias = 1.0 - (similitudes.toarray() if hasattr(similitudes, "toarray") else similitudes)
+    np.clip(distancias, 0.0, 2.0, out=distancias)
+    np.fill_diagonal(distancias, 0.0)
     etiquetas = AgglomerativeClustering(
-        n_clusters=None, metric="cosine", linkage="average", distance_threshold=distancia_maxima
-    ).fit_predict(matriz.toarray() if hasattr(matriz, "toarray") else matriz)
+        n_clusters=None,
+        metric="precomputed",
+        linkage="average",
+        distance_threshold=distancia_maxima,
+    ).fit_predict(distancias)
     salida = []
     for etiqueta in set(etiquetas.tolist()):
         indices = np.flatnonzero(etiquetas == etiqueta)

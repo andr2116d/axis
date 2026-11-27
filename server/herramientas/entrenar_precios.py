@@ -13,7 +13,9 @@ Con eso se eligen la agrupación y los umbrales, en vez de fijarlos a ojo.
 import argparse
 import asyncio
 import json
+from concurrent.futures import ProcessPoolExecutor
 from datetime import UTC, datetime
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -115,7 +117,9 @@ def main() -> None:
     argumentos = parser.parse_args()
     observados = cargar()
     print(f"Base: {len(observados)} precios de {len({o.obra for o in observados})} obras")
-    resultados = [evaluar(observados, p) for p in CANDIDATOS]
+    # Cada configuración se evalúa en su propio proceso: son independientes y usan CPU.
+    with ProcessPoolExecutor() as procesos:
+        resultados = list(procesos.map(partial(evaluar, observados), CANDIDATOS))
     for m in sorted(resultados, key=puntaje, reverse=True)[:6]:
         p = m["parametros"]
         print(
