@@ -3,6 +3,7 @@
 from collections.abc import Mapping, Sequence
 from uuid import UUID
 
+from axis.compartido.dominio.avance import Avisador
 from axis.compartido.dominio.motores import (
     EntradaMotor,
     Hallazgo,
@@ -85,9 +86,10 @@ class EvaluadorDesdeOrquestador:
         expediente: Expediente,
         secciones: Sequence[Seccion],
         previos: Mapping[str, ResultadoMotor],
+        avisar: Avisador,
     ) -> ResultadoDeMotores:
         entrada = await self._entrada(expediente, secciones)
-        evaluacion = await self._evaluar.ejecutar(entrada, previos)
+        evaluacion = await self._evaluar.ejecutar(entrada, previos, avisar)
         fichas = {m.ficha.id: m.ficha for m in self._catalogo.motores()}
         revisadas = frozenset(
             parte

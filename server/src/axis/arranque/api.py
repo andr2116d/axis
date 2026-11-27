@@ -166,7 +166,11 @@ def create_app(config: Config | None = None) -> FastAPI:
     )
     app.include_router(
         router_compuesto(
-            analizar_documento, adjuntar_documento, evaluar_expediente, config.limite_subida_bytes
+            analizar_documento,
+            adjuntar_documento,
+            evaluar_expediente,
+            config.limite_subida_bytes,
+            codigo_http,
         )
     )
 
@@ -215,9 +219,13 @@ def create_app(config: Config | None = None) -> FastAPI:
     return app
 
 
+def codigo_http(error: ErrorAxis) -> int:
+    return next((c for tipo, c in ERRORES_HTTP.items() if isinstance(error, tipo)), 400)
+
+
 def _registrar_errores(app: FastAPI) -> None:
     async def manejar(_peticion: Request, error: Exception) -> Response:
-        codigo = next((c for tipo, c in ERRORES_HTTP.items() if isinstance(error, tipo)), 400)
+        codigo = codigo_http(error) if isinstance(error, ErrorAxis) else 500
         return JSONResponse({"error": type(error).__name__, "detalle": str(error)}, codigo)
 
     app.add_exception_handler(ErrorAxis, manejar)
