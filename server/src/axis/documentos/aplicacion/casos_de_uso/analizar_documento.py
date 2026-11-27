@@ -35,7 +35,7 @@ from axis.documentos.dominio.valores import IdDocumento, OrigenPagina, TipoArchi
 
 # Cambia cuando cambia cómo se lee un archivo (por ejemplo, el extractor de partidas). Entra en
 # la clave de caché junto con la versión de los modelos: un lector nuevo obliga a releer.
-VERSION_LECTURA = "lectura-2"
+VERSION_LECTURA = "lectura-3"
 
 
 class AnalizarDocumento:

@@ -205,3 +205,29 @@ def test_en_un_escaneo_torcido_manda_la_linea_del_ocr():
 
     assert (primera.item, primera.unidad, primera.cuadra) == ("01.01.01", "glb", True)
     assert (segunda.item, segunda.unidad, segunda.cuadra) == ("01.01.02", "mes", True)
+
+
+def test_el_ruido_del_ocr_entre_la_descripcion_y_la_unidad_se_ignora():
+    (partida,) = extraer_partidas(
+        1,
+        fila(
+            100,
+            (52, "01.02.01"),
+            (104, "EQUIPOS"),
+            (150, "DE"),
+            (165, "PROTECCION"),
+            (220, "o"),
+            (226, "Ñ"),
+            (232, "und"),
+            (240, "'"),
+            (260, "|"),
+            (289, "1.00"),
+            (329, "'1.00'"),
+        ),
+    )
+
+    assert (partida.descripcion, partida.unidad, partida.numeros) == (
+        "EQUIPOS DE PROTECCION",
+        "und",
+        (Decimal("1.00"), Decimal("1.00")),
+    )

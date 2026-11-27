@@ -60,6 +60,9 @@ UNIDADES = frozenset(
 # Símbolos de moneda que algunas plantillas ponen como palabra aparte ("S/ 1,539.91").
 _MONEDA = frozenset({"s/", "s/.", "$", "us$", "soles"})
 _SUPERINDICES = str.maketrans({"²": "2", "³": "3"})
+# El OCR lee los bordes de una tabla escaneada como "|", "—", "o" u "Ñ" sueltos.
+_SIN_CONTENIDO = re.compile(r"^[^0-9A-Za-zÁÉÍÓÚÑáéíóúñ]+$")
+_COMILLAS = "'\"|[]{}“”‘’«»"
 _ITEM = re.compile(r"^\d{1,2}(?:\.\d{1,3}){0,6}\.?$")
 _NUMERO = re.compile(r"^\(?-?[\d.,]*\d[\d.,]*\)?$")
 _PALABRA_CON_LETRAS = re.compile(r"[A-Za-zÁÉÍÓÚÑáéíóúñ]{3,}")
@@ -112,7 +115,7 @@ class Partida:
 
 def numero(texto: str) -> Decimal | None:
     """Lee 1,883.63 · 1.883,63 · 2921.93 · 1,00 · (1,200.00). None si no es un número."""
-    limpio = texto.strip().replace("S/", "").rstrip("%")
+    limpio = texto.strip().strip(_COMILLAS).replace("S/", "").rstrip("%")
     if not _NUMERO.match(limpio):
         return None
     negativo = limpio.startswith("(") or limpio.startswith("-")
@@ -181,7 +184,7 @@ def _leer_fila(pagina: int, fila: list[Palabra]) -> Partida | None:
     item = fila[0].texto.replace(",", ".") if fila else ""
     if len(fila) < 2 or not _ITEM.match(item):  # noqa: PLR2004
         return None
-    resto = [p for p in fila[1:] if p.texto.lower() not in _MONEDA]
+    resto = [p for p in fila[1:] if p.texto.lower() not in _MONEDA and not _es_borde(p.texto)]
     indice_unidad = _indice_unidad(resto)
     fin_descripcion = indice_unidad if indice_unidad is not None else _inicio_numeros(resto)
     descripcion = " ".join(p.texto for p in resto[:fin_descripcion]).strip()
@@ -189,17 +192,37 @@ def _leer_fila(pagina: int, fila: list[Palabra]) -> Partida | None:
         return None
     desde = fin_descripcion + (1 if indice_unidad is not None else 0)
     numeros = tuple(n for p in resto[desde:] if (n := numero(p.texto)) is not None)
+    descripcion = _sin_ruido_final(descripcion)
     unidad = _unidad(resto[indice_unidad].texto) if indice_unidad is not None else None
     return _interpretar(pagina, item.rstrip("."), descripcion, unidad, numeros)
 
 
+def _es_borde(texto: str) -> bool:
+    return bool(_SIN_CONTENIDO.match(texto.strip()))
+
+
 def _indice_unidad(resto: list[Palabra]) -> int | None:
     # La unidad es la última palabra no numérica, siempre que todo lo que sigue sean números.
+    # Una letra suelta que no es unidad ("o", "Ñ", "y") es ruido del OCR: se salta.
     for i in range(len(resto) - 1, -1, -1):
-        if numero(resto[i].texto) is not None:
+        texto = resto[i].texto
+        if numero(texto) is not None:
             continue
-        return i if _unidad(resto[i].texto) in UNIDADES and i > 0 else None
+        unidad = _unidad(texto)
+        if unidad in UNIDADES:
+            return i if i > 0 else None
+        if len(unidad) == 1:
+            continue
+        return None
     return None
+
+
+def _sin_ruido_final(descripcion: str) -> str:
+    """Quita las letras sueltas que el OCR dejó entre la descripción y la unidad."""
+    palabras = descripcion.split()
+    while palabras and len(palabras[-1]) == 1 and not palabras[-1].isdigit():
+        palabras.pop()
+    return " ".join(palabras)
 
 
 def _unidad(texto: str) -> str:
