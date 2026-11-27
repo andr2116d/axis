@@ -61,6 +61,13 @@ from axis.normativa.aplicacion.casos_de_uso.consultar import ConsultarNormas
 from axis.orquestador.adaptadores.entrada.http import ERRORES_HTTP as ERRORES_ORQUESTADOR
 from axis.orquestador.adaptadores.entrada.http import crear_router as router_orquestador
 from axis.orquestador.aplicacion.casos_de_uso.evaluar import EvaluarDocumento, EvaluarEntrada
+from axis.seleccion.adaptadores.entrada.http import ERRORES_HTTP as ERRORES_SELECCION
+from axis.seleccion.adaptadores.entrada.http import crear_router as router_seleccion
+from axis.seleccion.adaptadores.salida.postgres import (
+    RegistroAntecedentesPostgres,
+    RepositorioProcesosPostgres,
+)
+from axis.seleccion.aplicacion.casos_de_uso.revisar_proceso import RevisarProceso
 
 log = structlog.get_logger()
 
@@ -69,6 +76,7 @@ ERRORES_HTTP: dict[type[ErrorAxis], int] = {
     **ERRORES_ORQUESTADOR,
     **ERRORES_EXPEDIENTE,
     **ERRORES_NORMATIVA,
+    **ERRORES_SELECCION,
 }
 
 
@@ -199,6 +207,15 @@ def create_app(config: Config | None = None) -> FastAPI:
     app.include_router(
         crear_router_normativa(
             lambda: ObtenerExpediente(repositorio=expedientes()), citar_normativa
+        )
+    )
+    app.include_router(
+        router_seleccion(
+            lambda: RevisarProceso(
+                procesos=RepositorioProcesosPostgres(recursos().motor_bd),
+                antecedentes=RegistroAntecedentesPostgres(recursos().motor_bd),
+                reloj=reloj,
+            )
         )
     )
     _registrar_errores(app)
