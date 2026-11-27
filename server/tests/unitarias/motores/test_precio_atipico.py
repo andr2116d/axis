@@ -5,7 +5,14 @@ from axis.compartido.dominio.motores import EntradaMotor, PartidaUbicada, Severi
 from axis.compartido.dominio.partidas import Partida
 from axis.compartido.dominio.valores import Fase
 from axis.motores.precio_atipico.inferencia import MotorPrecioAtipico
-from axis.motores.precio_atipico.modelo import PrecioObservado, Umbrales, actividad, entrenar
+from axis.motores.precio_atipico.modelo import (
+    PrecioObservado,
+    Umbrales,
+    actividad,
+    alcance,
+    entrenar,
+    medida,
+)
 
 
 def base(r=None):
@@ -103,3 +110,62 @@ def test_la_actividad_es_la_primera_palabra_con_contenido():
     assert actividad("REMOCIÓN DE CARPETA ASFÁLTICA") == "remocion"
     assert actividad("Nes 04 ELIMINACIÓN DE MATERIAL") == "eliminacion"
     assert actividad("CARPETA ASFALTICA EN CALIENTE") == "carpeta"
+
+
+def test_el_alcance_distingue_material_de_mano_de_obra():
+    assert alcance("SUMINISTRO E INSTALACION DE TUBERIA PVC") == "suministro_instalacion"
+    assert alcance("INSTALACION TUBO PVC UF") == "instalacion"
+    assert alcance("SEMBRADO DE GRASS INC. SUMINISTRO") == "suministro"
+    assert alcance("EXCAVACION MASIVA A MAQUINA") == ""
+
+
+def test_la_medida_es_la_que_define_el_precio():
+    assert medida("TUBERIA PVC UF DN 160MM") == "dn160"
+    assert medida("CONCRETO F'C=210 KG/CM2") == "fc210"
+    assert medida('CARPETA ASFALTICA EN CALIENTE E=2"') == 'e2"'
+    assert medida('TUBERIA PVC 1/2" INC. ACCESORIOS') == "pulg1/2"
+    assert medida("TRAZO Y REPLANTEO") == ""
+
+
+def test_una_tuberia_delgada_no_se_compara_con_una_gruesa():
+    r = random.Random(3)
+    gruesas = [
+        PrecioObservado(
+            "SUMINISTRO E INSTALACION DE TUBERIA PVC UF DN 200",
+            "m",
+            80 * r.uniform(0.9, 1.1),
+            f"obra-{i}",
+        )
+        for i in range(8)
+    ]
+    modelo = entrenar(
+        gruesas,
+        distancia_maxima=0.6,
+        minimo_precios=5,
+        minimo_obras=3,
+        similitud_minima=0.5,
+        dispersion_minima=0.1,
+        umbrales=Umbrales(veces_minimas=1.5, desvios_ambar=3.5, desvios_rojo=6.0),
+    )
+
+    assert modelo.comparar("SUMINISTRO E INSTALACION DE TUBERIA PVC UF DN 20", "m", 12.0) is None
+    assert (
+        modelo.comparar("SUMINISTRO E INSTALACION DE TUBERIA PVC UF DN 200", "m", 80.0) is not None
+    )
+
+
+def test_un_modelo_guardado_con_el_esquema_anterior_sigue_encontrando_sus_grupos():
+    viejo = entrenar(
+        base(),
+        distancia_maxima=0.6,
+        minimo_precios=5,
+        minimo_obras=3,
+        similitud_minima=0.5,
+        dispersion_minima=0.1,
+        umbrales=Umbrales(veces_minimas=1.5, desvios_ambar=3.5, desvios_rojo=6.0),
+        esquema_clave=1,
+    )
+    # Así queda un modelo guardado antes de que existiera el campo: sin él en la instancia.
+    del viejo.__dict__["esquema_clave"]
+
+    assert viejo.comparar("TRAZO Y REPLANTEO PRELIMINAR", "m2", 1.6) is not None

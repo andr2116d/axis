@@ -48,9 +48,11 @@ CANDIDATOS = [
     for d in (0.5, 0.65)
     for s in (0.45, 0.6)
     for disp in (0.12, 0.2)
-    for v in (1.5, 2.0)
+    for v in (1.5, 2.0, 2.5)
 ]
 TOLERANCIA_PROMOCION = 0.02
+# Agrupa también por alcance (suministro, instalación) y medida (DN, f'c, espesor).
+ESQUEMA_CLAVE = 2
 
 type Metricas = dict[str, Any]
 
@@ -73,6 +75,7 @@ def _entrenar(observados: list[PrecioObservado], parametros: dict[str, float]) -
         similitud_minima=parametros["similitud_minima"],
         dispersion_minima=parametros["dispersion_minima"],
         umbrales=Umbrales(parametros["veces_minimas"], DESVIOS_AMBAR, DESVIOS_ROJO),
+        esquema_clave=ESQUEMA_CLAVE,
     )
 
 

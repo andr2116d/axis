@@ -72,8 +72,47 @@ def actividad(descripcion: str) -> str:
     return ""
 
 
-def _clave(unidad: str, descripcion: str) -> str:
-    return f"{unidad}|{actividad(descripcion)}"
+_SUMINISTRO = re.compile(r"\bsuministr|\bincl?\.?\s*(?:suministro|material)|\bprovision")
+_INSTALACION = re.compile(r"\binstalac|\bcolocac|\bmontaje|\btendido")
+_MEDIDAS = (
+    ("dn", re.compile(r"\bdn\s*=?\s*(\d+(?:[.,]\d+)?)")),
+    ("fc", re.compile(r"\bf'?\s*c\s*=?\s*(\d{3})")),
+    ("e", re.compile(r"\be\s*=\s*(\d+(?:[.,]\d+)?\s*(?:mm|cm|m|\"|pulg)?)")),
+    ("mm", re.compile(r"(\d+(?:[.,]\d+)?)\s*mm\b")),
+    ("pulg", re.compile(r"(\d+(?:\s+\d/\d)?|\d/\d)\s*(?:\"|pulg)")),
+)
+
+
+def alcance(descripcion: str) -> str:
+    """Si la partida incluye el material, la mano de obra o ambos: cambia el precio por completo."""
+    texto = normalizar_descripcion(descripcion)
+    suministra = bool(_SUMINISTRO.search(texto))
+    instala = bool(_INSTALACION.search(texto))
+    if suministra and instala:
+        return "suministro_instalacion"
+    return "suministro" if suministra else ("instalacion" if instala else "")
+
+
+def medida(descripcion: str) -> str:
+    """La primera medida que define el precio: diámetro, resistencia del concreto o espesor.
+
+    Una tubería DN 20 y una DN 200 comparten casi todas las palabras, pero no el precio.
+    """
+    texto = normalizar_descripcion(descripcion)
+    for nombre, patron in _MEDIDAS:
+        encontrada = patron.search(texto)
+        if encontrada:
+            valor = _ESPACIOS.sub("", encontrada.group(1)).replace(",", ".")
+            return f"{nombre}{valor}"
+    return ""
+
+
+def clave_de_grupo(unidad: str, descripcion: str, esquema: int) -> str:
+    """Esquema 1: unidad y actividad. Esquema 2: además, alcance y medida."""
+    base = f"{unidad}|{actividad(descripcion)}"
+    if esquema == 1:
+        return base
+    return f"{base}|{alcance(descripcion)}|{medida(descripcion)}"
 
 
 def normalizar_descripcion(texto: str) -> str:
@@ -122,10 +161,12 @@ class ModeloPrecios:
     grupos: dict[str, list[Grupo]]
     similitud_minima: float
     umbrales: Umbrales
+    # Los modelos guardados antes de existir el campo usan el esquema 1 (vía el valor de clase).
+    esquema_clave: int = 1
 
     def comparar(self, descripcion: str, unidad: str, precio: float) -> Comparacion | None:
         """None si no hay un grupo parecido con la misma unidad: sin con qué comparar, no opina."""
-        clave = _clave(unidad, descripcion)
+        clave = clave_de_grupo(unidad, descripcion, self.esquema_clave)
         if precio <= 0 or unidad in UNIDADES_NO_COMPARABLES or clave not in self.centroides:
             return None
         vector = normalize(self.vectorizador.transform([normalizar_descripcion(descripcion)]))
@@ -148,6 +189,7 @@ def entrenar(  # noqa: PLR0913 - todos son hiperparámetros que elige la validac
     similitud_minima: float,
     dispersion_minima: float,
     umbrales: Umbrales,
+    esquema_clave: int = 2,
 ) -> ModeloPrecios:
     # Palabras completas distinguen "préstamo" de "propio"; letras toleran errores de OCR.
     vectorizador = FeatureUnion(
@@ -160,7 +202,8 @@ def entrenar(  # noqa: PLR0913 - todos son hiperparámetros que elige la validac
     por_unidad: dict[str, list[PrecioObservado]] = defaultdict(list)
     for observado in observados:
         if observado.precio > 0 and observado.unidad not in UNIDADES_NO_COMPARABLES:
-            por_unidad[_clave(observado.unidad, observado.descripcion)].append(observado)
+            clave = clave_de_grupo(observado.unidad, observado.descripcion, esquema_clave)
+            por_unidad[clave].append(observado)
     centroides: dict[str, np.ndarray] = {}
     grupos: dict[str, list[Grupo]] = {}
     for unidad, lista in por_unidad.items():
@@ -170,7 +213,9 @@ def entrenar(  # noqa: PLR0913 - todos son hiperparámetros que elige la validac
         if hallados:
             grupos[unidad] = [g for g, _ in hallados]
             centroides[unidad] = normalize(np.vstack([c for _, c in hallados]))
-    return ModeloPrecios(vectorizador, centroides, grupos, similitud_minima, umbrales)
+    return ModeloPrecios(
+        vectorizador, centroides, grupos, similitud_minima, umbrales, esquema_clave
+    )
 
 
 def _agrupar(
