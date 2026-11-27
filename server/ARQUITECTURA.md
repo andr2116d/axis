@@ -172,3 +172,15 @@ Casi todos los motores leen partidas (precios, metrados, valorizaciones). Se ext
   - Cada resultado de motor guarda una **firma**: el motor, su versión y el documento de cada parte que lee. Al reevaluar, un motor cuyas partes no cambiaron **no se vuelve a correr**.
   - Cada sección queda `rojo`, `ambar`, `verde` o **`sin_revisar`**. Una sección que ningún motor lee todavía no se pinta de verde.
 - Las evaluaciones se numeran y se guardan completas (resultados, omisiones, fallas), así que se puede reconstruir qué se dijo en cada versión.
+
+### Motor `metrados_presupuesto`
+
+- **Necesita** las partes `metrados` y `presupuesto`. Compara la cantidad de cada partida del presupuesto con el metrado de la planilla (el último número de su fila).
+- **Para no acusar por un error de lectura:**
+  - solo usa filas del presupuesto que cuadran;
+  - exige el mismo ítem (01.01.01 = 1.1.1), la misma unidad y una descripción parecida;
+  - **roja** solo si la diferencia es de 10 % o más **y** el metrado está confirmado (la planilla repite el valor en la fila);
+  - una diferencia de ×10, ×100 o ×1000 se marca **ámbar** como posible coma corrida, con confianza 0,4.
+- **"Sin metrado que la sustente"** solo se dice si la planilla se leyó bien: hay metrado para al menos el 70 % de las partidas.
+- Es una verificación de coherencia: no se entrena. Se registra en `motores/catalogo.py` como motor fijo.
+- **Primera prueba real** (proceso 1156628, escaneado): 4 diferencias aparentes, de las cuales 3 eran comas que el OCR no leyó y 1 era un 5 leído como 6. Con los resguardos queda 1 aviso ámbar de baja confianza.
