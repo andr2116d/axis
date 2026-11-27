@@ -7,3 +7,9 @@ class Fase(StrEnum):
     EXPEDIENTE = "expediente"
     SELECCION = "seleccion"
     EJECUCION = "ejecucion"
+
+
+class Semaforo(StrEnum):
+    VERDE = "verde"
+    AMBAR = "ambar"
+    ROJO = "rojo"
