@@ -112,7 +112,7 @@ export async function registrarObra(entrada: { expedienteId: string; situacion: 
 }
 
 /** Página del expediente original que muestra que la condición estaba prevista. */
-function buscarEvidencia(e: Expediente, textos: string[][], c: Condicion): Fuente | null {
+export function buscarEvidencia(e: Expediente, textos: string[][], c: Condicion): Fuente | null {
   const grupos: [string[], (t: string) => boolean][] = [
     [c.partidas, (t) => ['Presupuesto', 'Metrados', 'Precios unitarios', 'Expediente completo'].includes(t)],
     [c.estudios, (t) => ['Memoria', 'Estudio de suelos', 'Especificaciones', 'Planos', 'Expediente completo'].includes(t)],
