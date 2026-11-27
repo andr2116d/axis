@@ -13,12 +13,10 @@ import argparse
 import asyncio
 import json
 import os
-import re
 import shutil
 import subprocess
 import tempfile
 import time
-import unicodedata
 import zipfile
 from pathlib import Path
 
@@ -28,6 +26,7 @@ from axis.compartido.dominio.partidas import extraer_partidas
 from axis.documentos.adaptadores.salida.lector_archivos import LectorArchivosLocal
 from axis.documentos.dominio.errores import ArchivoIlegible
 from axis.documentos.dominio.valores import TipoArchivo
+from herramientas.nombres import ES_DE_PRECIOS, normalizar_nombre
 
 CLIENTE = "axis-investigacion/0.1"
 CONCURRENCIA = 3
@@ -35,21 +34,12 @@ PAUSA_SEGUNDOS = 0.5
 TAMANO_MAXIMO = 300 * 1024 * 1024
 # Un PDF que no se llama "presupuesto" se guarda igual si trae al menos estas partidas que cuadran.
 MINIMO_PARTIDAS_QUE_CUADRAN = 5
-ES_DE_PRECIOS = re.compile(
-    r"PRESUP|VALOR REFERENCIAL|COSTOS? UNITARIO|ANALISIS DE (PRECIO|COSTO)|ACU\b|METRADO|"
-    r"DESAGREGADO|FORMULA POLINOMICA|GASTOS GENERALES|RELACION DE INSUMOS"
-)
 _EXTENSIONES = {".pdf", ".xlsx", ".xls"}
 _COMPRIMIDOS = {".zip", ".rar", ".7z"}
 _PREFERENCIA = ("bases integradas", "bases administrativas")
 # Solo bases comprimidas: en 30 bases en PDF no hubo ningún presupuesto (traen solo el valor
 # referencial); en las comprimidas, 6 de cada 15 traían el presupuesto como anexo.
 _FORMATOS = ("zip", "rar", "7z")
-
-
-def normalizar_nombre(texto: str) -> str:
-    sin_tildes = unicodedata.normalize("NFKD", texto.upper())
-    return "".join(c for c in sin_tildes if not unicodedata.combining(c)).replace("_", " ")
 
 
 def elegir_documento(obra: dict[str, object]) -> dict[str, str] | None:

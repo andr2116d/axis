@@ -21,7 +21,7 @@ from axis.documentos.adaptadores.salida.ocr_tesseract import OcrTesseract
 from axis.documentos.dominio.errores import ArchivoIlegible
 from axis.documentos.dominio.servicios import clasificar_origen
 from axis.documentos.dominio.valores import OrigenPagina, TipoArchivo
-from herramientas.descargar_bases import ES_DE_PRECIOS, normalizar_nombre
+from herramientas.nombres import ES_DE_PRECIOS, normalizar_nombre
 
 SALIDA = Path(".cache/precios_reales.jsonl")
 
