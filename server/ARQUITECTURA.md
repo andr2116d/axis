@@ -130,3 +130,36 @@ Casi todos los motores leen partidas (precios, metrados, valorizaciones). Se ext
   - escaneado: 58 de 60 en uno de 7 páginas, en 2,8 s con OCR.
 - **El LLM de Bedrock no se usa aquí todavía.** La API marca las `paginas_dudosas` (menos de la mitad cuadra). Esas serían las candidatas a una segunda lectura con el LLM, y se conecta solo si el volumen lo justifica.
 - La clave de caché incluye `VERSION_LECTURA`: si cambia el extractor, el mismo archivo se vuelve a leer.
+
+## Orquestador y primer motor (implementados)
+
+`POST /evaluaciones {"id_documento": …, "fase"?, "tipologia"?}` responde con:
+- el semáforo;
+- los motores activados y por qué;
+- los omitidos y qué falta para prenderlos ("Falta subir: presupuesto");
+- los hallazgos, cada uno con su explicación;
+- las fallas.
+
+- **Hoy decide la ficha.** Cada motor declara fases, tipologías y partes requeridas. El enrutador aprendido, el asesor LLM y la exploración se suman después como otras fuentes de activación (`OrigenActivacion`).
+- Los motores corren en paralelo, con un límite de tiempo cada uno (`AXIS_SEGUNDOS_POR_MOTOR`). Si uno se cae o tarda, se informa como falla y no frena a los demás.
+- El puente entre `documentos` y `orquestador` vive en `arranque/puentes.py`: los contextos no se importan entre sí.
+- Cada motor tiene su registro en S3 (`motores/<id>/actual.json`). `arranque/catalogo.py` lo carga y lo recarga sin reiniciar. Agregar un motor es crear su paquete y anotarlo en `motores/catalogo.py`.
+
+### Motor `precio_atipico`
+
+- **Cómo agrupa:** solo compara partidas de la **misma unidad y la misma actividad** (la primera palabra con contenido: remoción, relleno, corte…), parecidas en palabras y en letras.
+- **Cómo decide que un precio es raro:** cada grupo guarda la distribución del precio en escala logarítmica (mediana y MAD). Un precio es raro si se aleja varias dispersiones de la mediana **y** la diferencia importa en plata.
+- **Cuándo no opina:**
+  - partidas globales (`glb`, `est`);
+  - filas que no cuadran (el precio leído puede ser un error de lectura);
+  - partidas sin grupo parecido.
+- **Cómo se ajusta** (`herramientas/entrenar_precios.py`): la agrupación y los umbrales se eligen por validación cruzada **por obra**. Se mide:
+  - las falsas alarmas sobre precios reales (máximo 5 %);
+  - la detección de errores metidos a propósito (×3, ÷3, ×10);
+  - la cobertura.
+- **Primera versión, con 956 precios de 23 obras:**
+  - **falsas alarmas: 3 %;**
+  - **detección: 82–95 %;**
+  - **cobertura: 38 %** de las partidas.
+
+  Varias de las "falsas alarmas" son en realidad precios raros que vale la pena mirar (trazo y replanteo a 4,5 veces lo usual).
