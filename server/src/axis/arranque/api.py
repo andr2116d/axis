@@ -8,6 +8,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 
 from axis.arranque.config import Config
+from axis.arranque.puentes import EntradasDesdeDocumentos
 from axis.arranque.recursos import Recursos
 from axis.compartido.dominio.errores import ErrorAxis
 from axis.compartido.infraestructura.logs import configurar_logs
@@ -32,10 +33,13 @@ from axis.documentos.aplicacion.casos_de_uso.corregir_clasificacion import (
     ListarCorrecciones,
     ObtenerEtiquetas,
 )
+from axis.orquestador.adaptadores.entrada.http import ERRORES_HTTP as ERRORES_ORQUESTADOR
+from axis.orquestador.adaptadores.entrada.http import crear_router as router_orquestador
+from axis.orquestador.aplicacion.casos_de_uso.evaluar import EvaluarDocumento
 
 log = structlog.get_logger()
 
-ERRORES_HTTP: dict[type[ErrorAxis], int] = {**ERRORES_DOCUMENTOS}
+ERRORES_HTTP: dict[type[ErrorAxis], int] = {**ERRORES_DOCUMENTOS, **ERRORES_ORQUESTADOR}
 
 
 def create_app(config: Config | None = None) -> FastAPI:
@@ -92,13 +96,28 @@ def create_app(config: Config | None = None) -> FastAPI:
         etiquetas=lambda: ObtenerEtiquetas(recursos().modelos_documentos),
     )
     app.include_router(router_documentos(casos, config.limite_subida_bytes))
+
+    def evaluar_documento() -> EvaluarDocumento:
+        return EvaluarDocumento(
+            catalogo=recursos().motores,
+            fuente=EntradasDesdeDocumentos(documentos()),
+            limite_segundos=config.segundos_por_motor,
+        )
+
+    app.include_router(router_orquestador(evaluar_documento))
     _registrar_errores(app)
     _registrar_medicion(app)
 
     @app.get("/salud", tags=["sistema"])
     async def salud() -> dict[str, str | None]:
-        modelos = recursos().modelos_documentos.actual()
-        return {"estado": "ok", "modelos_documentos": modelos.version if modelos else None}
+        r = recursos()
+        modelos = r.modelos_documentos.actual()
+        return {
+            "estado": "ok",
+            "modelos_documentos": modelos.version if modelos else None,
+            "motores": ", ".join(f"{m.ficha.id}@{m.ficha.version}" for m in r.motores.motores())
+            or None,
+        }
 
     return app
 

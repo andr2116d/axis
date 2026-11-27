@@ -24,6 +24,8 @@ class Config(BaseSettings):
     ocr_concurrencia: int = Field(default_factory=lambda: os.cpu_count() or 2)
 
     limite_subida_mb: int = 200
+    # Un motor que tarda más que esto se informa como falla y no frena a los demás.
+    segundos_por_motor: float = 10.0
     segundos_entre_recargas_de_modelos: int = 60
     log_json: bool = True
 

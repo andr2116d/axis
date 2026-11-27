@@ -7,6 +7,7 @@ import aioboto3
 import structlog
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
+from axis.arranque.catalogo import CatalogoRecargable
 from axis.arranque.config import Config
 from axis.compartido.infraestructura.s3 import ClienteS3
 from axis.documentos.adaptadores.salida.modelos.registro import (
@@ -25,6 +26,7 @@ class Recursos:
     motor_bd: AsyncEngine
     s3: ClienteS3
     modelos_documentos: ProveedorModelosRecargable
+    motores: CatalogoRecargable
     _pila: AsyncExitStack
     _recarga: asyncio.Task[None] | None = None
 
@@ -45,7 +47,9 @@ class Recursos:
             log.warning(
                 "sin_modelos_documentos", detalle="entrena con `docker compose run entrenar`"
             )
-        recursos = cls(config, motor_bd, s3, modelos, pila)
+        motores = CatalogoRecargable(s3, config.s3_bucket_modelos)
+        await motores.refrescar()
+        recursos = cls(config, motor_bd, s3, modelos, motores, pila)
         recursos._recarga = asyncio.create_task(recursos._recargar_periodicamente())
         return recursos
 
@@ -55,6 +59,7 @@ class Recursos:
             await asyncio.sleep(self.config.segundos_entre_recargas_de_modelos)
             try:
                 await self.modelos_documentos.refrescar()
+                await self.motores.refrescar()
             except Exception:  # una recarga fallida no debe tumbar la API
                 log.exception("recarga_modelos_fallida")
 
