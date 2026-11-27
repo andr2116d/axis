@@ -10,3 +10,5 @@ __pycache__/
 datos/
 .env*
 cdk.out/
+.cache/
+.cache_entrenamiento.log

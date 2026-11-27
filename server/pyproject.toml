@@ -3,7 +3,25 @@ name = "axis"
 version = "0.1.0"
 description = "Backend de Axis: API, orquestador y motores que aprenden de obras reales."
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "aioboto3>=15.5.0",
+    "alembic>=1.20.1",
+    "asyncpg>=0.32.0",
+    "fastapi>=0.165.0",
+    "granian>=2.8.9",
+    "numpy>=2.5.5",
+    "openpyxl>=3.1.5",
+    "orjson>=3.13.0",
+    "pillow>=13.0.0",
+    "pydantic-settings>=2.16.3",
+    "pypdfium2>=5.15.2",
+    "pytesseract>=0.3.13",
+    "python-multipart>=0.0.34",
+    "scikit-learn>=1.9.1",
+    "sqlalchemy[asyncio]>=2.1.9",
+    "structlog>=26.1.0",
+    "uvloop>=0.23.0",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -26,10 +44,16 @@ select = [
 ignore = [
   "RUF001", "RUF002", "RUF003",  # tildes en strings y comentarios
   "TRY003",                       # mensajes en excepciones de dominio
+  "N818",                         # los errores se llaman en español (ErrorAxis, ArchivoVacio)
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "PLR2004", "ANN"]
+"**/falsos.py" = ["ARG002"]           # los falsos ignoran lo que no necesitan
+"**/infraestructura/s3.py" = ["N803"]  # nombres de la API de AWS
+# Scripts de entrenamiento: imprimen en consola, usan azar no criptográfico y plantillas largas.
+"herramientas/**" = ["T201", "S311", "PLR2004"]
+"herramientas/sintetico.py" = ["E501", "ARG001"]  # todos los generadores reciben (azar, contexto)
 
 [tool.ruff.lint.pylint]
 max-args = 5
@@ -43,11 +67,13 @@ strict = true
 warn_unreachable = true
 disallow_any_explicit = true
 mypy_path = "src"
+plugins = ["pydantic.mypy"]
 
 # ---------- pytest ----------
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 addopts = "-ra --strict-markers --import-mode=importlib"
 markers = [
   "integracion: requiere Postgres/S3/SQS (testcontainers o moto)",
@@ -113,9 +139,20 @@ forbidden_modules = ["axis.arranque"]
 
 [dependency-groups]
 dev = [
+    "httpx>=0.29.0",
     "import-linter>=2.17",
     "mypy>=2.4.1",
     "pytest>=9.2.0",
     "pytest-asyncio>=1.5.0",
+    "reportlab>=5.1.2",
     "ruff>=0.17.6",
 ]
+
+[[tool.mypy.overrides]]
+# Los scripts de entrenamiento manejan métricas como JSON libre.
+module = ["herramientas.*"]
+disallow_any_explicit = false
+
+[[tool.mypy.overrides]]
+module = ["sklearn.*", "joblib.*", "pytesseract.*", "openpyxl.*", "aioboto3.*", "botocore.*", "reportlab.*", "pypdfium2.*"]
+ignore_missing_imports = true
