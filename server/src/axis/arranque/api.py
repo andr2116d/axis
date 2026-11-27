@@ -8,7 +8,11 @@ from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 
 from axis.arranque.config import Config
-from axis.arranque.puentes import EntradasDesdeDocumentos
+from axis.arranque.puentes import (
+    EntradasDesdeDocumentos,
+    EvaluadorDesdeOrquestador,
+    ResumenesDesdeDocumentos,
+)
 from axis.arranque.recursos import Recursos
 from axis.compartido.dominio.errores import ErrorAxis
 from axis.compartido.infraestructura.logs import configurar_logs
@@ -33,13 +37,26 @@ from axis.documentos.aplicacion.casos_de_uso.corregir_clasificacion import (
     ListarCorrecciones,
     ObtenerEtiquetas,
 )
+from axis.expediente.adaptadores.entrada.http import ERRORES_HTTP as ERRORES_EXPEDIENTE
+from axis.expediente.adaptadores.entrada.http import crear_router as router_expediente
+from axis.expediente.adaptadores.salida.postgres import RepositorioExpedientesPostgres
+from axis.expediente.aplicacion.casos_de_uso.evaluar_expediente import EvaluarExpediente
+from axis.expediente.aplicacion.casos_de_uso.gestionar import (
+    AdjuntarDocumento,
+    CrearExpediente,
+    ObtenerExpediente,
+)
 from axis.orquestador.adaptadores.entrada.http import ERRORES_HTTP as ERRORES_ORQUESTADOR
 from axis.orquestador.adaptadores.entrada.http import crear_router as router_orquestador
-from axis.orquestador.aplicacion.casos_de_uso.evaluar import EvaluarDocumento
+from axis.orquestador.aplicacion.casos_de_uso.evaluar import EvaluarDocumento, EvaluarEntrada
 
 log = structlog.get_logger()
 
-ERRORES_HTTP: dict[type[ErrorAxis], int] = {**ERRORES_DOCUMENTOS, **ERRORES_ORQUESTADOR}
+ERRORES_HTTP: dict[type[ErrorAxis], int] = {
+    **ERRORES_DOCUMENTOS,
+    **ERRORES_ORQUESTADOR,
+    **ERRORES_EXPEDIENTE,
+}
 
 
 def create_app(config: Config | None = None) -> FastAPI:
@@ -105,6 +122,31 @@ def create_app(config: Config | None = None) -> FastAPI:
         )
 
     app.include_router(router_orquestador(evaluar_documento))
+
+    def expedientes() -> RepositorioExpedientesPostgres:
+        return RepositorioExpedientesPostgres(recursos().motor_bd)
+
+    def evaluar_expediente() -> EvaluarExpediente:
+        r = recursos()
+        evaluador = EvaluadorDesdeOrquestador(
+            documentos(),
+            EvaluarEntrada(catalogo=r.motores, limite_segundos=config.segundos_por_motor),
+            r.motores,
+        )
+        return EvaluarExpediente(repositorio=expedientes(), evaluador=evaluador, reloj=reloj)
+
+    app.include_router(
+        router_expediente(
+            lambda: CrearExpediente(repositorio=expedientes(), reloj=reloj),
+            lambda: AdjuntarDocumento(
+                repositorio=expedientes(),
+                documentos=ResumenesDesdeDocumentos(documentos()),
+                reloj=reloj,
+            ),
+            lambda: ObtenerExpediente(repositorio=expedientes()),
+            evaluar_expediente,
+        )
+    )
     _registrar_errores(app)
     _registrar_medicion(app)
 
