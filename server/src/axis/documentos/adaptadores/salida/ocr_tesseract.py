@@ -8,10 +8,10 @@ import pypdfium2 as pdfium
 import pytesseract
 from PIL import Image, ImageOps
 
+from axis.compartido.dominio.partidas import Palabra
 from axis.compartido.infraestructura.pdfium import CANDADO_PDFIUM
 from axis.documentos.aplicacion.dto import TextoReconocido
 from axis.documentos.dominio.errores import ArchivoIlegible
-from axis.documentos.dominio.partidas import Palabra
 from axis.documentos.dominio.valores import TipoArchivo
 
 _PUNTOS_POR_PULGADA = 72

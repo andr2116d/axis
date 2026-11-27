@@ -9,6 +9,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.ext.asyncio import create_async_engine
 
+from axis.compartido.dominio.partidas import Partida
 from axis.compartido.dominio.valores import Fase
 from axis.documentos.adaptadores.salida.postgres import (
     RepositorioCorreccionesPostgres,
@@ -23,7 +24,6 @@ from axis.documentos.dominio.entidades import (
     Parte,
     SenalEdicion,
 )
-from axis.documentos.dominio.partidas import Partida
 from axis.documentos.dominio.valores import (
     Clasificacion,
     CodigoSenal,

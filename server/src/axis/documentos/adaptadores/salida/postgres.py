@@ -7,6 +7,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
+from axis.compartido.dominio.partidas import Partida
 from axis.compartido.dominio.valores import Fase
 from axis.documentos.dominio.entidades import (
     Correccion,
@@ -17,7 +18,6 @@ from axis.documentos.dominio.entidades import (
     Parte,
     SenalEdicion,
 )
-from axis.documentos.dominio.partidas import Partida
 from axis.documentos.dominio.valores import (
     Clasificacion,
     CodigoSenal,

@@ -11,11 +11,11 @@ import pypdfium2 as pdfium
 import pypdfium2.raw as pdfium_c
 from PIL import Image
 
+from axis.compartido.dominio.partidas import Palabra
 from axis.compartido.infraestructura.pdfium import CANDADO_PDFIUM
 from axis.documentos.aplicacion.dto import LecturaArchivo, PaginaLeida
 from axis.documentos.dominio.entidades import Huella
 from axis.documentos.dominio.errores import ArchivoIlegible
-from axis.documentos.dominio.partidas import Palabra
 from axis.documentos.dominio.valores import TipoArchivo
 
 _FIRMA_PDF = b"%PDF"

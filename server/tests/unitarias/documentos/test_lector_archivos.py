@@ -4,8 +4,8 @@ from PIL import Image
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
+from axis.compartido.dominio.partidas import extraer_partidas
 from axis.documentos.adaptadores.salida.lector_archivos import LectorArchivosLocal
-from axis.documentos.dominio.partidas import extraer_partidas
 from axis.documentos.dominio.servicios import clasificar_origen
 from axis.documentos.dominio.valores import OrigenPagina, TipoArchivo
 

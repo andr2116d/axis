@@ -5,6 +5,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from uuid import uuid4
 
+from axis.compartido.dominio.partidas import Palabra, Partida, extraer_partidas
 from axis.compartido.dominio.reloj import Reloj
 from axis.documentos.aplicacion.dto import (
     LecturaArchivo,
@@ -29,7 +30,6 @@ from axis.documentos.dominio.errores import (
     ArchivoVacio,
     ModelosNoDisponibles,
 )
-from axis.documentos.dominio.partidas import Palabra, Partida, extraer_partidas
 from axis.documentos.dominio.servicios import clasificar_origen, detectar_senales, segmentar
 from axis.documentos.dominio.valores import IdDocumento, OrigenPagina, TipoArchivo
 

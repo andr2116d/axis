@@ -2,7 +2,7 @@ from decimal import Decimal
 
 import pytest
 
-from axis.documentos.dominio.partidas import Palabra, extraer_partidas, numero
+from axis.compartido.dominio.partidas import Palabra, extraer_partidas, numero
 
 
 def fila(y, *celdas):

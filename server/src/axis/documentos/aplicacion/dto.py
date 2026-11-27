@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
+from axis.compartido.dominio.partidas import Palabra
 from axis.compartido.dominio.valores import Fase
 from axis.documentos.dominio.entidades import Correccion, Documento, Huella
-from axis.documentos.dominio.partidas import Palabra
 from axis.documentos.dominio.valores import Etiqueta, IdDocumento
 
 

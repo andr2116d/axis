@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from datetime import datetime
 
+from axis.compartido.dominio.partidas import Partida
 from axis.compartido.dominio.valores import Fase
-from axis.documentos.dominio.partidas import Partida
 from axis.documentos.dominio.valores import (
     Clasificacion,
     CodigoSenal,
