@@ -14,6 +14,10 @@ export async function GET() {
 export async function POST(request: Request) {
   const entrada = await leerPeticion(request).catch((e: Error) => e.message);
   if (typeof entrada === 'string') return error(entrada);
-  const expediente = await recibirExpediente(entrada.archivos);
-  return NextResponse.json({ id: expediente.id }, { status: 201 });
+  try {
+    const expediente = await recibirExpediente(entrada.archivos, { versionDe: entrada.campos.versionDe || undefined });
+    return NextResponse.json({ id: expediente.id }, { status: 201 });
+  } catch (e) {
+    return error((e as Error).message, 404);
+  }
 }

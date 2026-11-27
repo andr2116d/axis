@@ -2,7 +2,8 @@
 
 import { useRef, useState } from 'react';
 import Link from 'next/link';
-import type { DatosCarta, Expediente, Prioridad } from '@/dominio/tipos';
+import type { DatosCarta, ElaboradoPor, Expediente, Prioridad } from '@/dominio/tipos';
+import { semaforoVigente } from '@/dominio/semaforo';
 import { Icono } from '../Icono';
 import { useAviso } from '../Aviso';
 import { PRIORIDADES } from '../ui';
@@ -31,6 +32,16 @@ export function Carta({ expediente }: { expediente: Expediente }) {
     destinatario: e.carta.destinatario || 'Consultor responsable del expediente técnico',
   }));
   const pausa = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const [elaborado, setElaborado] = useState<ElaboradoPor>(e.elaboradoPor ?? 'consultor');
+  const consultor = elaborado === 'consultor';
+  const vigente = semaforoVigente(e);
+  const justificadas = (e.justificaciones ?? []).filter((j) => j.evaluacion.veredicto === 'aceptada').length;
+  const maximo = datos.plazoEntregable ? Math.floor(datos.plazoEntregable * 0.3) : null;
+  const elegir = (v: ElaboradoPor) => {
+    setElaborado(v);
+    guardarCarta(e.id, { elaboradoPor: v } as Partial<DatosCarta>).catch(() => avisar('No se pudo guardar.'));
+    avisar(v === 'consultor' ? 'Carta al consultor, con los plazos del art. 144.' : 'Informe para el equipo de la entidad que elaboró el expediente.');
+  };
 
   const elegidos = e.hallazgos.filter((h) => incluidos.has(h.id));
   const excluidos = e.hallazgos.filter((h) => !incluidos.has(h.id));
@@ -51,7 +62,7 @@ export function Carta({ expediente }: { expediente: Expediente }) {
   const campo = (id: keyof DatosCarta, etiqueta: string, tipo: 'text' | 'number' = 'text') => (
     <label className="campo-carta" key={id}>
       <span>{etiqueta}</span>
-      <input type={tipo} min={1} max={60} value={String(datos[id] ?? '')} onChange={(x) => editar(id, tipo === 'number' ? Number(x.target.value) : x.target.value)} />
+      <input type={tipo} min={1} max={id === 'plazoEntregable' ? 720 : 60} value={String(datos[id] ?? '')} onChange={(x) => editar(id, tipo === 'number' ? Number(x.target.value) : x.target.value)} />
     </label>
   );
 
@@ -59,7 +70,7 @@ export function Carta({ expediente }: { expediente: Expediente }) {
     <>
       <div className="report-actions"><Link href={`/revision/${e.id}`} className="back"><Icono nombre="back" tamano={17} /> Volver a la revisión</Link></div>
       <section className="page-lead report-lead">
-        <div><h1>Carta de observaciones</h1><p>Revisa el texto, quita lo que no quieras enviar y descárgala en PDF.</p></div>
+        <div><h1>{consultor ? 'Carta de observaciones' : 'Informe de observaciones'}</h1><p>Revisa el texto, quita lo que no quieras enviar y descárgala en PDF.</p></div>
         {elegidos.length > 0 && <button type="button" className="btn primary" onClick={() => window.print()}><Icono nombre="print" tamano={18} />Imprimir o guardar PDF</button>}
       </section>
       <div className="report-layout">
@@ -70,7 +81,7 @@ export function Carta({ expediente }: { expediente: Expediente }) {
             <img src="/axis-logo.svg" alt="AXIS" width={96} height={30} />
           </header>
           <p className="carta-fecha">{e.lugar ? `${e.lugar.split(',')[0]}, ` : ''}{hoy()}</p>
-          <p className="carta-numero"><b>CARTA N.° {datos.numero}</b></p>
+          <p className="carta-numero"><b>{consultor ? 'CARTA' : 'INFORME'} N.° {datos.numero}</b></p>
           <p className="carta-destino">Señor(a):<br /><b>{datos.destinatario}</b><br />Presente.–</p>
           <dl className="carta-ref">
             <div><dt>Asunto</dt><dd>Observaciones al expediente técnico de la obra «{e.nombre}»</dd></div>
@@ -78,14 +89,16 @@ export function Carta({ expediente }: { expediente: Expediente }) {
           </dl>
           <p>De mi consideración:</p>
           <p>
-            Por medio de la presente se comunica el resultado de la revisión del expediente técnico de la referencia.
+            {consultor
+              ? 'Por medio de la presente se comunica el resultado de la revisión del entregable del expediente técnico de la referencia, elaborado en el marco del contrato de consultoría de obra.'
+              : 'Se remite el resultado de la revisión del expediente técnico de la referencia, elaborado por la entidad, para su corrección antes de la aprobación.'}
             {elegidos.length
               ? ` Se han identificado ${elegidos.length} punto(s) que deben atenderse. Cada observación indica el documento y la página que la sustentan, y lo que se solicita.`
               : ' No se identificaron observaciones que comunicar.'}
           </p>
-          <div className={`carta-resultado resultado-${e.semaforo}`}>
-            <Semaforo estado={e.semaforo} tamano="chico" />
-            <div><b>Resultado de la revisión: {SEMAFORO[e.semaforo].titulo}</b><span>{SEMAFORO[e.semaforo].texto}</span></div>
+          <div className={`carta-resultado resultado-${vigente.estado}`}>
+            <Semaforo estado={vigente.estado} tamano="chico" />
+            <div><b>Resultado de la revisión: {SEMAFORO[vigente.estado].titulo}</b><span>{SEMAFORO[vigente.estado].texto}</span></div>
           </div>
 
           {secciones.map((s) => (
@@ -115,11 +128,15 @@ export function Carta({ expediente }: { expediente: Expediente }) {
             </section>
           ))}
 
-          {elegidos.length > 0 && (
+          {elegidos.length > 0 && (consultor ? (
             <p className="carta-cierre">
-              Se otorga un plazo de <b>{datos.plazo} días hábiles</b>, contados desde la recepción de la presente, para levantar las observaciones y presentar el expediente corregido, indicando en cada caso el folio donde se subsanó.
+              Conforme al numeral 144.4 del Reglamento de la Ley N.° 32069, se otorga un plazo de <b>{datos.plazo} días</b>, contados desde la recepción de la presente, para subsanar las observaciones y presentar el entregable corregido, indicando en cada caso el folio donde se subsanó. Subsanadas dentro del plazo, no corresponde aplicar penalidades; vencido el plazo, la penalidad por mora corre desde su vencimiento (numeral 144.7).
             </p>
-          )}
+          ) : (
+            <p className="carta-cierre">
+              Se solicita al equipo responsable de la elaboración levantar las observaciones en un plazo de <b>{datos.plazo} días hábiles</b> y presentar la versión corregida para su revisión, antes de emitir la resolución de aprobación (art. 173 del Reglamento).
+            </p>
+          ))}
           <p>Atentamente,</p>
           <div className="carta-firma">
             <span className="linea-firma" />
@@ -127,18 +144,26 @@ export function Carta({ expediente }: { expediente: Expediente }) {
             <span>{datos.cargo || 'Evaluador de expedientes técnicos'}</span>
             <span>{datos.entidad}</span>
           </div>
-          <p className="carta-pie">Revisión asistida por Axis: {e.pruebas ? `${e.pruebas.aplicadas} pruebas aplicadas de ${e.pruebas.total}` : 'pruebas aprendidas de obras reales'}. Cada observación fue confirmada por el evaluador antes de incluirla.</p>
+          <p className="carta-pie">Revisión asistida por Axis: {e.pruebas ? `${e.pruebas.aplicadas} pruebas aplicadas de ${e.pruebas.total}` : 'pruebas aprendidas de obras reales'}. Cada observación fue confirmada por el evaluador antes de incluirla.{justificadas ? ` ${justificadas} alerta(s) se justificaron con juicio de experto y constan en el registro de la revisión.` : ''}{e.version && e.version > 1 ? ` Versión ${e.version} del expediente.` : ''}</p>
         </article>
 
         <aside className="report-sidebar">
           <section className="content-panel report-controls">
             <h2>Datos de la carta</h2>
+            <fieldset className="elaborado">
+              <legend>¿Quién elaboró el expediente?</legend>
+              <label><input type="radio" name="elaborado" checked={consultor} onChange={() => elegir('consultor')} /> Un consultor contratado</label>
+              <label><input type="radio" name="elaborado" checked={!consultor} onChange={() => elegir('entidad')} /> La propia entidad</label>
+            </fieldset>
+            {consultor && <p className="inline-note"><Icono nombre="clock" tamano={15} /> La entidad tiene hasta 20 días para dar conformidad u observar cada entregable de consultoría; si se pasa, esos días no se le pueden imputar al consultor como penalidad (art. 144.3 y 144.6).</p>}
             {campo('entidad', 'Entidad u oficina')}
             {campo('numero', 'Número de carta')}
             {campo('destinatario', 'Destinatario')}
             {campo('evaluador', 'Evaluador')}
             {campo('cargo', 'Cargo')}
-            {campo('plazo', 'Plazo para subsanar (días hábiles)', 'number')}
+            {consultor && campo('plazoEntregable', 'Plazo del entregable (días)', 'number')}
+            {campo('plazo', consultor ? 'Plazo para subsanar (días)' : 'Plazo para corregir (días hábiles)', 'number')}
+            {consultor && maximo !== null && (datos.plazo ?? 0) > maximo && <p className="form-error" role="alert">El plazo de subsanación no puede pasar del 30 % del plazo del entregable: máximo {maximo} días (art. 144.4).</p>}
             <h2 className="carta-subtitulo">Contenido</h2>
             <p><b>{elegidos.length}</b> de {e.hallazgos.length} observaciones incluidas.</p>
             {excluidos.length > 0 && (

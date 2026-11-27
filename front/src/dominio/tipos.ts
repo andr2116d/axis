@@ -101,6 +101,8 @@ export interface DatosCarta {
   cargo?: string;
   /** Días hábiles para subsanar. */
   plazo?: number;
+  /** Plazo del entregable del consultor (días): la subsanación no puede pasar del 30 % (art. 144.4). */
+  plazoEntregable?: number;
 }
 
 export const CAMPOS_CARTA = ['destinatario', 'entidad', 'numero', 'evaluador', 'cargo'] as const;
@@ -129,6 +131,12 @@ export interface Expediente {
   ejecucion: EjecucionMotor[];
   /** Decisiones del evaluador sobre la carta. */
   carta: DatosCarta;
+  /** Alertas que el evaluador justificó con juicio de experto. */
+  justificaciones?: Justificacion[];
+  /** Versión anterior de este mismo expediente (la que se observó). */
+  versionDe?: string;
+  version?: number;
+  elaboradoPor?: ElaboradoPor;
 }
 
 export type SituacionObra = 'terminada' | 'paralizada';
@@ -205,4 +213,172 @@ export interface PruebaAprendida {
   /** Pruebas existentes que revisan algo parecido (para confirmar que es nueva). */
   relacionadas: { id: string; nombre: string; diferencia: string }[];
   creada: string;
+}
+
+// ── Fase 1 · Expediente: juicio de experto y versiones ───────
+
+/** Cómo quedó una justificación del evaluador después de que Axis la revisó. */
+export type VeredictoJustificacion = 'aceptada' | 'insuficiente' | 'no-justificable';
+
+export interface Justificacion {
+  hallazgo: string;
+  texto: string;
+  /** Documento del expediente que la respalda (id), si lo hay. */
+  documento?: string;
+  fecha: string;
+  evaluacion: {
+    veredicto: VeredictoJustificacion;
+    /** Por qué se aceptó o no, en orden. */
+    razones: string[];
+    /** Qué falta para aceptarla. */
+    faltan: string[];
+    /** Dónde el documento citado respalda lo que dice la justificación. */
+    respaldo?: Fuente;
+  };
+}
+
+/** Quién elaboró el expediente: cambia la carta y los plazos (Reglamento, art. 144 y 172). */
+export type ElaboradoPor = 'entidad' | 'consultor';
+
+// ── Fase 2 · Selección del contratista ───────────────────────
+
+export interface Consorciado {
+  nombre: string;
+  ruc: string;
+  /** % de participación en el consorcio (100 si es una sola empresa). */
+  participacion: number;
+  /** Experiencia que aporta en obras similares (S/). */
+  experiencia: number;
+  /** Inicio de actividades según SUNAT (AAAA-MM-DD). */
+  inicio?: string;
+}
+
+export interface Postor {
+  id: string;
+  nombre: string;
+  integrantes: Consorciado[];
+  oferta: number;
+  puntajeTecnico?: number;
+  puntajeTotal: number;
+  mype?: boolean;
+  mypeDiscapacidad?: boolean;
+  domicilio?: string;
+  representante?: string;
+  /** Personal clave ofrecido (nombres). */
+  personal: string[];
+}
+
+export type NivelSenal = 'alta' | 'media' | 'info';
+
+export interface SenalSeleccion {
+  id: string;
+  /** Postor al que se refiere (vacío si es del proceso). */
+  postor?: string;
+  nivel: NivelSenal;
+  titulo: string;
+  detalle: string;
+  /** Qué hacer y quién. */
+  accion: string;
+  /** Base legal. */
+  base: string;
+  /** De dónde salió el dato. */
+  fuente: string;
+}
+
+export interface ResultadoSeleccion {
+  orden: { postor: string; puesto: number | null; admitida: boolean; motivo?: string }[];
+  ganador: string | null;
+  /** Cómo se resolvió un empate, si lo hubo. */
+  desempate?: string;
+  senales: SenalSeleccion[];
+  recomendaciones: { para: string; texto: string; base: string }[];
+  ejecucion: EjecucionMotor[];
+}
+
+export interface ProcesoSeleccion {
+  id: string;
+  clave: string;
+  nomenclatura: string;
+  objeto: string;
+  entidad?: string;
+  expedienteId?: string;
+  /** Licitación pública sin modalidad o abreviada: cambia el desempate (art. 81). */
+  procedimiento: 'licitacion' | 'abreviada';
+  valorReferencial: number;
+  fechaBuenaPro: string;
+  /** % mínimo de participación por consorciado fijado en las bases (art. 72.3 d), si lo hay. */
+  minimoParticipacion?: number;
+  postores: Postor[];
+  creado: string;
+  resultado: ResultadoSeleccion;
+}
+
+// ── Fase 3 · Control de la obra en ejecución ─────────────────
+
+export type TipoSolicitud = 'ampliacion' | 'consulta' | 'adicional' | 'valorizacion' | 'otro';
+
+export interface Plazo {
+  actor: string;
+  accion: string;
+  /** Fecha límite (AAAA-MM-DD). */
+  vence: string;
+  habiles: boolean;
+  base: string;
+  /** Qué pasa si no se cumple. */
+  silencio?: string;
+}
+
+export interface CondicionSolicitud {
+  id: string;
+  nombre: string;
+  frase: string;
+  previsto: boolean;
+  evidencia?: Fuente;
+}
+
+export interface AnalisisSolicitud {
+  tipo: TipoSolicitud;
+  resumen: string;
+  /** observar: hay razones para no aceptarla tal cual; evaluar: puede proceder; informar: solo registro. */
+  dictamen: 'observar' | 'evaluar' | 'informar';
+  razones: { nivel: NivelSenal; texto: string; base?: string; fuente?: Fuente }[];
+  condiciones: CondicionSolicitud[];
+  plazos: Plazo[];
+  /** Respuesta del expediente a una consulta, si la tiene. */
+  respuesta?: Fuente;
+  diasSolicitados?: number;
+  causal?: { inicio?: string; fin?: string };
+  /** Lo que el expediente no previó: alimenta el aprendizaje y el reporte del art. 64.5 de la Ley. */
+  deficiencias: string[];
+  carta: string;
+  ejecucion: EjecucionMotor[];
+}
+
+export interface Solicitud {
+  id: string;
+  numero: number;
+  /** Fecha de la anotación o de presentación (AAAA-MM-DD). */
+  fecha: string;
+  titulo: string;
+  texto: string;
+  documento?: { nombre: string; paginas: number };
+  analisis: AnalisisSolicitud;
+  estado: 'pendiente' | 'respondida';
+  creada: string;
+}
+
+export interface ObraEjecucion {
+  id: string;
+  clave: string;
+  expedienteId: string;
+  nombre: string;
+  contratista: string;
+  supervisor?: string;
+  /** Inicio del plazo de ejecución (AAAA-MM-DD). */
+  inicio: string;
+  plazoDias: number;
+  montoContrato?: number;
+  procesoId?: string;
+  creado: string;
+  solicitudes: Solicitud[];
 }

@@ -2,7 +2,10 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import type { Categoria, Expediente, Hallazgo, Prioridad } from '@/dominio/tipos';
+import type { Categoria, Expediente, Hallazgo, Justificacion, Prioridad } from '@/dominio/tipos';
+import { semaforoVigente, type ComparacionVersiones } from '@/dominio/semaforo';
+import { Justificar } from './Justificar';
+import { VersionCorregida, BannerVersion } from './Versiones';
 import { nombreMotor } from '@/dominio/motores';
 import { Icono, type NombreIcono } from '../Icono';
 import { useAviso } from '../Aviso';
@@ -15,8 +18,11 @@ type Pestana = 'hallazgos' | 'pruebas' | 'documentos' | 'territorio';
 type Orden = 'prioridad' | 'categoria' | 'titulo';
 const RANGO: Record<Prioridad, number> = { alta: 0, media: 1, confirmar: 2 };
 
-export function Revision({ expediente }: { expediente: Expediente }) {
-  const e = expediente;
+export function Revision({ expediente, comparacion, anterior, subidaDirecta = false }: { expediente: Expediente; comparacion?: ComparacionVersiones; anterior?: { id: string; clave: string; version: number }; subidaDirecta?: boolean }) {
+  const [justificaciones, setJustificaciones] = useState<Justificacion[]>(expediente.justificaciones ?? []);
+  const e = { ...expediente, justificaciones };
+  const vigente = semaforoVigente(e);
+  const jDe = (id: string) => justificaciones.find((j) => j.hallazgo === id);
   const avisar = useAviso();
   const [pestana, setPestana] = useState<Pestana>('hallazgos');
   const [cat, setCat] = useState<Categoria | 'todos'>('todos');
@@ -33,7 +39,7 @@ export function Revision({ expediente }: { expediente: Expediente }) {
       : orden === 'prioridad' ? RANGO[a.prioridad] - RANGO[b.prioridad] : a.titulo.localeCompare(b.titulo, 'es')), [todos, cat, filtro, orden]);
   const actual = lista.find((h) => h.id === elegido) ?? lista[0];
 
-  const altas = todos.filter((h) => h.prioridad === 'alta').length;
+  const altas = todos.filter((h) => h.prioridad === 'alta' && jDe(h.id)?.evaluacion.veredicto !== 'aceptada').length;
   const observaciones = todos.filter((h) => h.prioridad !== 'confirmar').length;
   const pendientes = todos.length - observaciones;
   const lecturaIncompleta = e.documentos.some((d) => d.lectura !== 'leido');
@@ -45,6 +51,12 @@ export function Revision({ expediente }: { expediente: Expediente }) {
     setIncluidos(siguiente);
     avisar(quitar ? 'Observación retirada de la carta.' : 'Observación agregada a la carta.');
     await guardarCarta(e.id, { incluidos: [...siguiente] }).catch(() => avisar('No se pudo guardar el cambio en la carta.'));
+  };
+
+  const alJustificar = (id: string) => (j: Justificacion | null, nuevosIncluidos: string[]) => {
+    setJustificaciones((xs) => [...xs.filter((x) => x.hallazgo !== id), ...(j ? [j] : [])]);
+    setIncluidos(new Set(nuevosIncluidos));
+    avisar(!j ? 'Justificación retirada: la alerta vuelve a la carta.' : j.evaluacion.veredicto === 'aceptada' ? 'Justificación aceptada: la alerta queda en verde justificado.' : 'Axis no aceptó la justificación: revisa lo que falta.');
   };
 
   const pestanas: [Pestana, string, NombreIcono][] = [
@@ -59,16 +71,21 @@ export function Revision({ expediente }: { expediente: Expediente }) {
           <h1>{e.nombre}</h1>
           <p><Icono nombre="pin" tamano={16} /> {e.lugar ?? 'Ubicación no declarada'} <span className="divider-dot" /> {e.documentos.length} documentos <span className="divider-dot" /> <span className="mono">{e.clave}</span></p>
         </div>
-        <Link className="btn primary" href={`/revision/${e.id}/carta`}><Icono nombre="file" tamano={18} />Abrir carta <span className="btn-count">{incluidos.size}</span></Link>
+        <div className="review-heading-actions">
+          {e.semaforo !== 'gris' && <VersionCorregida expedienteId={e.id} version={e.version ?? 1} subidaDirecta={subidaDirecta} />}
+          <Link className="btn primary" href={`/revision/${e.id}/carta`}><Icono nombre="file" tamano={18} />Abrir carta <span className="btn-count">{incluidos.size}</span></Link>
+        </div>
       </section>
+      {comparacion && anterior && <BannerVersion comparacion={comparacion} anterior={anterior} version={e.version ?? 2} />}
 
-      <div className={`summary-strip resultado-${e.semaforo}`}>
+      <div className={`summary-strip resultado-${vigente.estado}`}>
         <div className="summary-main">
-          <Semaforo estado={e.semaforo} />
+          <Semaforo estado={vigente.estado} />
           <div>
-            <strong>{SEMAFORO[e.semaforo].titulo}</strong>
+            <strong>{SEMAFORO[vigente.estado].titulo}{vigente.justificadas ? ` · ${vigente.justificadas} justificada${vigente.justificadas > 1 ? 's' : ''}` : ''}</strong>
             <small>
-              {altas ? `${altas} ${altas === 1 ? 'observación' : 'observaciones'} de prioridad alta. Empieza por esos puntos. ` : SEMAFORO[e.semaforo].texto + ' '}
+              {altas ? `${altas} ${altas === 1 ? 'observación' : 'observaciones'} de prioridad alta. Empieza por esos puntos. ` : SEMAFORO[vigente.estado].texto + ' '}
+              {vigente.justificadas ? `${vigente.justificadas} alerta(s) justificadas con juicio de experto y aceptadas por Axis (siguen en el registro). ` : ''}
               {e.pruebas ? `Aplicaron ${e.pruebas.aplicadas} de las ${e.pruebas.total} pruebas que Axis aprendió` : `Se revisaron ${e.cobertura.length} grupos de pruebas`}{lecturaIncompleta ? '; hay documentos que no se leyeron completos' : ''}.
               {e.pruebas && e.pruebas.aplicadas < e.pruebas.total && <> <button type="button" className="text-link" onClick={() => setPestana('pruebas')}>¿Por qué no todas?</button></>}
             </small>
@@ -128,7 +145,7 @@ export function Revision({ expediente }: { expediente: Expediente }) {
                     {orden === 'categoria' && cat === 'todos' && lista[i - 1]?.categoria !== h.categoria && <h3 className="finding-group">{categoria(h.categoria).nombre}</h3>}
                     <button type="button" className="finding" aria-pressed={actual?.id === h.id} onClick={() => setElegido(h.id)}>
                       <span className="finding-content">
-                        <span className="finding-meta"><Pill prioridad={h.prioridad} /><span>{categoria(h.categoria).nombre}</span></span>
+                        <span className="finding-meta"><Pill prioridad={h.prioridad} />{jDe(h.id)?.evaluacion.veredicto === 'aceptada' && <span className="pill confirmed"><Icono nombre="check" tamano={12} />Justificada</span>}<span>{categoria(h.categoria).nombre}</span></span>
                         <strong>{h.titulo}</strong>
                         <span className="finding-source">{h.fuentes[0]?.documento} · {h.fuentes[0]?.pagina}</span>
                       </span>
@@ -146,7 +163,11 @@ export function Revision({ expediente }: { expediente: Expediente }) {
                 )}
               </div>
             </section>
-            {actual && <Evidencia h={actual} incluido={incluidos.has(actual.id)} alAlternar={() => alternar(actual.id)} alVerTerritorio={e.territorio ? () => setPestana('territorio') : undefined} />}
+            {actual && (
+              <Evidencia h={actual} incluido={incluidos.has(actual.id)} alAlternar={() => alternar(actual.id)} alVerTerritorio={e.territorio ? () => setPestana('territorio') : undefined}>
+                <Justificar key={actual.id} expedienteId={e.id} h={actual} documentos={e.documentos} actual={jDe(actual.id)} alCambiar={alJustificar(actual.id)} />
+              </Evidencia>
+            )}
           </div>
         </>
       )}
@@ -269,7 +290,7 @@ function PanelPruebas({ e }: { e: Expediente }) {
   );
 }
 
-function Evidencia({ h, incluido, alAlternar, alVerTerritorio }: { h: Hallazgo; incluido: boolean; alAlternar: () => void; alVerTerritorio?: () => void }) {
+function Evidencia({ h, incluido, alAlternar, alVerTerritorio, children }: { h: Hallazgo; incluido: boolean; alAlternar: () => void; alVerTerritorio?: () => void; children?: React.ReactNode }) {
   const c = categoria(h.categoria);
   return (
     <aside className="evidence" aria-label="Evidencia del hallazgo">
@@ -296,6 +317,7 @@ function Evidencia({ h, incluido, alAlternar, alVerTerritorio }: { h: Hallazgo; 
         {h.categoria === 'territorio' && alVerTerritorio && (
           <div className="evidence-origin terrain-origin"><span><Icono nombre="pin" tamano={16} /> Ubicación del tramo disponible</span><button type="button" className="btn secondary" onClick={alVerTerritorio}>Abrir mapa y perfil</button></div>
         )}
+        {children}
         <div className="evidence-actions">
           {incluido && <span className="included-label"><Icono nombre="check" tamano={17} /> Incluida en la carta</span>}
           <button type="button" className="btn secondary" onClick={alAlternar}><Icono nombre={incluido ? 'close' : 'plus'} tamano={17} />{incluido ? 'Quitar de la carta' : 'Añadir a la carta'}</button>
