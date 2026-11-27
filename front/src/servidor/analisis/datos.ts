@@ -33,3 +33,7 @@ export const territorio = () => una<DatosTerritorio>('territorio', () => ({
 export const antecedentesContraloria = () => una('antecedentes', () => leer<AntecedentesContraloria>('real/antecedentes_contraloria.json'));
 
 export const clasificador = () => una('clasificador', () => leer<ModeloClasificador>('aprendido/clasificador.json'));
+
+// Selección del contratista: antecedentes OECE por RUC y procesos de obra de La Libertad (OCDS).
+export const proveedores = () => una('proveedores', () => leer<import('../seleccion/antecedentes').IndiceProveedores>('real/proveedores.json'));
+export const competencia = () => una('competencia', () => leer<import('../seleccion/antecedentes').DatosCompetencia>('real/competencia_la_libertad.json'));
