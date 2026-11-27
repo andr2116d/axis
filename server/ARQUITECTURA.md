@@ -184,3 +184,18 @@ Casi todos los motores leen partidas (precios, metrados, valorizaciones). Se ext
 - **"Sin metrado que la sustente"** solo se dice si la planilla se leyó bien: hay metrado para al menos el 70 % de las partidas.
 - Es una verificación de coherencia: no se entrena. Se registra en `motores/catalogo.py` como motor fijo.
 - **Primera prueba real** (proceso 1156628, escaneado): 4 diferencias aparentes, de las cuales 3 eran comas que el OCR no leyó y 1 era un 5 leído como 6. Con los resguardos queda 1 aviso ámbar de baja confianza.
+
+## Revisión del evaluador (implementada)
+
+`POST /expedientes/{id}/hallazgos/{clave}/revision {"decision", "motivo"?}` registra lo que el evaluador decide sobre un hallazgo de la última evaluación:
+
+- **`confirmado`:** es un problema; se observa al consultor. La sección sigue en rojo o ámbar.
+- **`descartado`:** falsa alarma; el motor se equivocó. Pide motivo.
+- **`justificado`:** es inusual, pero tiene una razón válida (flete, zona alejada…). Pide motivo.
+
+Cómo se comporta:
+- Un hallazgo descartado o justificado **deja de pintar** su sección y el semáforo. La salida dice cuántos quedan `abiertos` por sección y cuántos están `sin_revisar` en total.
+- Cada hallazgo tiene una **clave estable**: motor, documento, sección, página e ítem. No usa el título ni la versión, porque traen números que cambian al reentrenar, y la decisión tiene que seguir valiendo. Si se sube un documento nuevo para esa parte, el hallazgo es otro y se vuelve a revisar.
+- Se guarda **todo el historial** (`revisiones_hallazgo`); vale la última decisión. Cada revisión lleva una copia del hallazgo tal como lo vio el evaluador, con su motor y versión.
+
+Por qué importa: estas revisiones son las **etiquetas** que faltaban. Con ellas se entrena el enrutador aprendido (qué motores sirven en qué expedientes) y se mide cada motor con alarmas reales, no solo con errores metidos a propósito.
