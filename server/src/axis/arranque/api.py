@@ -47,6 +47,7 @@ from axis.expediente.aplicacion.casos_de_uso.gestionar import (
     CrearExpediente,
     ObtenerExpediente,
 )
+from axis.expediente.aplicacion.casos_de_uso.revisar_hallazgo import RevisarHallazgo
 from axis.orquestador.adaptadores.entrada.http import ERRORES_HTTP as ERRORES_ORQUESTADOR
 from axis.orquestador.adaptadores.entrada.http import crear_router as router_orquestador
 from axis.orquestador.aplicacion.casos_de_uso.evaluar import EvaluarDocumento, EvaluarEntrada
@@ -149,6 +150,7 @@ def create_app(config: Config | None = None) -> FastAPI:
             adjuntar_documento,
             lambda: ObtenerExpediente(repositorio=expedientes()),
             evaluar_expediente,
+            lambda: RevisarHallazgo(repositorio=expedientes(), reloj=reloj),
         )
     )
     app.include_router(

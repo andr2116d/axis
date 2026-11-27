@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 from axis.compartido.dominio.reloj import Reloj
+from axis.expediente.aplicacion.casos_de_uso.gestionar import armar_vista
 from axis.expediente.aplicacion.dto import VistaExpediente
 from axis.expediente.aplicacion.puertos import EvaluadorMotores, RepositorioExpedientes
 from axis.expediente.dominio.entidades import EvaluacionExpediente, IdEvaluacion, IdExpediente
@@ -39,4 +40,4 @@ class EvaluarExpediente:
             duracion_ms=resultado.duracion_ms,
         )
         await self._repositorio.guardar_evaluacion(evaluacion)
-        return VistaExpediente(expediente, evaluacion)
+        return await armar_vista(self._repositorio, expediente, evaluacion)

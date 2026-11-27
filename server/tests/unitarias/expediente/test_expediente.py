@@ -3,6 +3,7 @@ from datetime import timedelta
 import pytest
 
 from axis.compartido.dominio.motores import Factor, Hallazgo, ResultadoMotor, Severidad
+from axis.compartido.dominio.valores import Semaforo
 from axis.documentos.adaptadores.salida.falsos import RelojFijo
 from axis.expediente.adaptadores.salida.falsos import (
     DocumentosFijos,
@@ -15,8 +16,10 @@ from axis.expediente.aplicacion.casos_de_uso.gestionar import (
     CrearExpediente,
     ObtenerExpediente,
 )
+from axis.expediente.aplicacion.casos_de_uso.revisar_hallazgo import RevisarHallazgo
 from axis.expediente.aplicacion.dto import (
     OrdenCrearExpediente,
+    OrdenRevisarHallazgo,
     ResultadoDeMotores,
     ResumenDocumento,
 )
@@ -25,7 +28,10 @@ from axis.expediente.dominio.errores import (
     DocumentoNoEncontrado,
     DocumentoYaAdjunto,
     ExpedienteSinDocumentos,
+    HallazgoNoEncontrado,
+    RevisionInvalida,
 )
+from axis.expediente.dominio.revisiones import DecisionHallazgo
 
 
 class Reloj(RelojFijo):
@@ -86,7 +92,9 @@ def sistema():
         ),
         "evaluar": EvaluarExpediente(repositorio=repositorio, evaluador=evaluador, reloj=reloj),
         "obtener": ObtenerExpediente(repositorio=repositorio),
+        "revisar": RevisarHallazgo(repositorio=repositorio, reloj=reloj),
         "evaluador": evaluador,
+        "repositorio": repositorio,
     }
 
 
@@ -155,3 +163,113 @@ async def test_errores_de_uso(sistema):
     await sistema["adjuntar"].ejecutar(expediente.id, "exp-v1")
     with pytest.raises(DocumentoYaAdjunto):
         await sistema["adjuntar"].ejecutar(expediente.id, "exp-v1")
+
+
+# Revisión del evaluador sobre los hallazgos
+
+
+async def evaluado(sistema):
+    expediente = await sistema["crear"].ejecutar(OrdenCrearExpediente("Pistas"))
+    await sistema["adjuntar"].ejecutar(expediente.id, "exp-v1")
+    vista = await sistema["evaluar"].ejecutar(expediente.id)
+    return expediente.id, vista.ultima_evaluacion.hallazgos[0]
+
+
+def presupuesto(vista):
+    seccion = next(s for s in vista.expediente.secciones_vigentes() if s.etiqueta == "presupuesto")
+    return vista.ultima_evaluacion.estado_de(seccion, vista.cerrados)
+
+
+def test_la_clave_no_cambia_con_la_version_ni_con_el_titulo():
+    original = hallazgo("presupuesto", "doc-1")
+    reentrenado = hallazgo("presupuesto", "doc-1", Severidad.AMBAR)
+    otro_documento = hallazgo("presupuesto", "doc-2")
+
+    assert original.clave == reentrenado.clave
+    assert original.clave != otro_documento.clave
+
+
+async def test_descartar_un_hallazgo_rojo_apaga_la_seccion(sistema):
+    id_expediente, rojo = await evaluado(sistema)
+
+    vista = await sistema["revisar"].ejecutar(
+        OrdenRevisarHallazgo(
+            id_expediente, rojo.clave, DecisionHallazgo.DESCARTADO, "el precio es de la zona"
+        )
+    )
+
+    assert presupuesto(vista) == EstadoSeccion.VERDE
+    assert vista.ultima_evaluacion.semaforo(vista.cerrados) == Semaforo.VERDE
+    assert vista.revisiones[rojo.clave].hallazgo == rojo
+
+
+async def test_confirmar_deja_la_seccion_en_rojo(sistema):
+    id_expediente, rojo = await evaluado(sistema)
+
+    vista = await sistema["revisar"].ejecutar(
+        OrdenRevisarHallazgo(id_expediente, rojo.clave, DecisionHallazgo.CONFIRMADO)
+    )
+
+    assert presupuesto(vista) == EstadoSeccion.ROJO
+    assert vista.revisiones[rojo.clave].motivo is None
+
+
+async def test_vale_la_ultima_decision_y_se_guarda_el_historial(sistema):
+    id_expediente, rojo = await evaluado(sistema)
+    for decision, motivo in [
+        (DecisionHallazgo.JUSTIFICADO, "obra en zona alejada"),
+        (DecisionHallazgo.CONFIRMADO, None),
+    ]:
+        await sistema["revisar"].ejecutar(
+            OrdenRevisarHallazgo(id_expediente, rojo.clave, decision, motivo)
+        )
+
+    vista = await sistema["obtener"].ejecutar(id_expediente)
+
+    assert vista.revisiones[rojo.clave].decision == DecisionHallazgo.CONFIRMADO
+    assert len(await sistema["repositorio"].revisiones(id_expediente)) == 2
+
+
+async def test_la_decision_sigue_valiendo_al_reevaluar_si_el_documento_no_cambio(sistema):
+    id_expediente, rojo = await evaluado(sistema)
+    await sistema["revisar"].ejecutar(
+        OrdenRevisarHallazgo(id_expediente, rojo.clave, DecisionHallazgo.JUSTIFICADO, "flete")
+    )
+
+    vista = await sistema["evaluar"].ejecutar(id_expediente)
+
+    assert presupuesto(vista) == EstadoSeccion.VERDE
+
+
+async def test_descartar_o_justificar_sin_motivo_no_se_acepta(sistema):
+    id_expediente, rojo = await evaluado(sistema)
+
+    with pytest.raises(RevisionInvalida):
+        await sistema["revisar"].ejecutar(
+            OrdenRevisarHallazgo(id_expediente, rojo.clave, DecisionHallazgo.DESCARTADO, "  ")
+        )
+
+
+async def test_no_se_revisa_un_hallazgo_que_no_esta_en_la_ultima_evaluacion(sistema):
+    id_expediente, _ = await evaluado(sistema)
+
+    with pytest.raises(HallazgoNoEncontrado):
+        await sistema["revisar"].ejecutar(
+            OrdenRevisarHallazgo(id_expediente, "no-existe", DecisionHallazgo.CONFIRMADO)
+        )
+
+
+async def test_el_historial_se_ordena_por_fecha_aunque_llegue_desordenado(sistema):
+    id_expediente, rojo = await evaluado(sistema)
+    reloj = sistema["revisar"]._reloj
+    await sistema["revisar"].ejecutar(
+        OrdenRevisarHallazgo(id_expediente, rojo.clave, DecisionHallazgo.CONFIRMADO)
+    )
+    reloj.momento -= timedelta(hours=1)  # una revisión registrada con hora anterior
+    await sistema["revisar"].ejecutar(
+        OrdenRevisarHallazgo(id_expediente, rojo.clave, DecisionHallazgo.DESCARTADO, "viejo")
+    )
+
+    vista = await sistema["obtener"].ejecutar(id_expediente)
+
+    assert vista.revisiones[rojo.clave].decision == DecisionHallazgo.CONFIRMADO

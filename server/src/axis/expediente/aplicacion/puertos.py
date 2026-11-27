@@ -9,6 +9,7 @@ from axis.expediente.dominio.entidades import (
     IdExpediente,
     Seccion,
 )
+from axis.expediente.dominio.revisiones import RevisionHallazgo
 
 
 class RepositorioExpedientes(Protocol):
@@ -18,6 +19,10 @@ class RepositorioExpedientes(Protocol):
     async def ultima_evaluacion(
         self, id_expediente: IdExpediente
     ) -> EvaluacionExpediente | None: ...
+    async def guardar_revision(self, revision: RevisionHallazgo) -> None: ...
+    async def revisiones(self, id_expediente: IdExpediente) -> tuple[RevisionHallazgo, ...]:
+        """Todo el historial de revisiones del expediente, en cualquier orden."""
+        ...
 
 
 class ConsultaDocumentos(Protocol):

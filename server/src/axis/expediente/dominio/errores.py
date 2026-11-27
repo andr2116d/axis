@@ -15,3 +15,10 @@ class DocumentoYaAdjunto(ErrorExpediente): ...
 
 class ExpedienteSinDocumentos(ErrorExpediente):
     """No hay nada que evaluar todavía."""
+
+
+class HallazgoNoEncontrado(ErrorExpediente):
+    """El hallazgo no está en la última evaluación del expediente."""
+
+
+class RevisionInvalida(ErrorExpediente): ...

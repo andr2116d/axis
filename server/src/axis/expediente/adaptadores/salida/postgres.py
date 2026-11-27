@@ -1,7 +1,7 @@
 from collections.abc import Mapping
 from datetime import datetime
 from typing import cast
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
@@ -16,6 +16,7 @@ from axis.expediente.dominio.entidades import (
     IdExpediente,
     OmisionMotor,
 )
+from axis.expediente.dominio.revisiones import DecisionHallazgo, RevisionHallazgo
 
 metadatos = sa.MetaData()
 
@@ -51,6 +52,21 @@ evaluaciones = sa.Table(
     sa.Column("fallas", JSONB, nullable=False),
     sa.Column("secciones_revisadas", JSONB, nullable=False),
     sa.Column("duracion_ms", sa.Integer, nullable=False),
+)
+
+revisiones = sa.Table(
+    "revisiones_hallazgo",
+    metadatos,
+    sa.Column("id", sa.Uuid, primary_key=True),
+    sa.Column("expediente_id", sa.Uuid, nullable=False),
+    sa.Column("clave", sa.Text, nullable=False),
+    sa.Column("decision", sa.Text, nullable=False),
+    sa.Column("motivo", sa.Text),
+    sa.Column("id_motor", sa.Text, nullable=False),
+    sa.Column("version_motor", sa.Text, nullable=False),
+    sa.Column("numero_evaluacion", sa.Integer, nullable=False),
+    sa.Column("hallazgo", JSONB, nullable=False),
+    sa.Column("revisado_en", sa.DateTime(timezone=True), nullable=False),
 )
 
 type Json = dict[str, object]
@@ -207,52 +223,99 @@ class RepositorioExpedientesPostgres:
             duracion_ms=int(cast(int, fila["duracion_ms"])),
         )
 
+    async def guardar_revision(self, revision: RevisionHallazgo) -> None:
+        hallazgo = revision.hallazgo
+        async with self._motor.begin() as conexion:
+            await conexion.execute(
+                sa.insert(revisiones).values(
+                    id=uuid4(),
+                    expediente_id=revision.id_expediente,
+                    clave=revision.clave,
+                    decision=revision.decision.value,
+                    motivo=revision.motivo,
+                    id_motor=hallazgo.id_motor,
+                    version_motor=hallazgo.version_motor,
+                    numero_evaluacion=revision.numero_evaluacion,
+                    hallazgo=_hallazgo_a_json(hallazgo),
+                    revisado_en=revision.revisado_en,
+                )
+            )
+
+    async def revisiones(self, id_expediente: IdExpediente) -> tuple[RevisionHallazgo, ...]:
+        async with self._motor.connect() as conexion:
+            filas = (
+                (
+                    await conexion.execute(
+                        sa.select(revisiones)
+                        .where(revisiones.c.expediente_id == id_expediente)
+                        .order_by(revisiones.c.revisado_en)
+                    )
+                )
+                .mappings()
+                .all()
+            )
+        return tuple(
+            RevisionHallazgo(
+                id_expediente=id_expediente,
+                hallazgo=_hallazgo_de_json(
+                    cast(Json, f["hallazgo"]), str(f["id_motor"]), str(f["version_motor"])
+                ),
+                decision=DecisionHallazgo(str(f["decision"])),
+                motivo=_texto(f["motivo"]),
+                numero_evaluacion=int(cast(int, f["numero_evaluacion"])),
+                revisado_en=cast(datetime, f["revisado_en"]),
+            )
+            for f in filas
+        )
+
+
+def _hallazgo_a_json(h: Hallazgo) -> Json:
+    return {
+        "severidad": h.severidad.value,
+        "titulo": h.titulo,
+        "explicacion": h.explicacion,
+        "confianza": h.confianza,
+        "pagina": h.pagina,
+        "item": h.item,
+        "documento": h.id_documento,
+        "seccion": h.seccion,
+        "metadatos": h.metadatos,
+        "factores": [{"nombre": f.nombre, "valor": f.valor} for f in h.factores],
+    }
+
+
+def _hallazgo_de_json(h: Json, motor: str, version: str) -> Hallazgo:
+    return Hallazgo(
+        id_motor=motor,
+        version_motor=version,
+        severidad=Severidad(str(h["severidad"])),
+        titulo=str(h["titulo"]),
+        explicacion=str(h["explicacion"]),
+        confianza=float(cast(float, h["confianza"])),
+        factores=tuple(
+            Factor(str(f["nombre"]), str(f["valor"])) for f in cast(list[Json], h["factores"])
+        ),
+        pagina=cast(int | None, h.get("pagina")),
+        item=_texto(h.get("item")),
+        id_documento=_texto(h.get("documento")),
+        seccion=_texto(h.get("seccion")),
+        metadatos={str(k): str(v) for k, v in cast(Mapping[str, object], h["metadatos"]).items()},
+    )
+
 
 def _resultado_a_json(r: ResultadoMotor) -> Json:
     return {
         "motor": r.id_motor,
         "version": r.version_motor,
         "firma": r.firma,
-        "hallazgos": [
-            {
-                "severidad": h.severidad.value,
-                "titulo": h.titulo,
-                "explicacion": h.explicacion,
-                "confianza": h.confianza,
-                "pagina": h.pagina,
-                "item": h.item,
-                "documento": h.id_documento,
-                "seccion": h.seccion,
-                "metadatos": h.metadatos,
-                "factores": [{"nombre": f.nombre, "valor": f.valor} for f in h.factores],
-            }
-            for h in r.hallazgos
-        ],
+        "hallazgos": [_hallazgo_a_json(h) for h in r.hallazgos],
     }
 
 
 def _resultado_de_json(datos: Json) -> ResultadoMotor:
     motor, version = str(datos["motor"]), str(datos["version"])
     hallazgos = tuple(
-        Hallazgo(
-            id_motor=motor,
-            version_motor=version,
-            severidad=Severidad(str(h["severidad"])),
-            titulo=str(h["titulo"]),
-            explicacion=str(h["explicacion"]),
-            confianza=float(cast(float, h["confianza"])),
-            factores=tuple(
-                Factor(str(f["nombre"]), str(f["valor"])) for f in cast(list[Json], h["factores"])
-            ),
-            pagina=cast(int | None, h.get("pagina")),
-            item=_texto(h.get("item")),
-            id_documento=_texto(h.get("documento")),
-            seccion=_texto(h.get("seccion")),
-            metadatos={
-                str(k): str(v) for k, v in cast(Mapping[str, object], h["metadatos"]).items()
-            },
-        )
-        for h in cast(list[Json], datos["hallazgos"])
+        _hallazgo_de_json(h, motor, version) for h in cast(list[Json], datos["hallazgos"])
     )
     return ResultadoMotor(motor, version, str(datos["firma"]), hallazgos)
 

@@ -3,8 +3,14 @@ from uuid import uuid4
 from axis.compartido.dominio.reloj import Reloj
 from axis.expediente.aplicacion.dto import OrdenCrearExpediente, VistaExpediente
 from axis.expediente.aplicacion.puertos import ConsultaDocumentos, RepositorioExpedientes
-from axis.expediente.dominio.entidades import DocumentoAdjunto, Expediente, IdExpediente
+from axis.expediente.dominio.entidades import (
+    DocumentoAdjunto,
+    EvaluacionExpediente,
+    Expediente,
+    IdExpediente,
+)
 from axis.expediente.dominio.errores import DocumentoNoEncontrado, ExpedienteNoEncontrado
+from axis.expediente.dominio.revisiones import decisiones_vigentes
 
 
 class CrearExpediente:
@@ -26,11 +32,23 @@ class CrearExpediente:
         return expediente
 
 
-async def _cargar(repositorio: RepositorioExpedientes, id_expediente: IdExpediente) -> Expediente:
+async def cargar_expediente(
+    repositorio: RepositorioExpedientes, id_expediente: IdExpediente
+) -> Expediente:
     expediente = await repositorio.obtener(id_expediente)
     if expediente is None:
         raise ExpedienteNoEncontrado(f"no existe el expediente {id_expediente}")
     return expediente
+
+
+async def armar_vista(
+    repositorio: RepositorioExpedientes,
+    expediente: Expediente,
+    evaluacion: EvaluacionExpediente | None,
+) -> VistaExpediente:
+    """El expediente con su última evaluación y lo que el evaluador decidió de cada hallazgo."""
+    historial = await repositorio.revisiones(expediente.id) if evaluacion else ()
+    return VistaExpediente(expediente, evaluacion, decisiones_vigentes(historial))
 
 
 class AdjuntarDocumento:
@@ -44,7 +62,7 @@ class AdjuntarDocumento:
         self._reloj = reloj
 
     async def ejecutar(self, id_expediente: IdExpediente, id_documento: str) -> Expediente:
-        expediente = await _cargar(self._repositorio, id_expediente)
+        expediente = await cargar_expediente(self._repositorio, id_expediente)
         resumen = await self._documentos.resumen(id_documento)
         if resumen is None:
             raise DocumentoNoEncontrado(f"no existe el documento {id_documento}")
@@ -66,6 +84,6 @@ class ObtenerExpediente:
         self._repositorio = repositorio
 
     async def ejecutar(self, id_expediente: IdExpediente) -> VistaExpediente:
-        expediente = await _cargar(self._repositorio, id_expediente)
+        expediente = await cargar_expediente(self._repositorio, id_expediente)
         ultima = await self._repositorio.ultima_evaluacion(id_expediente)
-        return VistaExpediente(expediente, ultima)
+        return await armar_vista(self._repositorio, expediente, ultima)

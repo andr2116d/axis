@@ -4,10 +4,9 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from axis.compartido.dominio.errores import ErrorAxis
-from axis.compartido.dominio.motores import semaforo_de
 from axis.compartido.dominio.valores import Semaforo
 from axis.expediente.aplicacion.casos_de_uso.evaluar_expediente import EvaluarExpediente
 from axis.expediente.aplicacion.casos_de_uso.gestionar import (
@@ -15,13 +14,25 @@ from axis.expediente.aplicacion.casos_de_uso.gestionar import (
     CrearExpediente,
     ObtenerExpediente,
 )
-from axis.expediente.aplicacion.dto import OrdenCrearExpediente, VistaExpediente
+from axis.expediente.aplicacion.casos_de_uso.revisar_hallazgo import RevisarHallazgo
+from axis.expediente.aplicacion.dto import (
+    OrdenCrearExpediente,
+    OrdenRevisarHallazgo,
+    VistaExpediente,
+)
 from axis.expediente.dominio.entidades import EstadoSeccion, IdExpediente
 from axis.expediente.dominio.errores import (
     DocumentoNoEncontrado,
     DocumentoYaAdjunto,
     ExpedienteNoEncontrado,
     ExpedienteSinDocumentos,
+    HallazgoNoEncontrado,
+    RevisionInvalida,
+)
+from axis.expediente.dominio.revisiones import (
+    LARGO_MAXIMO_MOTIVO,
+    DecisionHallazgo,
+    RevisionHallazgo,
 )
 
 ERRORES_HTTP: dict[type[ErrorAxis], int] = {
@@ -29,6 +40,8 @@ ERRORES_HTTP: dict[type[ErrorAxis], int] = {
     DocumentoNoEncontrado: status.HTTP_404_NOT_FOUND,
     DocumentoYaAdjunto: status.HTTP_409_CONFLICT,
     ExpedienteSinDocumentos: status.HTTP_409_CONFLICT,
+    HallazgoNoEncontrado: status.HTTP_404_NOT_FOUND,
+    RevisionInvalida: status.HTTP_422_UNPROCESSABLE_CONTENT,
 }
 
 
@@ -43,6 +56,11 @@ class AdjuntarEntrada(BaseModel):
     id_documento: str
 
 
+class RevisionEntrada(BaseModel):
+    decision: DecisionHallazgo
+    motivo: str | None = Field(default=None, max_length=LARGO_MAXIMO_MOTIVO)
+
+
 class SeccionSalida(BaseModel):
     etiqueta: str
     id_documento: str
@@ -50,6 +68,7 @@ class SeccionSalida(BaseModel):
     version: int
     estado: EstadoSeccion
     hallazgos: int
+    abiertos: int  # los que el evaluador no descartó ni justificó
 
 
 class DocumentoSalida(BaseModel):
@@ -65,7 +84,14 @@ class FactorSalida(BaseModel):
     valor: str
 
 
+class RevisionSalida(BaseModel):
+    decision: DecisionHallazgo
+    motivo: str | None
+    revisado_en: datetime
+
+
 class HallazgoSalida(BaseModel):
+    clave: str
     motor: str
     severidad: str
     titulo: str
@@ -76,6 +102,7 @@ class HallazgoSalida(BaseModel):
     pagina: int | None
     item: str | None
     factores: list[FactorSalida]
+    revision: RevisionSalida | None
 
 
 class MotorSalida(BaseModel):
@@ -100,6 +127,7 @@ class EvaluacionSalida(BaseModel):
     omitidos: list[OmitidoSalida]
     fallas: list[dict[str, str]]
     hallazgos: list[HallazgoSalida]
+    sin_revisar: int  # hallazgos que el evaluador todavía no miró
 
 
 class ExpedienteSalida(BaseModel):
@@ -119,6 +147,7 @@ def crear_router(
     adjuntar: Callable[[], AdjuntarDocumento],
     obtener: Callable[[], ObtenerExpediente],
     evaluar: Callable[[], EvaluarExpediente],
+    revisar: Callable[[], RevisarHallazgo],
 ) -> APIRouter:
     router = APIRouter(prefix="/expedientes", tags=["expediente"])
 
@@ -153,11 +182,24 @@ def crear_router(
     ) -> ExpedienteSalida:
         return salida_expediente(await caso.ejecutar(IdExpediente(id_expediente)))
 
+    @router.post("/{id_expediente}/hallazgos/{clave}/revision")
+    async def revisar_hallazgo(
+        id_expediente: UUID,
+        clave: str,
+        cuerpo: RevisionEntrada,
+        caso: Annotated[RevisarHallazgo, Depends(revisar)],
+    ) -> ExpedienteSalida:
+        """Confirma, descarta o justifica un hallazgo. Descartar o justificar pide el motivo."""
+        orden = OrdenRevisarHallazgo(
+            IdExpediente(id_expediente), clave, cuerpo.decision, cuerpo.motivo
+        )
+        return salida_expediente(await caso.ejecutar(orden))
+
     return router
 
 
 def salida_expediente(vista: VistaExpediente) -> ExpedienteSalida:
-    expediente, evaluacion = vista.expediente, vista.ultima_evaluacion
+    expediente, evaluacion, cerrados = vista.expediente, vista.ultima_evaluacion, vista.cerrados
     secciones = expediente.secciones_vigentes()
     return ExpedienteSalida(
         id=expediente.id,
@@ -165,21 +207,22 @@ def salida_expediente(vista: VistaExpediente) -> ExpedienteSalida:
         cui=expediente.cui,
         entidad=expediente.entidad,
         tipologia=expediente.tipologia,
-        semaforo=semaforo_de(evaluacion.hallazgos, bool(evaluacion.fallas)) if evaluacion else None,
+        semaforo=evaluacion.semaforo(cerrados) if evaluacion else None,
         secciones=[
             SeccionSalida(
                 etiqueta=s.etiqueta,
                 id_documento=s.id_documento,
                 nombre_documento=s.nombre_documento,
                 version=s.version,
-                estado=evaluacion.estado_de(s) if evaluacion else EstadoSeccion.SIN_REVISAR,
-                hallazgos=sum(
-                    1
-                    for h in evaluacion.hallazgos
-                    if h.seccion == s.etiqueta and h.id_documento == s.id_documento
-                )
-                if evaluacion
-                else 0,
+                estado=(
+                    evaluacion.estado_de(s, cerrados) if evaluacion else EstadoSeccion.SIN_REVISAR
+                ),
+                hallazgos=len(evaluacion.de_seccion(s)) if evaluacion else 0,
+                abiertos=(
+                    sum(h.clave not in cerrados for h in evaluacion.de_seccion(s))
+                    if evaluacion
+                    else 0
+                ),
             )
             for s in secciones
         ],
@@ -219,8 +262,10 @@ def _evaluacion(vista: VistaExpediente) -> EvaluacionSalida:
             for o in e.omitidos
         ],
         fallas=[{"motor": m, "razon": r} for m, r in e.fallas],
+        sin_revisar=sum(h.clave not in vista.revisiones for h in e.hallazgos),
         hallazgos=[
             HallazgoSalida(
+                clave=h.clave,
                 motor=h.id_motor,
                 severidad=h.severidad,
                 titulo=h.titulo,
@@ -231,7 +276,16 @@ def _evaluacion(vista: VistaExpediente) -> EvaluacionSalida:
                 pagina=h.pagina,
                 item=h.item,
                 factores=[FactorSalida(nombre=f.nombre, valor=f.valor) for f in h.factores],
+                revision=_revision(vista.revisiones.get(h.clave)),
             )
             for h in orden
         ],
+    )
+
+
+def _revision(revision: RevisionHallazgo | None) -> RevisionSalida | None:
+    if revision is None:
+        return None
+    return RevisionSalida(
+        decision=revision.decision, motivo=revision.motivo, revisado_en=revision.revisado_en
     )

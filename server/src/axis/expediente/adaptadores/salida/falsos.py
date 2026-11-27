@@ -10,12 +10,14 @@ from axis.expediente.dominio.entidades import (
     IdExpediente,
     Seccion,
 )
+from axis.expediente.dominio.revisiones import RevisionHallazgo
 
 
 class RepositorioExpedientesEnMemoria:
     def __init__(self) -> None:
         self._expedientes: dict[IdExpediente, Expediente] = {}
         self._evaluaciones: dict[IdExpediente, list[EvaluacionExpediente]] = {}
+        self._revisiones: dict[IdExpediente, list[RevisionHallazgo]] = {}
 
     async def guardar(self, expediente: Expediente) -> None:
         self._expedientes[expediente.id] = expediente
@@ -29,6 +31,12 @@ class RepositorioExpedientesEnMemoria:
     async def ultima_evaluacion(self, id_expediente: IdExpediente) -> EvaluacionExpediente | None:
         lista = self._evaluaciones.get(id_expediente)
         return lista[-1] if lista else None
+
+    async def guardar_revision(self, revision: RevisionHallazgo) -> None:
+        self._revisiones.setdefault(revision.id_expediente, []).append(revision)
+
+    async def revisiones(self, id_expediente: IdExpediente) -> tuple[RevisionHallazgo, ...]:
+        return tuple(self._revisiones.get(id_expediente, ()))
 
 
 class DocumentosFijos:

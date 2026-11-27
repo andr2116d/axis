@@ -4,7 +4,8 @@ from enum import StrEnum
 from typing import NewType
 from uuid import UUID
 
-from axis.compartido.dominio.motores import Hallazgo, ResultadoMotor, Severidad
+from axis.compartido.dominio.motores import Hallazgo, ResultadoMotor, Severidad, semaforo_de
+from axis.compartido.dominio.valores import Semaforo
 from axis.expediente.dominio.errores import DocumentoYaAdjunto
 
 IdExpediente = NewType("IdExpediente", UUID)
@@ -94,15 +95,25 @@ class EvaluacionExpediente:
     def hallazgos(self) -> tuple[Hallazgo, ...]:
         return tuple(h for r in self.resultados for h in r.hallazgos)
 
-    def estado_de(self, seccion: Seccion) -> EstadoSeccion:
-        if seccion.etiqueta not in self.secciones_revisadas:
-            return EstadoSeccion.SIN_REVISAR
-        # Solo cuentan los hallazgos del documento vigente de esa sección.
-        propios = {
-            h.severidad
+    def abiertos(self, cerrados: frozenset[str] = frozenset()) -> tuple[Hallazgo, ...]:
+        """Los hallazgos que el evaluador no descartó ni justificó."""
+        return tuple(h for h in self.hallazgos if h.clave not in cerrados)
+
+    def semaforo(self, cerrados: frozenset[str] = frozenset()) -> Semaforo:
+        return semaforo_de(self.abiertos(cerrados), hay_fallas=bool(self.fallas))
+
+    def de_seccion(self, seccion: Seccion) -> tuple[Hallazgo, ...]:
+        """Solo cuentan los hallazgos del documento vigente de esa sección."""
+        return tuple(
+            h
             for h in self.hallazgos
             if h.seccion == seccion.etiqueta and h.id_documento == seccion.id_documento
-        }
+        )
+
+    def estado_de(self, seccion: Seccion, cerrados: frozenset[str] = frozenset()) -> EstadoSeccion:
+        if seccion.etiqueta not in self.secciones_revisadas:
+            return EstadoSeccion.SIN_REVISAR
+        propios = {h.severidad for h in self.de_seccion(seccion) if h.clave not in cerrados}
         if Severidad.ROJO in propios:
             return EstadoSeccion.ROJO
         if Severidad.AMBAR in propios:
