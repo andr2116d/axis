@@ -10,7 +10,7 @@ import { BotonDemo } from '@/componentes/KitDemo';
 export const dynamic = 'force-dynamic';
 
 const FASES = [
-  { n: '1', titulo: 'Expediente técnico', href: '#cargar', texto: 'Sube cada parte, corrige hasta el verde y justifica lo que tenga razón técnica.', quien: 'Unidad ejecutora · equipo revisor' },
+  { n: '1', titulo: 'Expediente técnico', href: '#cargar', texto: 'Sube el expediente completo o cada parte, mira qué encontró cada modelo, corrige hasta el verde y justifica lo que tenga razón técnica.', quien: 'Unidad ejecutora · equipo revisor' },
   { n: '2', titulo: 'Selección', href: '/seleccion', texto: 'El ganador según la ley y qué verificar de él: sanciones, consorcios, vínculos.', quien: 'Comité u oficial de compra · DEC' },
   { n: '3', titulo: 'Ejecución', href: '/ejecucion', texto: 'Cada solicitud del contratista cotejada con el expediente, con tus plazos.', quien: 'Unidad ejecutora · supervisión' },
   { n: '↻', titulo: 'Cierre y aprendizaje', href: '/obras', texto: 'Lo que pasó en la obra se vuelve una prueba para el siguiente expediente.', quien: 'Quien registra la obra terminada o paralizada' },

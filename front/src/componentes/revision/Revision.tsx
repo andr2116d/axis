@@ -13,8 +13,9 @@ import { Territorio } from '../territorio/Territorio';
 import { CATEGORIAS, LECTURA, PRIORIDADES, Pill, categoria, tamano } from '../ui';
 import { guardarCarta } from './guardar-carta';
 import { SEMAFORO, Semaforo } from '../Semaforo';
+import { PanelPorModelo } from './PorModelo';
 
-type Pestana = 'hallazgos' | 'pruebas' | 'documentos' | 'territorio';
+type Pestana = 'hallazgos' | 'pruebas' | 'modelos' | 'documentos' | 'territorio';
 type Orden = 'prioridad' | 'categoria' | 'titulo';
 const RANGO: Record<Prioridad, number> = { alta: 0, media: 1, confirmar: 2 };
 
@@ -59,8 +60,10 @@ export function Revision({ expediente, comparacion, anterior, subidaDirecta = fa
     avisar(!j ? 'Justificación retirada: la alerta vuelve a la carta.' : j.evaluacion.veredicto === 'aceptada' ? 'Justificación aceptada: la alerta queda en verde justificado.' : 'Axis no aceptó la justificación: revisa lo que falta.');
   };
 
+  const verHallazgo = (id: string) => { setCat('todos'); setFiltro('todos'); setElegido(id); setPestana('hallazgos'); };
+
   const pestanas: [Pestana, string, NombreIcono][] = [
-    ['hallazgos', 'Hallazgos', 'list'], ['pruebas', e.pruebas ? `Pruebas (${e.pruebas.aplicadas} de ${e.pruebas.total})` : 'Pruebas', 'check'], ['documentos', 'Documentos', 'files'], ['territorio', 'Territorio', 'map'],
+    ['hallazgos', 'Hallazgos', 'list'], ['pruebas', e.pruebas ? `Pruebas (${e.pruebas.aplicadas} de ${e.pruebas.total})` : 'Pruebas', 'check'], ['modelos', 'Por modelo', 'layers'], ['documentos', 'Documentos', 'files'], ['territorio', 'Territorio', 'map'],
   ];
 
   return (
@@ -201,7 +204,8 @@ export function Revision({ expediente, comparacion, anterior, subidaDirecta = fa
           </section>
         ))}
 
-      {pestana === 'pruebas' && <PanelPruebas e={e} />}
+      {pestana === 'pruebas' && <PanelPruebas e={e} alVerHallazgo={verHallazgo} />}
+      {pestana === 'modelos' && <PanelPorModelo e={e} alVerHallazgo={verHallazgo} />}
     </>
   );
 }
@@ -212,7 +216,7 @@ const ESTADO_PRUEBA = {
   pasa: { texto: 'Pasó', clase: 'confirmed' },
 } as const;
 
-function PanelPruebas({ e }: { e: Expediente }) {
+function PanelPruebas({ e, alVerHallazgo }: { e: Expediente; alVerHallazgo: (id: string) => void }) {
   const todas = e.resultadoPruebas ?? [];
   const corrieron = todas.filter((r) => r.estado !== 'no-aplica' && r.estado !== 'descartada');
   const descartadas = todas.filter((r) => r.estado === 'descartada');
@@ -233,7 +237,11 @@ function PanelPruebas({ e }: { e: Expediente }) {
           <li key={r.id} className={r.origen === 'obra' ? 'de-obra' : ''}>
             <span className="mono">{r.id}</span>
             <span className="nombre-prueba">{r.nombre}{r.origen === 'obra' && <small>Aprendida de una obra</small>}{r.motivo && <small>{r.motivo}</small>}</span>
-            <span className={`pill ${ESTADO_PRUEBA[r.estado as keyof typeof ESTADO_PRUEBA].clase}`}>{ESTADO_PRUEBA[r.estado as keyof typeof ESTADO_PRUEBA].texto}</span>
+            {(() => {
+              const h = e.hallazgos.find((x) => x.prueba === r.id);
+              const pill = <span className={`pill ${ESTADO_PRUEBA[r.estado as keyof typeof ESTADO_PRUEBA].clase}`}>{ESTADO_PRUEBA[r.estado as keyof typeof ESTADO_PRUEBA].texto}</span>;
+              return h ? <button type="button" className="ver-hallazgo" onClick={() => alVerHallazgo(h.id)} aria-label={`Ver el hallazgo de ${r.id}`}>{pill}<Icono nombre="chevron" tamano={15} /></button> : pill;
+            })()}
           </li>
         ))}
       </ul>

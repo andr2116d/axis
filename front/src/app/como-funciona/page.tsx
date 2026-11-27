@@ -3,6 +3,7 @@ import { GRUPOS_MOTORES, type Fase } from '@/dominio/motores';
 import { listarPruebas } from '@/servidor/almacen';
 import { pruebasConocidas } from '@/servidor/aprendizaje/biblioteca';
 import { Icono, type NombreIcono } from '@/componentes/Icono';
+import { Cita } from '@/componentes/Cita';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Cómo funciona' };
@@ -96,7 +97,7 @@ export default async function ComoFunciona() {
               </ol>
               <details>
                 <summary>Base legal</summary>
-                <ul>{f.normas.map((n) => <li key={n}>{n}</li>)}</ul>
+                <ul>{f.normas.map((n) => <li key={n}><Cita texto={n} /></li>)}</ul>
               </details>
             </li>
           ))}

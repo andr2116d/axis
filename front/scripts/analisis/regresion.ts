@@ -18,6 +18,8 @@ import { leerOferta } from '../../src/servidor/seleccion/ofertas';
 import { verificarGanador } from '../../src/servidor/seleccion/contrato';
 import { detectarTipo } from '../../src/servidor/ejecucion/analizar';
 import { diasEntre, fechasEnTexto, sumarDias } from '../../src/dominio/fechas';
+import { tramosCita } from '../../src/dominio/normativa';
+import textosNorma from '../../src/datos/normativa/textos.json';
 
 let fallos = 0, total = 0;
 function ok(cond: boolean, nombre: string, detalle = '') {
@@ -210,6 +212,33 @@ async function main() {
     const v = verificarGanador({ postores: [{ ...o.postor, id: 'P1', puntajeTotal: 100 }], resultado: { ganador: 'P1' } } as any, [{ nombre: 'C', unidad: 'pág.', paginas: await textos('public/demo/seleccion/CONTRATO_consorcio-vias-del-norte.pdf') }], comp);
     const t = v.senales.map((x) => x.titulo).join(' | ');
     ok(v.filas.length === 4 && /no coincide con la constancia/.test(t) && /otro ganador/.test(t) && /anterior a la constitución/.test(t) && /no es la suma/.test(t), 'documentos del ganador: monto, SEACE, constitución y suma', t);
+  }
+  console.log('\nNormativa: cada cita apunta a un artículo y numeral que existen');
+  {
+    const enlaces = (c: string) => tramosCita(c).flatMap((x) => 'norma' in x ? [`${x.norma}:${x.texto}`] : []).join(' ');
+    ok(enlaces('Reglamento, art. 200.1 a y 198.1') === 'reglamento:200.1 reglamento:198.1', 'cita con dos numerales del Reglamento');
+    ok(enlaces('Adicionales y topes de 15 %, 30 % y 50 % (art. 194; Ley, art. 64)') === 'reglamento:194 ley:64', 'cita mixta Reglamento y Ley, sin enlazar porcentajes');
+    ok(enlaces('el reporte del art. 64.5 de la Ley') === 'ley:64.5' && enlaces('conforme al art. 190.3 del Reglamento') === 'reglamento:190.3', 'la norma escrita después del número');
+    ok(enlaces('Bases estándar, numeral 3.6 y Reglamento, art. 72.3 c') === 'reglamento:72.3', 'no enlaza numerales de las bases');
+    const normas = textosNorma as Record<'ley' | 'reglamento', { articulos: { n: number; parrafos: { t: string; k?: string }[] }[] }>;
+    ok(normas.ley.articulos.length === 100 && normas.reglamento.articulos.length === 389, 'Ley con 100 artículos y Reglamento con 389');
+    const carpetas = ['src/servidor/ejecucion', 'src/servidor/seleccion', 'src/app', 'src/componentes', 'src/dominio'];
+    const archivos = carpetas.flatMap((d) => (fs.readdirSync(d, { recursive: true }) as string[]).filter((f) => /\.tsx?$/.test(f)).map((f) => `${d}/${f}`));
+    const faltan: string[] = [];
+    let citas = 0;
+    for (const f of archivos) {
+      for (const linea of fs.readFileSync(f, 'utf8').split('\n')) {
+        if (!/\b[Aa]rts?\.\s*\d/.test(linea)) continue;
+        for (const x of tramosCita(linea)) {
+          if (!('norma' in x)) continue;
+          citas++;
+          const a = normas[x.norma].articulos.find((y) => y.n === x.n);
+          const existe = a && (!x.numeral || a.parrafos.some((p) => p.k !== 'anterior' && p.t.startsWith(`${x.numeral}.`)));
+          if (!existe) faltan.push(`${f}: ${x.norma} ${x.texto}`);
+        }
+      }
+    }
+    ok(citas > 60 && !faltan.length, `${citas} citas en el código existen en el texto oficial`, faltan.join(' | '));
   }
   console.log(`\n${total - fallos}/${total} pruebas pasan`);
   if (fallos) process.exit(1);

@@ -7,6 +7,7 @@ import { nombreMotor } from '@/dominio/motores';
 import { VerificarContrato } from '@/componentes/seleccion/VerificarContrato';
 import { usaBlob } from '@/servidor/respaldo';
 import { fechaCorta } from '@/dominio/fechas';
+import { Cita } from '@/componentes/Cita';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +21,7 @@ function Senal({ s }: { s: SenalSeleccion }) {
       <strong>{s.titulo}</strong>
       <p>{s.detalle}</p>
       <p className="senal-accion"><b>Qué hacer:</b> {s.accion}</p>
-      <small>{s.base} · Fuente: {s.fuente}</small>
+      <small><Cita texto={s.base} /> · Fuente: {s.fuente}</small>
     </li>
   );
 }
@@ -84,7 +85,7 @@ export default async function PaginaProceso({ params }: { params: Promise<{ id: 
         <section className="bloque">
           <h2>Qué hacer y quién</h2>
           <ol className="recomendaciones">
-            {r.recomendaciones.map((x) => <li key={x.texto}><span className="rec-para">{x.para}</span><p>{x.texto}</p><small>{x.base}</small></li>)}
+            {r.recomendaciones.map((x) => <li key={x.texto}><span className="rec-para">{x.para}</span><p>{x.texto}</p><small><Cita texto={x.base} /></small></li>)}
           </ol>
         </section>
       )}

@@ -5,7 +5,9 @@ import * as almacen from '../almacen';
 import type { ArchivoEntrante } from '../http';
 import { leerDocumento } from '../motores/lectura';
 import { clasificador } from '../analisis/datos';
-import { buscarEvidencia } from '../obras';
+import { aprenderDeHechos, buscarEvidencia } from '../obras';
+import { CONDICIONES } from '../aprendizaje/condiciones';
+import { sugerirCausaHallazgo } from '../analisis/aprendizaje';
 import { analizarSolicitud, NOMBRE_TIPO } from './analizar';
 
 // Servicio de control de la obra: registra la obra en ejecución (enlazada a su
@@ -79,6 +81,8 @@ export async function agregarSolicitud(id: string, entrada: { campos: Record<str
     analisis,
     estado: 'pendiente',
     creada: new Date().toISOString(),
+    // Si el expediente no previó algo, Axis se lo ofrece al evaluador para aprenderlo ya, sin esperar al cierre.
+    aprendizaje: analisis.condiciones.some((c) => !c.previsto) ? { estado: 'pendiente', pruebas: [] } : undefined,
   };
   obra.solicitudes.push(s);
   await almacen.guardarEjecucion(obra);
@@ -92,6 +96,46 @@ export async function actualizarSolicitud(id: string, sid: string, cambios: { es
   if (!s) throw new Error('Solicitud no encontrada');
   if (cambios.estado === 'pendiente' || cambios.estado === 'respondida') s.estado = cambios.estado;
   if (typeof cambios.carta === 'string') s.analisis.carta = cambios.carta.slice(0, 12000);
+  await almacen.guardarEjecucion(obra);
+  return s;
+}
+
+/**
+ * Aprender de un entregable: cada condición que el expediente no previó se compara con el
+ * expediente original y, si es nueva, se vuelve una prueba propuesta que el evaluador acepta o rechaza.
+ */
+export async function aprenderDeSolicitud(id: string, sid: string): Promise<Solicitud> {
+  const obra = await almacen.leerEjecucion(id);
+  if (!obra) throw new Error('Obra no encontrada');
+  const s = obra.solicitudes.find((x) => x.id === sid);
+  if (!s) throw new Error('Solicitud no encontrada');
+  const expediente = await almacen.leerExpediente(obra.expedienteId);
+  if (!expediente) throw new Error('No se encontró el expediente de la obra.');
+  const modelo = clasificador();
+  const observadas = s.analisis.condiciones.filter((c) => !c.previsto).flatMap((c) => {
+    const condicion = CONDICIONES.find((x) => x.id === c.id);
+    if (!condicion) return [];
+    const causa = sugerirCausaHallazgo(modelo, c.frase);
+    return [{
+      condicion,
+      causa: { nombre: causa.causa, fuente: causa.fuente, probabilidad: causa.probabilidad },
+      fuente: { documento: s.documento?.nombre ?? 'Cuaderno de incidencias', pagina: `solicitud N.° ${s.numero}, ${s.fecha}`, extracto: c.frase },
+    }];
+  });
+  const { hechos } = await aprenderDeHechos(expediente, observadas, { id: obra.id, clave: `${obra.clave} · solicitud N.° ${s.numero}`, situacion: 'en ejecución' });
+  const pruebas = [...new Set(hechos.flatMap((h) => h.prueba ? [h.prueba] : []))];
+  s.aprendizaje = pruebas.length
+    ? { estado: 'propuesto', pruebas }
+    : { estado: 'sin-prueba', pruebas: [], motivo: hechos.some((h) => h.previsto.si) ? 'El expediente sí lo consideraba: es un mayor metrado, no una prueba nueva.' : 'La prueba no habría alertado al expediente original, así que no se propone.' };
+  await almacen.guardarEjecucion(obra);
+  return s;
+}
+
+export async function posponerAprendizaje(id: string, sid: string) {
+  const obra = await almacen.leerEjecucion(id);
+  const s = obra?.solicitudes.find((x) => x.id === sid);
+  if (!obra || !s) throw new Error('Solicitud no encontrada');
+  if (s.aprendizaje?.estado === 'pendiente') s.aprendizaje.estado = 'pospuesto';
   await almacen.guardarEjecucion(obra);
   return s;
 }

@@ -18,8 +18,6 @@ import { verificadorPorId } from '@/datos/verificadores';
 // convierte en una prueba aprendida, validada contra ese mismo expediente, que corre
 // sobre las revisiones siguientes.
 
-const SITUACION = { terminada: 'terminada', paralizada: 'paralizada' } as const;
-
 export async function registrarObra(entrada: { expedienteId: string; situacion: SituacionObra; archivos: ArchivoEntrante[] }): Promise<RegistroObra> {
   const expediente = await almacen.leerExpediente(entrada.expedienteId);
   if (!expediente) throw new Error('Expediente no encontrado');
@@ -66,42 +64,13 @@ export async function registrarObra(entrada: { expedienteId: string; situacion: 
   const conCausa = await medir('causas', () => senales.map((s) => ({ ...s, causa: sugerirCausaHallazgo(modelo, s.frase) })),
     (r) => r.length ? r.map((x) => `${x.condicion.nombre.split(':')[0]} → ${x.causa.causa}`).join('; ') : 'Sin condiciones que clasificar.');
 
-  // 3. ¿El expediente original lo había previsto?
-  const textosExp = await Promise.all(expediente.documentos.map((d) => almacen.leerTexto('expedientes', expediente.id, d.id)));
-  const original = obraEvaluada(expediente, null, textosExp);
-  const existentes = await almacen.listarPruebas();
-  const otros = (await almacen.listarExpedientes()).filter((e) => e.estado === 'analizado' && e.id !== expediente.id);
-  const nuevas: PruebaAprendida[] = [];
-
-  const hechos: HechoObra[] = await medir('generacion-pruebas', async () => {
-    const out: HechoObra[] = [];
-    for (const s of conCausa) {
-      const fuente: Fuente = { documento: s.documento.nombre, pagina: citar(s.documento.unidad, s.pagina), extracto: s.frase };
-      const causa: HechoObra['causa'] = { nombre: s.causa.causa, fuente: s.causa.fuente, probabilidad: s.causa.probabilidad };
-      const evidencia = buscarEvidencia(expediente, textosExp, s.condicion);
-      const hecho: HechoObra = { condicion: s.condicion.id, nombre: s.condicion.nombre, causa, fuente, previsto: { si: !!evidencia, evidencia: evidencia ?? undefined } };
-      if (!evidencia) {
-        const repetida = existentes.find((p) => p.condicion === s.condicion.id && mismoLugar(p, expediente));
-        if (repetida) hecho.prueba = repetida.id;
-        else {
-          const prueba = await crearPrueba(s.condicion, causa, fuente, expediente, { id, clave, situacion: entrada.situacion }, existentes.length + nuevas.length + 1);
-          prueba.validacion = await validar(prueba, original, expediente, otros);
-          // Solo se propone si habría alertado al expediente original; el evaluador decide si la acepta.
-          if (prueba.validacion.estado === 'validada') {
-            nuevas.push(prueba);
-            hecho.prueba = prueba.id;
-          }
-        }
-      }
-      out.push(hecho);
-    }
-    return out;
-  }, (r) => {
-    const previstos = r.filter((h) => h.previsto.si).length;
-    return `${nuevas.length} prueba(s) nueva(s) propuesta(s); ${previstos} condición(es) ya estaban previstas en el expediente.`;
-  });
-
-  for (const p of nuevas) await almacen.guardarPrueba(p);
+  // 3. ¿El expediente original lo había previsto? Lo no previsto se vuelve una prueba propuesta.
+  const { hechos } = await medir('generacion-pruebas',
+    () => aprenderDeHechos(expediente, conCausa.map((s) => ({
+      condicion: s.condicion, causa: { nombre: s.causa.causa, fuente: s.causa.fuente, probabilidad: s.causa.probabilidad },
+      fuente: { documento: s.documento.nombre, pagina: citar(s.documento.unidad, s.pagina), extracto: s.frase },
+    })), { id, clave, situacion: entrada.situacion }),
+    (r) => `${r.nuevas.length} prueba(s) nueva(s) propuesta(s); ${r.hechos.filter((h) => h.previsto.si).length} condición(es) ya estaban previstas en el expediente.`);
 
   const registro: RegistroObra = {
     id, clave, expedienteId: expediente.id, situacion: entrada.situacion,
@@ -109,6 +78,44 @@ export async function registrarObra(entrada: { expedienteId: string; situacion: 
   };
   await almacen.guardarObra(registro);
   return registro;
+}
+
+/**
+ * Compara cada condición observada en la obra con el expediente original. Si el expediente
+ * no la previó, propone una prueba (validada contra ese expediente) y la guarda; si ya
+ * existe una prueba para esa condición en el mismo lugar, la reutiliza.
+ */
+export async function aprenderDeHechos(
+  expediente: Expediente,
+  observadas: { condicion: Condicion; causa: HechoObra['causa']; fuente: Fuente }[],
+  obra: { id: string; clave: string; situacion: SituacionObra },
+): Promise<{ hechos: HechoObra[]; nuevas: PruebaAprendida[] }> {
+  const textosExp = await Promise.all(expediente.documentos.map((d) => almacen.leerTexto('expedientes', expediente.id, d.id)));
+  const original = obraEvaluada(expediente, null, textosExp);
+  const existentes = await almacen.listarPruebas();
+  const otros = (await almacen.listarExpedientes()).filter((e) => e.estado === 'analizado' && e.id !== expediente.id);
+  const nuevas: PruebaAprendida[] = [];
+  const hechos: HechoObra[] = [];
+  for (const s of observadas) {
+    const evidencia = buscarEvidencia(expediente, textosExp, s.condicion);
+    const hecho: HechoObra = { condicion: s.condicion.id, nombre: s.condicion.nombre, causa: s.causa, fuente: s.fuente, previsto: { si: !!evidencia, evidencia: evidencia ?? undefined } };
+    if (!evidencia) {
+      const repetida = [...existentes, ...nuevas].find((p) => p.condicion === s.condicion.id && mismoLugar(p, expediente));
+      if (repetida) hecho.prueba = repetida.id;
+      else {
+        const prueba = await crearPrueba(s.condicion, s.causa, s.fuente, expediente, obra, existentes.length + nuevas.length + 1);
+        prueba.validacion = await validar(prueba, original, expediente, otros);
+        // Solo se propone si habría alertado al expediente original; el evaluador decide si la acepta.
+        if (prueba.validacion.estado === 'validada') {
+          nuevas.push(prueba);
+          hecho.prueba = prueba.id;
+        }
+      }
+    }
+    hechos.push(hecho);
+  }
+  for (const p of nuevas) await almacen.guardarPrueba(p);
+  return { hechos, nuevas };
 }
 
 /** Página del expediente original que muestra que la condición estaba prevista. */
@@ -151,7 +158,7 @@ async function crearPrueba(
     palabrasEstudio: c.estudios,
     recomendacion: c.recomendacion,
     origen: {
-      obraId: obra.id, obraClave: obra.clave, situacion: SITUACION[obra.situacion],
+      obraId: obra.id, obraClave: obra.clave, situacion: obra.situacion,
       expedienteId: e.id, expedienteClave: e.clave, expedienteNombre: e.nombre, fuente,
     },
     validacion: { estado: 'descartada', motivo: '', expedientesQueDispara: [] },

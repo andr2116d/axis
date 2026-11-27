@@ -2,12 +2,14 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Solicitud } from '@/dominio/tipos';
+import type { PruebaAprendida, Solicitud } from '@/dominio/tipos';
 import { diasEntre, fechaCorta, hoyIso } from '@/dominio/fechas';
 import { Icono } from '../Icono';
 import { useAviso } from '../Aviso';
 import { SelectorArchivos, enviar } from '../SelectorArchivos';
 import type { EjemploSolicitud } from './ejemplos';
+import { AprendizajeEnSolicitud } from './Aprendizaje';
+import { Cita } from '../Cita';
 
 const TIPOS: [string, string][] = [
   ['', 'Que Axis lo identifique'], ['ampliacion', 'Ampliación de plazo'], ['consulta', 'Consulta'],
@@ -66,7 +68,7 @@ const DICTAMEN = {
 } as const;
 const NIVEL = { alta: 'alta', media: 'media', info: 'confirmar' } as const;
 
-export function TarjetaSolicitud({ obraId, s }: { obraId: string; s: Solicitud }) {
+export function TarjetaSolicitud({ obraId, s, pruebas = [], existentes = [] }: { obraId: string; s: Solicitud; pruebas?: PruebaAprendida[]; existentes?: { id: string; nombre: string }[] }) {
   const avisar = useAviso();
   const [carta, setCarta] = useState(s.analisis.carta);
   const [estado, setEstado] = useState(s.estado);
@@ -103,7 +105,7 @@ export function TarjetaSolicitud({ obraId, s }: { obraId: string; s: Solicitud }
             return (
               <li key={p.actor + p.accion} className={estado !== 'respondida' && p.actor === 'Entidad' ? (quedan < 0 ? 'vencido' : quedan <= 3 ? 'urgente' : '') : ''}>
                 <span className="plazo-fecha">{fechaCorta(p.vence)}</span>
-                <span><b>{p.actor}:</b> {p.accion} <small>({p.habiles ? 'días hábiles' : 'días calendario'}, {p.base})</small>{p.silencio && <em>{p.silencio}</em>}</span>
+                <span><b>{p.actor}:</b> {p.accion} <small>({p.habiles ? 'días hábiles' : 'días calendario'}, <Cita texto={p.base} />)</small>{p.silencio && <em>{p.silencio}</em>}</span>
               </li>
             );
           })}
@@ -118,13 +120,15 @@ export function TarjetaSolicitud({ obraId, s }: { obraId: string; s: Solicitud }
               <div>
                 <p>{r.texto}</p>
                 {r.fuente && <blockquote>{r.fuente.extracto}<cite>{r.fuente.documento} · {r.fuente.pagina}</cite></blockquote>}
-                {r.base && <small>{r.base}</small>}
+                {r.base && <small><Cita texto={r.base} /></small>}
               </div>
             </li>
           ))}
         </ul>
       )}
-      {a.deficiencias.length > 0 && <p className="inline-note aprende"><Icono nombre="layers" tamano={15} /> No previsto en el expediente: {a.deficiencias.join(', ').toLowerCase()}. Al cerrar la obra, Axis lo convierte en una prueba para los próximos expedientes.</p>}
+      {s.aprendizaje
+        ? <AprendizajeEnSolicitud obraId={obraId} s={s} pruebas={pruebas} existentes={existentes} />
+        : a.deficiencias.length > 0 && <p className="inline-note aprende"><Icono nombre="layers" tamano={15} /> No previsto en el expediente: {a.deficiencias.join(', ').toLowerCase()}.</p>}
 
       <div className="solicitud-acciones">
         <button type="button" className="btn secondary" onClick={() => setVerCarta((x) => !x)}><Icono nombre="file" tamano={17} />{verCarta ? 'Ocultar el pronunciamiento' : 'Redactar pronunciamiento'}</button>

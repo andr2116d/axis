@@ -112,3 +112,9 @@ export function fichaMotor(id: string): FichaMotor | undefined {
 export function nombreMotor(id: string): string {
   return PORID.get(id)?.nombre ?? id;
 }
+
+/** Motores que corren dentro de la biblioteca de verificadores (no se registran por separado). */
+export const MOTORES_EN_VERIFICADORES = new Set([
+  'tablas', 'extraccion', 'correspondencia', 'coherencia-tecnica', 'metrados', 'aritmetica', 'apu', 'comparables',
+  'cronograma', 'normativa', 'geometria', 'relieve', 'suelos', 'redes', 'peligros',
+]);

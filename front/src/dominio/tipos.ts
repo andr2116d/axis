@@ -139,7 +139,8 @@ export interface Expediente {
   elaboradoPor?: ElaboradoPor;
 }
 
-export type SituacionObra = 'terminada' | 'paralizada';
+/** «en ejecución»: la prueba se aprendió de un entregable de una obra que sigue en curso. */
+export type SituacionObra = 'terminada' | 'paralizada' | 'en ejecución';
 
 export const TIPOS_DOCUMENTO_OBRA = [
   'Informe de paralización',
@@ -396,6 +397,15 @@ export interface Solicitud {
   analisis: AnalisisSolicitud;
   estado: 'pendiente' | 'respondida';
   creada: string;
+  /** Aviso de aprendizaje: lo que el expediente no previó, ofrecido al evaluador para convertirlo en prueba. */
+  aprendizaje?: AprendizajeSolicitud;
+}
+
+export interface AprendizajeSolicitud {
+  /** pendiente: aún no se avisó; pospuesto: «más tarde»; propuesto: ya generó pruebas; sin-prueba: no había nada nuevo que aprender. */
+  estado: 'pendiente' | 'pospuesto' | 'propuesto' | 'sin-prueba';
+  pruebas: string[];
+  motivo?: string;
 }
 
 export interface ObraEjecucion {

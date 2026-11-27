@@ -956,3 +956,70 @@ li.vencido{border-left:4px solid var(--high)!important;background:var(--high-bg)
 .celda-bien{color:var(--good);font-weight:650}
 .celda-mal{color:var(--high);font-weight:650;background:var(--high-bg)}
 @media(max-width:820px){.contrato-grid{grid-template-columns:1fr}.tabla-experiencia{display:block;overflow-x:auto}}
+
+/* Aprendizaje desde cada entregable de la obra */
+.aviso-aprendizaje{width:min(620px,calc(100vw - 32px));max-height:calc(100vh - 48px);overflow:auto;border:1px solid var(--line-strong);border-radius:var(--radius);padding:24px;background:var(--surface);color:var(--ink);box-shadow:0 24px 60px rgba(40,39,35,.22)}
+.aviso-aprendizaje::backdrop{background:rgba(40,39,35,.42)}
+.aviso-aprendizaje h2{margin:8px 0 8px}
+.aviso-aprendizaje>p{color:var(--muted)}
+.aviso-aprendizaje .fase-etiqueta{display:inline-flex;align-items:center;gap:6px}
+.aviso-aprendizaje .intake-actions{margin-top:16px}
+.hallado{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:10px}
+.hallado li{padding:10px 12px;border-radius:8px;background:var(--warm);border:1px solid var(--warm-line)}
+.hallado blockquote{margin-top:4px;font-size:.88rem}
+.hallado cite{display:block;margin-top:4px;font:400 .74rem/1.4 var(--mono);font-style:normal;color:var(--muted)}
+.aprende-solicitud{margin-top:12px}
+.aprende-solicitud.por-aprender{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:var(--warm);border:1px solid var(--warm-line);color:var(--accent)}
+.aprende-solicitud.por-aprender p{flex:1;color:var(--ink);font-size:.88rem}
+.aprende-solicitud.por-aprender .btn{min-height:40px}
+.por-aprender-banda{display:flex;align-items:center;gap:10px;margin:14px 0 24px;padding:10px 14px;border-radius:8px;background:var(--warm);border:1px solid var(--warm-line);font-size:.9rem}
+.por-aprender-banda svg{color:var(--accent)}
+@media (max-width:640px){.aprende-solicitud.por-aprender{flex-wrap:wrap}.aviso-aprendizaje{padding:18px}}
+.por-aprender-lista{margin-bottom:22px}
+.por-aprender-lista>p{color:var(--muted);margin-top:4px}
+.por-aprender-lista ul{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:8px}
+.por-aprender-lista li{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--warm);border:1px solid var(--warm-line)}
+.por-aprender-lista li svg{color:var(--accent)}
+.por-aprender-lista li span{flex:1;font-size:.9rem}
+.por-aprender-lista .btn{min-height:40px}
+
+/* Revisión modelo por modelo */
+.panel-modelos>p{color:var(--muted);margin-top:4px}
+.grupo-modelos{margin-top:22px}
+.grupo-modelos h3{display:flex;align-items:center;gap:8px;font-size:1.02rem;letter-spacing:-.01em}
+.grupo-modelos h3 svg{color:var(--accent)}
+.grupo-modelos>ul{list-style:none;margin:10px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:10px}
+.grupo-modelos>ul>li{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--white)}
+.grupo-modelos>ul>li.no-corrio{background:transparent;color:var(--muted)}
+.modelo-cabeza{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.modelo-cabeza .doc-status{display:inline-flex;align-items:center;gap:4px;font-size:.76rem;white-space:nowrap}
+.grupo-modelos>ul>li>p{margin-top:4px;font-size:.84rem;color:var(--muted)}
+.sin-hallazgos{display:block;margin-top:6px;font-size:.78rem;color:var(--good)}
+.modelo-hallazgos{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px}
+.modelo-hallazgos button{width:100%;min-height:40px;display:flex;align-items:center;gap:8px;text-align:left;border:1px solid var(--line);border-radius:6px;background:var(--surface);padding:6px 8px;font-size:.84rem}
+.modelo-hallazgos button:hover{border-color:var(--accent);background:var(--warm)}
+.modelo-hallazgos button span:not(.pill){flex:1}
+.ver-hallazgo{display:inline-flex;align-items:center;gap:2px;border:0;background:none;padding:0;min-height:32px}
+@media (max-width:640px){.grupo-modelos>ul{grid-template-columns:1fr}}
+
+/* Normativa */
+.cita{color:var(--accent);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
+.cita:hover{text-decoration-thickness:2px}
+.buscar-articulo{margin:18px 0}
+.buscar-articulo input{width:100%}
+.buscar-articulo ul,.indice-articulos{list-style:none;margin:8px 0 0;padding:0}
+.buscar-articulo li a,.indice-articulos a{display:flex;gap:10px;align-items:baseline;padding:7px 4px;border-bottom:1px solid var(--line);text-decoration:none;font-size:.9rem}
+.buscar-articulo li a .mono,.indice-articulos a .mono{flex:none;min-width:64px;color:var(--muted)}
+.normas{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:18px}
+.indice-articulos{max-height:560px;overflow:auto;padding-right:6px}
+.articulo-norma{max-width:860px}
+.articulo-norma h1{font-size:clamp(26px,3vw,38px);margin:12px 0 6px}
+.texto-norma{margin-top:18px;display:grid;gap:12px;font-size:1rem;line-height:1.7}
+.texto-norma p.literal{padding-left:22px}
+.texto-norma p:target{background:var(--warm);outline:2px solid var(--warm-line);outline-offset:6px;border-radius:4px}
+.nota-norma{font-size:.8rem;color:var(--muted);border-left:3px solid var(--line-strong);padding-left:10px}
+.texto-anterior{font-size:.85rem;color:var(--muted)}
+.texto-anterior p{margin-top:6px;text-decoration:line-through;text-decoration-color:var(--line-strong)}
+.articulo-nav{display:flex;justify-content:space-between;gap:16px;margin-top:26px;padding-top:14px;border-top:1px solid var(--line);font-size:.86rem}
+.articulo-nav a{text-decoration:none;display:inline-flex;align-items:center;gap:6px;max-width:48%}
+@media (max-width:640px){.articulo-nav{flex-direction:column}.articulo-nav a{max-width:100%}}
