@@ -199,3 +199,34 @@ Cómo se comporta:
 - Se guarda **todo el historial** (`revisiones_hallazgo`); vale la última decisión. Cada revisión lleva una copia del hallazgo tal como lo vio el evaluador, con su motor y versión.
 
 Por qué importa: estas revisiones son las **etiquetas** que faltaban. Con ellas se entrena el enrutador aprendido (qué motores sirven en qué expedientes) y se mide cada motor con alarmas reales, no solo con errores metidos a propósito.
+
+## Normativa (implementada)
+
+Las citas legales las elige un modelo que **lee el texto oficial**. Ningún número de artículo está escrito en el código.
+
+**Índice.** `herramientas/indexar_normas.py` parte en artículos y disposiciones los textos consolidados vigentes:
+- **Ley N.° 32069** (texto al 19-07-2026): 100 artículos y 41 disposiciones.
+- **Reglamento, D.S. N.° 009-2025-EF** (texto al 09-01-2026): 390 artículos y 22 disposiciones.
+
+Cómo se lee la estructura:
+- El parser sigue la estructura del texto: Título, Capítulo y Subcapítulo; artículos (con títulos de varias líneas); disposiciones complementarias finales, transitorias, modificatorias y derogatorias.
+- Se salta lo que no es norma: el decreto aprobatorio (antes del Título I) y la fe de erratas.
+- Cuando una modificación transcribe el texto nuevo de un artículo, queda como `art-82~2`, con la etiqueta "Artículo 82 (texto modificado)", junto a la nota de vigencia.
+- Cada fragmento se guarda sin tildes en un `tsvector` en español, con el título pesando doble. Buscar toma unos 6 ms.
+- Reindexar cambia la huella de la norma, y eso invalida las respuestas guardadas.
+
+**Lectura** (`POST /normativa/consultas {"pregunta", "contexto"?}`):
+1. **La ley entera va en el prompt de sistema del LLM** (por Bedrock, `anthropic.claude-opus-5-5`, con pensamiento adaptativo), con **caché de 1 hora**. Son unos 55k tokens, que después de la primera consulta se leen desde la caché.
+2. **Del reglamento van solo los 14 fragmentos candidatos** de la búsqueda, en el mensaje del usuario junto con el caso. Es demasiado largo (~250k tokens) para mandarlo entero cada vez.
+3. El LLM responde con un JSON estructurado: identificador del fragmento, extracto, razón y pertinencia (`alta` o `media`).
+4. **Cada cita se verifica contra el texto oficial.** El fragmento tiene que estar entre los que se le dieron, y el extracto tiene que ser literal (se admiten omisiones con "(...)", en orden). Si no, se descarta y se cuenta en `descartadas`.
+5. La respuesta se guarda por consulta y versión del índice: la misma pregunta no se vuelve a pagar ni a esperar.
+
+**Si el LLM no responde** (sin credenciales, un error o una negativa), la API no falla. Devuelve las 3 coincidencias por palabras con `origen: "busqueda"` y `leida_por_modelo: false`, y avisa en cada cita que nadie la leyó. Si el modelo declina, la reintenta `anthropic.claude-opus-4-8` mediante el middleware del SDK, porque Bedrock no tiene fallback del lado del servidor.
+
+**Por hallazgo:** `GET /expedientes/{id}/hallazgos/{clave}/normativa` arma la consulta con el hallazgo (obra, sección, explicación y factores) y devuelve los artículos en los que el evaluador puede apoyar la observación. La ruta vive en `arranque/rutas_compuestas.py`, porque une `expediente` con `normativa`.
+
+**Configuración:**
+- `AXIS_LECTOR_NORMATIVA` (`bedrock` | `ninguno`), `AXIS_MODELO_LLM`, `AXIS_MODELO_LLM_RESPALDO` y `AXIS_ESFUERZO_NORMATIVA` (por defecto `medium`).
+- En AWS se usa el rol IAM de la tarea.
+- En local, `docker compose` monta `~/.aws`; exporta `AXIS_AWS_PERFIL` con tu perfil SSO.
