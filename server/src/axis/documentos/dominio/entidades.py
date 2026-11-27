@@ -6,6 +6,7 @@ from axis.documentos.dominio.valores import (
     Clasificacion,
     CodigoSenal,
     Etiqueta,
+    IdCorreccion,
     IdDocumento,
     OrigenPagina,
     TipoArchivo,
@@ -83,6 +84,28 @@ class EvaluacionEdicion:
 
 # Por encima de este percentil el archivo es más raro que el 95 % del corpus real.
 UMBRAL_RAREZA = 0.95
+
+
+@dataclass(frozen=True, slots=True)
+class Correccion:
+    """El evaluador dice qué es una página (o el documento completo, si `pagina` es None).
+
+    Se liga al contenido del archivo y no al análisis: si el archivo se reanaliza con modelos
+    nuevos, la corrección se vuelve a aplicar y además sirve como etiqueta real para entrenar.
+    """
+
+    id: IdCorreccion
+    hash_contenido: str
+    pagina: int | None
+    etiqueta_anterior: Etiqueta | None
+    etiqueta: Etiqueta
+    fase: Fase | None
+    version_modelos: str
+    corregido_en: datetime
+
+    @property
+    def es_del_documento(self) -> bool:
+        return self.pagina is None
 
 
 @dataclass(frozen=True, slots=True)

@@ -1,15 +1,33 @@
+import re
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import NewType
 from uuid import UUID
 
 from axis.compartido.dominio.valores import Fase
+from axis.documentos.dominio.errores import EtiquetaInvalida
 
 IdDocumento = NewType("IdDocumento", UUID)
+IdCorreccion = NewType("IdCorreccion", UUID)
 
 # El conjunto de etiquetas lo define el modelo entrenado, no el código:
 # si el modelo aprende un tipo nuevo de parte, el dominio no cambia.
 Etiqueta = NewType("Etiqueta", str)
+
+# Una etiqueta es un nombre corto en minúsculas: "metrados", "cotizacion", "plano_de_redes".
+_ETIQUETA_VALIDA = re.compile(r"^[a-z][a-z0-9_]{1,48}$")
+
+
+def validar_etiqueta(texto: str) -> Etiqueta:
+    limpio = texto.strip().lower().replace(" ", "_")
+    if not _ETIQUETA_VALIDA.match(limpio):
+        raise EtiquetaInvalida(f"«{texto}» no es una etiqueta válida (minúsculas, números y _)")
+    return Etiqueta(limpio)
+
+
+class FuenteClasificacion(StrEnum):
+    MODELO = "modelo"
+    EVALUADOR = "evaluador"
 
 
 class TipoArchivo(StrEnum):
@@ -39,6 +57,7 @@ class CodigoSenal(StrEnum):
 class Clasificacion:
     etiqueta: Etiqueta
     confianza: float
+    fuente: FuenteClasificacion = FuenteClasificacion.MODELO
 
     def __post_init__(self) -> None:
         if not 0.0 <= self.confianza <= 1.0:
@@ -56,6 +75,7 @@ class TipoDocumento:
     etiqueta: Etiqueta
     confianza: float
     fase: Fase | None
+    fuente: FuenteClasificacion = FuenteClasificacion.MODELO
 
     def __post_init__(self) -> None:
         if not 0.0 <= self.confianza <= 1.0:
@@ -63,4 +83,6 @@ class TipoDocumento:
 
     @property
     def es_confiable(self) -> bool:
+        if self.fuente is FuenteClasificacion.EVALUADOR:
+            return True
         return self.confianza >= CONFIANZA_MINIMA_TIPO

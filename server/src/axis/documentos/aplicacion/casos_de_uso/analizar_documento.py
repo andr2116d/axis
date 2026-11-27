@@ -19,8 +19,10 @@ from axis.documentos.aplicacion.puertos import (
     ModelosDocumentos,
     MotorOcr,
     ProveedorModelos,
+    RepositorioCorrecciones,
     RepositorioDocumentos,
 )
+from axis.documentos.aplicacion.servicios import aplicar_correcciones
 from axis.documentos.dominio.entidades import Documento, EvaluacionEdicion, Pagina
 from axis.documentos.dominio.errores import (
     ArchivoNoSoportado,
@@ -38,6 +40,7 @@ class AnalizarDocumento:
         self,
         *,
         repositorio: RepositorioDocumentos,
+        correcciones: RepositorioCorrecciones,
         almacen: AlmacenArchivos,
         lector: LectorArchivos,
         ocr: MotorOcr,
@@ -45,6 +48,7 @@ class AnalizarDocumento:
         reloj: Reloj,
     ) -> None:
         self._repositorio = repositorio
+        self._correcciones = correcciones
         self._almacen = almacen
         self._lector = lector
         self._ocr = ocr
@@ -66,6 +70,9 @@ class AnalizarDocumento:
             return ResultadoAnalisis(existente, desde_cache=True, duracion_ms=_ms(inicio))
 
         documento = await self._analizar(orden, hash_contenido, modelos)
+        # Lo que el evaluador ya corrigió de este archivo no se pierde con un modelo nuevo.
+        correcciones = await self._correcciones.listar(hash_contenido)
+        documento = await aplicar_correcciones(documento, correcciones, modelos)
         await self._repositorio.guardar(documento)
         return ResultadoAnalisis(documento, desde_cache=False, duracion_ms=_ms(inicio))
 

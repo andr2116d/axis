@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 
 from axis.compartido.dominio.valores import Fase
 from axis.documentos.aplicacion.dto import TextoReconocido
-from axis.documentos.dominio.entidades import Documento, Huella, Pagina
+from axis.documentos.dominio.entidades import Correccion, Documento, Huella, Pagina
 from axis.documentos.dominio.valores import (
     Clasificacion,
     Etiqueta,
@@ -33,6 +33,20 @@ class RepositorioDocumentosEnMemoria:
         self._por_id[documento.id] = documento
 
 
+class RepositorioCorreccionesEnMemoria:
+    def __init__(self) -> None:
+        self._correcciones: list[Correccion] = []
+
+    async def guardar(self, correccion: Correccion) -> None:
+        self._correcciones.append(correccion)
+
+    async def listar(self, hash_contenido: str) -> list[Correccion]:
+        return sorted(
+            (c for c in self._correcciones if c.hash_contenido == hash_contenido),
+            key=lambda c: c.corregido_en,
+        )
+
+
 class AlmacenEnMemoria:
     def __init__(self) -> None:
         self.archivos: dict[str, bytes] = {}
@@ -56,6 +70,8 @@ class OcrFalso:
 class ClasificadorPaginasPorPalabra:
     """Clasifica por la primera palabra del texto: suficiente para probar el flujo."""
 
+    etiquetas: tuple[Etiqueta, ...] = (Etiqueta("memoria"), Etiqueta("metrados"))
+
     async def clasificar(self, textos: Sequence[str]) -> list[Clasificacion]:
         return [Clasificacion(Etiqueta(t.split()[0].lower()), 0.9) for t in textos]
 
@@ -65,6 +81,10 @@ class ClasificadorDocumentosFijo:
     etiqueta: str = "expediente_tecnico"
     fase: Fase | None = Fase.EXPEDIENTE
     confianza: float = 0.8
+    etiquetas: tuple[Etiqueta, ...] = (Etiqueta("expediente_tecnico"), Etiqueta("valorizacion"))
+
+    def fase_de(self, etiqueta: Etiqueta) -> Fase | None:
+        return {"expediente_tecnico": Fase.EXPEDIENTE, "valorizacion": Fase.EJECUCION}.get(etiqueta)
 
     async def clasificar(self, paginas: Sequence[Pagina]) -> TipoDocumento:
         return TipoDocumento(Etiqueta(self.etiqueta), self.confianza, self.fase)

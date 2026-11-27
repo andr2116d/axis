@@ -1,10 +1,12 @@
 from collections.abc import Mapping, Sequence
 from typing import Protocol
 
+from axis.compartido.dominio.valores import Fase
 from axis.documentos.aplicacion.dto import LecturaArchivo, TextoReconocido
-from axis.documentos.dominio.entidades import Documento, Huella, Pagina
+from axis.documentos.dominio.entidades import Correccion, Documento, Huella, Pagina
 from axis.documentos.dominio.valores import (
     Clasificacion,
+    Etiqueta,
     IdDocumento,
     TipoArchivo,
     TipoDocumento,
@@ -21,6 +23,13 @@ class RepositorioDocumentos(Protocol):
     async def buscar_por_hash(self, hash_contenido: str) -> Documento | None: ...
     async def obtener(self, id_documento: IdDocumento) -> Documento | None: ...
     async def guardar(self, documento: Documento) -> None: ...
+
+
+class RepositorioCorrecciones(Protocol):
+    async def guardar(self, correccion: Correccion) -> None: ...
+    async def listar(self, hash_contenido: str) -> list[Correccion]:
+        """Las correcciones de un archivo, de la más antigua a la más reciente."""
+        ...
 
 
 class LectorArchivos(Protocol):
@@ -41,12 +50,17 @@ class MotorOcr(Protocol):
 class ClasificadorPaginas(Protocol):
     """Dice qué tipo de parte es cada página (memoria, metrados, valorización…)."""
 
+    @property
+    def etiquetas(self) -> tuple[Etiqueta, ...]: ...
     async def clasificar(self, textos: Sequence[str]) -> list[Clasificacion]: ...
 
 
 class ClasificadorDocumentos(Protocol):
     """Dice qué es el archivo completo a partir de sus páginas ya clasificadas."""
 
+    @property
+    def etiquetas(self) -> tuple[Etiqueta, ...]: ...
+    def fase_de(self, etiqueta: Etiqueta) -> Fase | None: ...
     async def clasificar(self, paginas: Sequence[Pagina]) -> TipoDocumento: ...
 
 

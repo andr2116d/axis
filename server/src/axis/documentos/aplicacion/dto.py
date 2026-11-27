@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
 from axis.compartido.dominio.valores import Fase
-from axis.documentos.dominio.entidades import Documento, Huella
-from axis.documentos.dominio.valores import IdDocumento
+from axis.documentos.dominio.entidades import Correccion, Documento, Huella
+from axis.documentos.dominio.valores import Etiqueta, IdDocumento
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,3 +46,25 @@ class ResultadoAnalisis:
 class OrdenObtenerPagina:
     id_documento: IdDocumento
     numero: int
+
+
+@dataclass(frozen=True, slots=True)
+class OrdenCorregir:
+    id_documento: IdDocumento
+    pagina: int | None  # None: se corrige el tipo del documento completo
+    etiqueta: str
+    fase: Fase | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ResultadoCorreccion:
+    documento: Documento
+    correccion: Correccion
+    es_etiqueta_nueva: bool  # el modelo vigente no la conoce: la aprenderá al reentrenar
+
+
+@dataclass(frozen=True, slots=True)
+class EtiquetasConocidas:
+    version: str
+    paginas: tuple[Etiqueta, ...]
+    documentos: tuple[tuple[Etiqueta, Fase | None], ...]

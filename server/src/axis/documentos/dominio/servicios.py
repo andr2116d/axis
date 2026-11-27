@@ -2,12 +2,14 @@
 
 from collections import Counter
 from collections.abc import Sequence
+from dataclasses import replace
 from datetime import timedelta
 
-from axis.documentos.dominio.entidades import Huella, Pagina, Parte, SenalEdicion
+from axis.documentos.dominio.entidades import Correccion, Huella, Pagina, Parte, SenalEdicion
 from axis.documentos.dominio.valores import (
     Clasificacion,
     CodigoSenal,
+    FuenteClasificacion,
     OrigenPagina,
 )
 
@@ -56,6 +58,29 @@ def segmentar(paginas: Sequence[Pagina]) -> tuple[Parte, ...]:
     return tuple(partes)
 
 
+def corregir_paginas(
+    paginas: Sequence[Pagina], correcciones: Sequence[Correccion]
+) -> tuple[Pagina, ...]:
+    """Lo que dijo el evaluador reemplaza al modelo. Si corrigió dos veces, vale la última."""
+    ultima = {c.pagina: c for c in sorted(correcciones, key=lambda c: c.corregido_en) if c.pagina}
+    return tuple(
+        replace(
+            p,
+            clasificacion=Clasificacion(
+                ultima[p.numero].etiqueta, 1.0, FuenteClasificacion.EVALUADOR
+            ),
+        )
+        if p.numero in ultima
+        else p
+        for p in paginas
+    )
+
+
+def correccion_del_documento(correcciones: Sequence[Correccion]) -> Correccion | None:
+    del_documento = [c for c in correcciones if c.es_del_documento]
+    return max(del_documento, key=lambda c: c.corregido_en) if del_documento else None
+
+
 def _suavizar(
     clasificaciones: Sequence[Clasificacion | None],
 ) -> list[Clasificacion | None]:
@@ -65,6 +90,9 @@ def _suavizar(
     for i in range(1, len(resultado) - 1):
         anterior, actual, siguiente = resultado[i - 1], resultado[i], resultado[i + 1]
         if anterior is None or actual is None or siguiente is None:
+            continue
+        # Lo que corrigió una persona no lo deshace el suavizado.
+        if actual.fuente is FuenteClasificacion.EVALUADOR:
             continue
         mismo_vecino = anterior.etiqueta == siguiente.etiqueta != actual.etiqueta
         if mismo_vecino and actual.confianza < min(anterior.confianza, siguiente.confianza):

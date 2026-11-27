@@ -8,6 +8,7 @@ from axis.documentos.adaptadores.salida.falsos import (
     OcrFalso,
     ProveedorModelosFijo,
     RelojFijo,
+    RepositorioCorreccionesEnMemoria,
     RepositorioDocumentosEnMemoria,
 )
 from axis.documentos.aplicacion.casos_de_uso.analizar_documento import AnalizarDocumento
@@ -50,6 +51,7 @@ def armar(paginas, modelos=None, tipo=TipoArchivo.PDF):
     almacen = AlmacenEnMemoria()
     caso = AnalizarDocumento(
         repositorio=RepositorioDocumentosEnMemoria(),
+        correcciones=RepositorioCorreccionesEnMemoria(),
         almacen=almacen,
         lector=lector,
         ocr=ocr,

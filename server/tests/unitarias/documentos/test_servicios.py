@@ -6,6 +6,7 @@ from axis.documentos.dominio.valores import (
     Clasificacion,
     CodigoSenal,
     Etiqueta,
+    FuenteClasificacion,
     OrigenPagina,
     TipoArchivo,
 )
@@ -116,3 +117,17 @@ def test_hoja_apaisada_es_el_mismo_papel():
     paginas = [pagina(1), pagina(2, tamano=(842.0, 595.0)), pagina(3)]
 
     assert detectar_senales(huella(), paginas) == ()
+
+
+def test_el_suavizado_no_deshace_una_correccion():
+    corregida = Pagina(
+        2,
+        OrigenPagina.DIGITAL,
+        "t",
+        595.0,
+        842.0,
+        Clasificacion(Etiqueta("cotizacion"), 0.3, FuenteClasificacion.EVALUADOR),
+    )
+    paginas = [pagina(1, "presupuesto"), corregida, pagina(3, "presupuesto")]
+
+    assert [p.etiqueta for p in segmentar(paginas)] == ["presupuesto", "cotizacion", "presupuesto"]
