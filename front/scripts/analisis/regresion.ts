@@ -14,6 +14,8 @@ import { cuencaAportante, elevacion, perfil, trazoDeVia } from '../../src/servid
 import { seccionTipica, verificarSeccion } from '../../src/servidor/analisis/seccion';
 import { evaluarPertinencia } from '../../src/servidor/analisis/pertinencia';
 import { evaluarProceso } from '../../src/servidor/seleccion/evaluar';
+import { leerOferta } from '../../src/servidor/seleccion/ofertas';
+import { verificarGanador } from '../../src/servidor/seleccion/contrato';
 import { detectarTipo } from '../../src/servidor/ejecucion/analizar';
 import { diasEntre, fechasEnTexto, sumarDias } from '../../src/dominio/fechas';
 
@@ -198,6 +200,16 @@ async function main() {
     ok(r.senales.some((x) => x.postor === 'A' && /socio con 10/.test(x.titulo)), 'consorcio con la experiencia en un socio de 10 %');
     ok(r.senales.some((x) => /comparten/.test(x.titulo)), 'vínculo por domicilio compartido');
     ok(r.recomendaciones.some((x) => x.base === 'Reglamento, art. 83'), 'recomienda la verificación posterior del ganador');
+  }
+  {
+    const comp = JSON.parse(fs.readFileSync('src/datos/real/competencia_la_libertad.json', 'utf8'));
+    const textos = async (f: string) => (await paginasDePdf(f)).map((p: any) => (Array.isArray(p) ? p.join('\n') : p.lineas?.join('\n') ?? String(p)));
+    const o = leerOferta(await textos('public/demo/seleccion/OFERTA-1_consorcio-vias-del-norte.pdf'), 'OFERTA-1');
+    ok(o.postor.nombre === 'Consorcio Vías del Norte' && o.postor.oferta === 1220275 && o.postor.integrantes.map((m) => m.participacion).join() === '90,10', 'oferta leída: consorcio, monto y % de la promesa', JSON.stringify(o.postor).slice(0, 200));
+    ok(o.postor.integrantes[0].inicio === '2026-02-10', 'fecha de constitución desde la vigencia de poder');
+    const v = verificarGanador({ postores: [{ ...o.postor, id: 'P1', puntajeTotal: 100 }], resultado: { ganador: 'P1' } } as any, [{ nombre: 'C', unidad: 'pág.', paginas: await textos('public/demo/seleccion/CONTRATO_consorcio-vias-del-norte.pdf') }], comp);
+    const t = v.senales.map((x) => x.titulo).join(' | ');
+    ok(v.filas.length === 4 && /no coincide con la constancia/.test(t) && /otro ganador/.test(t) && /anterior a la constitución/.test(t) && /no es la suma/.test(t), 'documentos del ganador: monto, SEACE, constitución y suma', t);
   }
   console.log(`\n${total - fallos}/${total} pruebas pasan`);
   if (fallos) process.exit(1);

@@ -88,10 +88,10 @@ export function GuiaDemo({ subidaDirecta }: { subidaDirecta: boolean }) {
     accion = siguiente(aSeleccion, 'Siguiente: elegir al contratista');
   } else if (ruta === '/seleccion') {
     paso = 3;
-    texto = 'Cargamos un proceso de ejemplo con empresas ficticias: un consorcio 90/10 y dos postores que comparten domicilio. Pulsa «Analizar postores».';
+    texto = 'Ya están las 4 ofertas de ejemplo en PDF (empresas ficticias). Pulsa «Leer 4 ofertas»: Axis arma la lista de postores. Revisa y pulsa «Analizar postores».';
   } else if (ruta.startsWith('/seleccion/')) {
     paso = 3;
-    texto = 'Por ley gana el mejor puntaje y Axis no lo cambia, pero te dice qué verificar del ganador (art. 83) y qué remitir a Indecopi.';
+    texto = 'Por ley gana el mejor puntaje y Axis no lo cambia. Baja a «Documentos del ganador» y pulsa «Verificar documentos»: Axis coteja su experiencia con las constancias y el SEACE (art. 83).';
     accion = siguiente(aEjecucion, 'Siguiente: controlar la obra');
   } else if (ruta === '/ejecucion') {
     paso = 4;

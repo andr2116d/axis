@@ -4,6 +4,9 @@ import { leerProceso, listarEjecucion } from '@/servidor/almacen';
 import { Icono } from '@/componentes/Icono';
 import type { SenalSeleccion } from '@/dominio/tipos';
 import { nombreMotor } from '@/dominio/motores';
+import { VerificarContrato } from '@/componentes/seleccion/VerificarContrato';
+import { usaBlob } from '@/servidor/respaldo';
+import { fechaCorta } from '@/dominio/fechas';
 
 export const dynamic = 'force-dynamic';
 
@@ -102,6 +105,46 @@ export default async function PaginaProceso({ params }: { params: Promise<{ id: 
         </div>
       </section>
 
+      {ganador && (
+        <section className="bloque" id="contrato">
+          <h2>Documentos del ganador para el contrato</h2>
+          <div className="contrato-grid">
+            <div className="content-panel">
+              <VerificarContrato procesoId={p.id} ganador={ganador.nombre} subidaDirecta={usaBlob} hecho={!!p.verificacion} ejemplo={/EJEMPLO/.test(p.nomenclatura) ? '/demo/seleccion/CONTRATO_consorcio-vias-del-norte.pdf' : undefined} />
+            </div>
+            {p.verificacion && (
+              <div className="content-panel resultado-contrato">
+                <h3>{p.verificacion.senales.filter((s) => s.nivel === 'alta').length ? `${p.verificacion.senales.filter((s) => s.nivel === 'alta').length} posible(s) información inexacta` : p.verificacion.senales.length ? 'Puntos que verificar' : 'Sin observaciones en los documentos'}</h3>
+                <p className="empty-line">{p.verificacion.documentos.map((d) => `${d.nombre} (${d.paginas} pág.)`).join(' · ')}</p>
+                {p.verificacion.filas.length > 0 && (
+                  <table className="tabla-orden tabla-experiencia">
+                    <thead><tr><th>N.°</th><th>Obra declarada</th><th>Integrante</th><th>Monto declarado</th><th>Constancia</th><th>SEACE</th></tr></thead>
+                    <tbody>
+                      {p.verificacion.filas.map((f) => {
+                        const difiere = f.constancia?.monto && Math.abs(f.constancia.monto - f.monto) / f.monto > 0.01;
+                        return (
+                          <tr key={f.n}>
+                            <td>{f.n}</td>
+                            <td><strong>{f.contrato}</strong><small>{f.cliente}{f.fecha ? ` · ${fechaCorta(f.fecha)}` : ''}</small></td>
+                            <td>{f.integrante}</td>
+                            <td>{soles(f.monto)}</td>
+                            <td className={!f.constancia ? 'celda-mal' : difiere ? 'celda-mal' : 'celda-bien'}>{!f.constancia ? 'No llegó' : f.constancia.monto ? soles(f.constancia.monto) : 'Sin monto'}{f.constancia && <small>{f.constancia.fuente.pagina}</small>}</td>
+                            <td className={f.seace ? (f.seace.coincide ? 'celda-bien' : 'celda-mal') : ''}>{f.seace ? (f.seace.coincide ? 'Coincide' : 'Otro ganador') : '—'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    {p.verificacion.totalDeclarado ? <tfoot><tr><td /><td colSpan={2}>Suma de las obras · acumulado declarado</td><td colSpan={3}>{soles(p.verificacion.filas.reduce((a, f) => a + f.monto, 0))} · {soles(p.verificacion.totalDeclarado)}</td></tr></tfoot> : null}
+                  </table>
+                )}
+                {p.verificacion.senales.length > 0 && <ul className="senales">{[...p.verificacion.senales].sort((a, b) => ['alta', 'media', 'info'].indexOf(a.nivel) - ['alta', 'media', 'info'].indexOf(b.nivel)).map((s) => <Senal key={s.id} s={s} />)}</ul>}
+                {p.verificacion.senales.some((s) => s.nivel === 'alta') && <p className="inline-note aprende"><Icono nombre="alert" tamano={15} /> Si se comprueba la inexactitud, la entidad puede declarar la nulidad de la buena pro o del contrato y debe comunicarlo al Tribunal de Contrataciones Públicas (Reglamento, art. 83.2 y 83.3).</p>}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
       {deProceso.length > 0 && (
         <section className="bloque">
           <h2>Señales del proceso</h2>
@@ -112,7 +155,7 @@ export default async function PaginaProceso({ params }: { params: Promise<{ id: 
       <details className="engine-details">
         <summary>Detalle técnico: motores que corrieron</summary>
         <ul className="docs-table">
-          {r.ejecucion.map((x) => (
+          {[...r.ejecucion, ...(p.verificacion?.ejecucion ?? [])].map((x) => (
             <li key={x.motor}><Icono nombre="check" tamano={20} /><span><strong>{nombreMotor(x.motor)}</strong><small>{x.nota}</small></span><span className="mono">{x.ms} ms</span><span className="doc-status">Corrió</span></li>
           ))}
         </ul>

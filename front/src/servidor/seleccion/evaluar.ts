@@ -141,12 +141,15 @@ function vinculos(postores: Postor[]): Omit<SenalSeleccion, 'id'>[] {
       const lazos: string[] = [];
       if (a.domicilio && b.domicilio && norm(a.domicilio) === norm(b.domicilio)) lazos.push(`el mismo domicilio (${a.domicilio})`);
       if (a.representante && b.representante && norm(a.representante) === norm(b.representante)) lazos.push(`el mismo representante (${a.representante})`);
+      const apoderados = (a.apoderados ?? []).filter((x) => (b.apoderados ?? []).some((y) => norm(x) === norm(y)) && !(a.representante && norm(a.representante) === norm(x)));
+      if (apoderados.length) lazos.push(`el mismo apoderado (${apoderados.join(', ')})`);
+      if (a.telefono && b.telefono && a.telefono.replace(/\D/g, '') === b.telefono.replace(/\D/g, '') && a.telefono.replace(/\D/g, '').length >= 6) lazos.push(`el mismo teléfono (${a.telefono})`);
       const rucs = a.integrantes.filter((m) => b.integrantes.some((n) => n.ruc === m.ruc)).map((m) => m.nombre);
       if (rucs.length) lazos.push(`integrantes en común (${rucs.join(', ')})`);
       const personal = a.personal.filter((n) => b.personal.some((m) => norm(m) === norm(n)));
       if (personal.length) lazos.push(`el mismo personal clave (${personal.join(', ')})`);
       if (!lazos.length) continue;
-      const fuerte = lazos.length > 1 || rucs.length > 0 || lazos.some((l) => l.includes('representante'));
+      const fuerte = lazos.length > 1 || rucs.length > 0 || lazos.some((l) => l.includes('representante') || l.includes('apoderado'));
       out.push({
         postor: a.id,
         nivel: fuerte || personal.length ? 'alta' : 'media',
@@ -156,7 +159,7 @@ function vinculos(postores: Postor[]): Omit<SenalSeleccion, 'id'>[] {
           ? 'Un integrante no puede presentar más de una oferta en el mismo procedimiento: el evaluador no debe admitir esas ofertas. Además, remitir la información a Indecopi.'
           : 'No cambia el resultado por sí solo. La entidad debe remitir la información a la Secretaría Técnica de Libre Competencia de Indecopi, en reserva, para que evalúe una posible concertación.',
         base: rucs.length ? 'Reglamento, art. 69 (contenido de las ofertas) y Ley 32069, DCF 24.ª' : 'Ley 32069, disposición complementaria final 24.ª',
-        fuente: 'Datos declarados en las ofertas',
+        fuente: [a.archivo, b.archivo].every(Boolean) ? `Anexo 1 y vigencia de poder de ${a.archivo} y ${b.archivo}` : 'Datos declarados en las ofertas',
       });
     }
   }

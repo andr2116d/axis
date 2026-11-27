@@ -3,6 +3,10 @@ import type { Postor, ProcesoSeleccion } from '@/dominio/tipos';
 import * as almacen from '../almacen';
 import { competencia, proveedores } from '../analisis/datos';
 import { evaluarProceso } from './evaluar';
+import { leerOferta, puntajePorPrecio } from './ofertas';
+import { verificarGanador } from './contrato';
+import { leerDocumento } from '../motores/lectura';
+import type { ArchivoEntrante } from '../http';
 
 // Servicio de la fase de selección: valida lo que llega del formulario, corre el motor
 // con los datos reales del OECE y guarda el proceso con su resultado.
@@ -37,6 +41,8 @@ export function validarProceso(c: Record<string, unknown>): Omit<ProcesoSeleccio
       puntajeTecnico: Number.isFinite(numero(r.puntajeTecnico)) ? numero(r.puntajeTecnico) : undefined,
       mype: r.mype === true, mypeDiscapacidad: r.mypeDiscapacidad === true,
       domicilio: texto(r.domicilio) || undefined, representante: texto(r.representante) || undefined,
+      telefono: texto(r.telefono, 40) || undefined, archivo: texto(r.archivo) || undefined,
+      apoderados: (Array.isArray(r.apoderados) ? r.apoderados : []).map((n) => texto(n, 80)).filter(Boolean).slice(0, 10),
       personal: (Array.isArray(r.personal) ? r.personal : String(r.personal ?? '').split(/[,;\n]/)).map((n) => texto(n, 80)).filter(Boolean).slice(0, 15),
     });
   }
@@ -56,6 +62,34 @@ export function validarProceso(c: Record<string, unknown>): Omit<ProcesoSeleccio
 export async function crearProceso(datos: Omit<ProcesoSeleccion, 'resultado' | 'id' | 'clave' | 'creado'>): Promise<ProcesoSeleccion> {
   const resultado = evaluarProceso(datos, { idx: proveedores(), comp: competencia() });
   const p: ProcesoSeleccion = { ...datos, id: almacen.nuevoId(), clave: await almacen.siguienteClave('procesos', 'SEL'), creado: new Date().toISOString(), resultado };
+  await almacen.guardarProceso(p);
+  return p;
+}
+
+/** Lee las ofertas subidas (un archivo por postor) y devuelve los postores para revisar. */
+export async function leerOfertas(archivos: ArchivoEntrante[], valorReferencial: number) {
+  const leidas = [];
+  for (const a of archivos) {
+    const l = await leerDocumento(a.nombre, a.datos);
+    const o = leerOferta(l.paginas, a.nombre);
+    if (l.estado !== 'leido') o.avisos.push(l.estado === 'escaneado' ? 'Es un escaneo sin texto: hay que completar los datos a mano.' : 'No se pudo leer completo.');
+    leidas.push(o);
+  }
+  const puntajes = valorReferencial > 0 ? puntajePorPrecio(leidas.map((o) => o.postor.oferta), valorReferencial) : [];
+  return leidas.map((o, i) => ({ ...o, postor: { ...o.postor, puntajeTotal: puntajes[i] } }));
+}
+
+/** Documentos del ganador para firmar el contrato: los lee y los coteja (art. 83). */
+export async function verificarContrato(id: string, archivos: ArchivoEntrante[]): Promise<ProcesoSeleccion> {
+  const p = await almacen.leerProceso(id);
+  if (!p) throw new Error('Proceso no encontrado');
+  if (!p.resultado.ganador) throw new Error('El proceso no tiene un ganador único.');
+  const docs = [];
+  for (const a of archivos) {
+    const l = await leerDocumento(a.nombre, a.datos);
+    docs.push({ nombre: a.nombre, unidad: l.unidad, paginas: l.paginas });
+  }
+  p.verificacion = verificarGanador(p, docs, competencia());
   await almacen.guardarProceso(p);
   return p;
 }
