@@ -60,7 +60,7 @@ export default async function PaginaProcesoSeace({ params }: { params: Promise<{
           <div>
             <strong>{r.semaforo === 'rojo' ? 'Hay un postor que figura inhabilitado' : r.semaforo === 'ambar' ? 'Hay antecedentes que conviene mirar' : r.semaforo === 'verde' ? 'Sin antecedentes en el registro' : 'No se pudo consultar a ningún postor'}</strong>
             <small>
-              Revisado a la fecha de la convocatoria ({dia(r.al_dia)}) con el {r.fuente.nombre.toLowerCase()}{r.fuente.corte ? `, actualizado al ${dia(r.fuente.corte)}` : ''}. Una sanción posterior a esa fecha no aparece.
+              Revisado a la fecha de la convocatoria ({dia(r.al_dia)}) con el {r.fuente.nombre.replace(/^Registro/, 'registro')}{r.fuente.corte ? `, actualizado al ${dia(r.fuente.corte)}` : ''}. Una sanción posterior a esa fecha no aparece.
               {ganador ? ` La buena pro corresponde a ${ganador.nombre}; Axis no cambia ese resultado.` : ''}
             </small>
           </div>
