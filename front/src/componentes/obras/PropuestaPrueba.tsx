@@ -20,7 +20,7 @@ export function PropuestaPrueba({ prueba, existentes }: { prueba: PruebaAprendid
     setEnviando(false);
     if (!r.ok) { avisar('No se pudo guardar la decisión.'); return; }
     avisar(decision === 'aceptar' ? `Prueba ${p.id} aceptada: ya corre en las revisiones.` : `Prueba ${p.id} rechazada.`);
-    if (decision === 'aceptar') avanzarDemo({ paso: 3 });
+    if (decision === 'aceptar') avanzarDemo({ paso: 5 });
     router.refresh();
   };
 

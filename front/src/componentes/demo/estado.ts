@@ -4,11 +4,14 @@
 
 export interface EstadoDemo {
   escenario: string;
-  /** Último paso alcanzado: 0 elegido, 1 revisar, 2 carta, 3 obra y prueba aceptada, 4 expediente cercano. */
-  paso: 0 | 1 | 2 | 3 | 4;
+  /** Último paso alcanzado: 0 elegido, 1 revisar, 2 carta, 3 selección, 4 ejecución, 5 obra y prueba aceptada, 6 expediente cercano. */
+  paso: 0 | 1 | 2 | 3 | 4 | 5 | 6;
   /** Revisión del expediente original y del cercano. */
   a?: string;
   b?: string;
+  /** Proceso de selección y obra en ejecución de la demo. */
+  proceso?: string;
+  obra?: string;
 }
 
 const CLAVE = 'axis-demo';

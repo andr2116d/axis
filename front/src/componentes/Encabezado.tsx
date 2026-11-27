@@ -4,10 +4,12 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Icono, type NombreIcono } from './Icono';
 
-const SECCIONES: { href: string; texto: string; icono: NombreIcono; activa: (ruta: string) => boolean }[] = [
-  { href: '/', texto: 'Revisar expedientes', icono: 'files', activa: (r) => r === '/' || r.startsWith('/revision') },
-  { href: '/obras', texto: 'Obras terminadas', icono: 'layers', activa: (r) => r.startsWith('/obras') },
-  { href: '/pruebas', texto: 'Pruebas', icono: 'check', activa: (r) => r.startsWith('/pruebas') },
+// Las tres fases del proceso de obra en que actúa la entidad, más el aprendizaje que las une.
+const SECCIONES: { href: string; texto: string; fase?: string; icono: NombreIcono; activa: (ruta: string) => boolean }[] = [
+  { href: '/', texto: 'Expediente', fase: '1', icono: 'files', activa: (r) => r === '/' || r.startsWith('/revision') },
+  { href: '/seleccion', texto: 'Selección', fase: '2', icono: 'user', activa: (r) => r.startsWith('/seleccion') },
+  { href: '/ejecucion', texto: 'Ejecución', fase: '3', icono: 'building', activa: (r) => r.startsWith('/ejecucion') },
+  { href: '/obras', texto: 'Aprendizaje', icono: 'layers', activa: (r) => r.startsWith('/obras') || r.startsWith('/pruebas') },
   { href: '/como-funciona', texto: 'Cómo funciona', icono: 'list', activa: (r) => r.startsWith('/como-funciona') },
 ];
 
@@ -23,7 +25,7 @@ export function Encabezado() {
         <nav className="main-nav" aria-label="Navegación principal">
           {SECCIONES.map((s) => (
             <Link key={s.href} href={s.href} aria-current={s.activa(ruta) ? 'page' : undefined}>
-              <Icono nombre={s.icono} tamano={17} />{s.texto}
+              {s.fase ? <span className="nav-fase">{s.fase}</span> : <Icono nombre={s.icono} tamano={17} />}{s.texto}
             </Link>
           ))}
         </nav>

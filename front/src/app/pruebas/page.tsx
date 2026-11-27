@@ -14,7 +14,7 @@ const VALIDACION: { cifra: string; titulo: string; detalle: string }[] = [
   { cifra: '0', titulo: 'falsas alarmas en presupuestos de control', detalle: 'Presupuestos reales de Santa Verónica, Indoamérica, Av. Perú y Av. C (Alto Trujillo) pasan sin observaciones inventadas; un escaneo se declara no verificable en vez de acusar.' },
   { cifra: '87 %', titulo: 'exactitud del clasificador de causas', detalle: 'Regresión logística entrenada con 11,408 consultas reales de 926 procesos; validación cruzada agrupada por proceso sobre 240 consultas etiquetadas.' },
   { cifra: '11/11', titulo: 'documentos ajenos rechazados', detalle: 'Un CV, una receta o un contrato no se revisan ni salen «sin observaciones».' },
-  { cifra: '81/81', titulo: 'pruebas de regresión', detalle: 'Presupuestos reales, los tres expedientes sintéticos con sus errores sembrados, terreno, pertinencia, aprendizaje y clasificador (npm run analisis:regresion).' },
+  { cifra: '91/91', titulo: 'pruebas de regresión', detalle: 'Presupuestos reales, los tres expedientes sintéticos con sus errores sembrados, terreno, pertinencia, aprendizaje, clasificador, plazos legales y selección del contratista con datos del OECE (npm run analisis:regresion).' },
 ];
 
 export default async function Pruebas() {
@@ -24,6 +24,7 @@ export default async function Pruebas() {
   const propuestas = todas.filter((p) => p.estado === 'propuesta').length;
   return (
     <>
+      <nav className="subnav" aria-label="Aprendizaje"><Link href="/obras">Obras terminadas y paralizadas</Link><Link href="/pruebas" aria-current="page">Pruebas aprendidas</Link></nav>
       <section className="page-lead">
         <h1>Axis aprendió {activas.length} pruebas</h1>
         <p>

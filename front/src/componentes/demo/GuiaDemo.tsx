@@ -11,7 +11,7 @@ import { EVENTO_DEMO, avanzarDemo, guardarDemo, leerDemo, type EstadoDemo } from
 // Barra fija que acompaña la demo: en qué paso vas, qué hacer en esta pantalla y
 // el botón al siguiente paso. Solo aparece si se empezó un escenario.
 
-const PASOS = ['Revisar', 'Carta', 'Obra y prueba', 'Aplicar'];
+const PASOS = ['Revisar', 'Juicio y carta', 'Selección', 'Ejecución', 'Cierre y prueba', 'Aplicar'];
 
 /**
  * Sube un PDF de la demo y lo revisa de una vez: en la demo no hay nada que confirmar,
@@ -47,16 +47,22 @@ export function GuiaDemo({ subidaDirecta }: { subidaDirecta: boolean }) {
   }, [ruta]);
 
   const esc = estado ? escenarios.find((x) => x.id === estado.escenario) : undefined;
+  // La guía avanza sola cuando la persona llega a la pantalla de cada paso.
   useEffect(() => {
-    if (estado?.a && ruta === `/revision/${estado.a}/carta`) avanzarDemo({ paso: 2 });
-  }, [ruta, estado?.a]);
+    if (!estado?.a) return;
+    if (ruta === `/revision/${estado.a}/carta`) avanzarDemo({ paso: 2 });
+    const sel = /^\/seleccion\/([0-9a-f-]{36})$/.exec(ruta);
+    if (sel && estado.paso >= 2) avanzarDemo({ paso: 3, proceso: sel[1] });
+    const obra = /^\/ejecucion\/([0-9a-f-]{36})$/.exec(ruta);
+    if (obra && estado.paso >= 3) avanzarDemo({ paso: 4, obra: obra[1] });
+  }, [ruta, estado?.a, estado?.paso]);
   // En la portada, la tarjeta de la demo ya muestra el avance y el botón para continuar.
   if (!estado || !esc || estado.paso === 0 || ruta === '/') return null;
 
   const cercano = async () => {
     try {
       const b = await revisarDemo(esc.cercano.archivo, subidaDirecta, setCargando);
-      avanzarDemo({ paso: 4, b });
+      avanzarDemo({ paso: 6, b });
       router.push(`/revision/${b}`);
     } finally {
       setCargando('');
@@ -69,31 +75,49 @@ export function GuiaDemo({ subidaDirecta }: { subidaDirecta: boolean }) {
   let accion: React.ReactNode = null;
   const siguiente = (href: string, etiqueta: string) => <Link className="btn primary" href={href}><Icono nombre="arrow" tamano={17} />{etiqueta}</Link>;
   const botonCercano = <button type="button" className="btn primary" disabled={!!cargando} onClick={cercano}><Icono nombre={cargando ? 'clock' : 'arrow'} tamano={17} />{cargando || `Siguiente: revisar ${esc.cercano.via}`}</button>;
+  const aSeleccion = `/seleccion?expediente=${estado.a}&ejemplo=1`;
+  const aEjecucion = estado.obra ? `/ejecucion/${estado.obra}` : `/ejecucion?expediente=${estado.a}${estado.proceso ? `&proceso=${estado.proceso}` : ''}`;
 
   if (estado.a && ruta === `/revision/${estado.a}`) {
     paso = 1;
-    texto = 'Este es el resultado: el semáforo y cada error con su documento y página. Mira también la pestaña «Pruebas».';
-    accion = siguiente(`/revision/${estado.a}/carta`, 'Siguiente: armar la carta');
+    texto = 'El semáforo y cada error con su documento y página. Elige una alerta y prueba «Justificar esta alerta»: Axis revisa tu sustento antes de aceptarlo.';
+    accion = siguiente(`/revision/${estado.a}/carta`, 'Siguiente: la carta');
   } else if (estado.a && ruta === `/revision/${estado.a}/carta`) {
     paso = 2;
-    texto = 'La carta para el proyectista ya está armada. Quita lo que no quieras enviar; puedes descargarla en PDF.';
-    accion = siguiente(`/obras?escenario=${esc.id}`, 'Siguiente: registrar la obra');
-  } else if (ruta.startsWith('/obras')) {
+    texto = 'La carta al consultor ya tiene los plazos del art. 144. Cuando el expediente se aprueba, la obra se licita.';
+    accion = siguiente(aSeleccion, 'Siguiente: elegir al contratista');
+  } else if (ruta === '/seleccion') {
     paso = 3;
-    texto = estado.paso >= 3
+    texto = 'Cargamos un proceso de ejemplo con empresas ficticias: un consorcio 90/10 y dos postores que comparten domicilio. Pulsa «Analizar postores».';
+  } else if (ruta.startsWith('/seleccion/')) {
+    paso = 3;
+    texto = 'Por ley gana el mejor puntaje y Axis no lo cambia, pero te dice qué verificar del ganador (art. 83) y qué remitir a Indecopi.';
+    accion = siguiente(aEjecucion, 'Siguiente: controlar la obra');
+  } else if (ruta === '/ejecucion') {
+    paso = 4;
+    texto = 'Los datos del ganador ya están. Pulsa «Registrar obra».';
+  } else if (ruta.startsWith('/ejecucion/')) {
+    paso = 4;
+    texto = 'Prueba los ejemplos: una ampliación, una consulta y un adicional. Axis calcula tus plazos (el silencio puede aprobarlos) y los coteja con el expediente.';
+    accion = siguiente(`/obras?escenario=${esc.id}`, 'Siguiente: cerrar la obra');
+  } else if (ruta.startsWith('/obras')) {
+    paso = 5;
+    texto = estado.paso >= 5
       ? 'Listo: Axis aprendió una prueba nueva. Ahora mira cómo la aplica en otro expediente.'
       : `Ya cargamos la ${esc.obra.tipo.toLowerCase()} de la obra. Pulsa «Registrar obra» y luego «Aceptar prueba».`;
-    accion = estado.paso >= 3 ? botonCercano : null;
+    accion = estado.paso >= 5 ? botonCercano : null;
   } else if (estado.b && ruta === `/revision/${estado.b}`) {
-    paso = 4;
+    paso = 6;
     texto = `${esc.cercano.via} no tenía errores sembrados, pero la prueba que Axis aprendió de la obra la observa (hallazgo «Pruebas aprendidas»). ¡Demo completa!`;
     accion = <><Link className="btn secondary" href="/pruebas">Ver todas las pruebas</Link><Link className="btn primary" href="/" onClick={salir}><Icono nombre="check" tamano={17} />Terminar</Link></>;
   } else {
     texto = `Tienes una demo en curso: ${esc.titulo.toLowerCase()} (${esc.zona}).`;
-    accion = estado.paso === 1 && estado.a ? siguiente(`/revision/${estado.a}`, 'Continuar')
-      : estado.paso === 2 ? siguiente(`/obras?escenario=${esc.id}`, 'Continuar')
-        : estado.paso === 3 ? botonCercano
-          : estado.b ? siguiente(`/revision/${estado.b}`, 'Continuar') : null;
+    const destino = estado.paso === 1 && estado.a ? `/revision/${estado.a}`
+      : estado.paso === 2 ? aSeleccion
+        : estado.paso === 3 ? (estado.proceso ? `/seleccion/${estado.proceso}` : aSeleccion)
+          : estado.paso === 4 ? aEjecucion
+            : estado.paso === 6 && estado.b ? `/revision/${estado.b}` : null;
+    accion = estado.paso === 5 ? botonCercano : destino ? siguiente(destino, 'Continuar') : null;
   }
 
   return (
@@ -106,7 +130,7 @@ export function GuiaDemo({ subidaDirecta }: { subidaDirecta: boolean }) {
             </li>
           ))}
         </ol>
-        <p className="guia-texto"><b>Paso {paso} de 4.</b> {texto}</p>
+        <p className="guia-texto"><b>Paso {paso} de {PASOS.length}.</b> {texto}</p>
         <div className="guia-acciones">
           {accion}
           <button type="button" className="icon-btn" aria-label="Cerrar la guía" title="Cerrar la guía" onClick={salir}><Icono nombre="close" tamano={16} /></button>

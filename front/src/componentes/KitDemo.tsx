@@ -17,10 +17,12 @@ export interface EscenarioKit {
 }
 
 /** Adónde continuar una demo empezada (null: falta revisar el expediente cercano). */
-function destinoDemo(d: EstadoDemo): string | null {
+export function destinoDemo(d: EstadoDemo): string | null {
   if (d.paso === 1 && d.a) return `/revision/${d.a}`;
-  if (d.paso === 2) return `/obras?escenario=${d.escenario}`;
-  if (d.paso === 4 && d.b) return `/revision/${d.b}`;
+  if (d.paso === 2 && d.a) return `/seleccion?expediente=${d.a}&ejemplo=1`;
+  if (d.paso === 3) return d.proceso ? `/seleccion/${d.proceso}` : `/seleccion?expediente=${d.a}&ejemplo=1`;
+  if (d.paso === 4) return d.obra ? `/ejecucion/${d.obra}` : `/ejecucion?expediente=${d.a}${d.proceso ? `&proceso=${d.proceso}` : ''}`;
+  if (d.paso === 6 && d.b) return `/revision/${d.b}`;
   return null;
 }
 
@@ -57,7 +59,7 @@ export function BotonDemo({ subidaDirecta, actual, lista }: { subidaDirecta: boo
     if (!enCurso) return revisar(e.original.archivo, (a) => guardarDemo({ escenario: e.id, paso: 1, a }));
     const destino = destinoDemo(enCurso);
     if (destino) router.push(destino);
-    else revisar(e.cercano.archivo, (b) => guardarDemo({ ...enCurso, paso: 4, b }));
+    else revisar(e.cercano.archivo, (b) => guardarDemo({ ...enCurso, paso: 6, b }));
   };
 
   return (
@@ -66,7 +68,7 @@ export function BotonDemo({ subidaDirecta, actual, lista }: { subidaDirecta: boo
         <Icono nombre={cargando ? 'clock' : 'arrow'} tamano={20} />{cargando || (enCurso ? 'Continuar la demo' : 'Empezar la demo')}
       </button>
       <small>
-        Escenario {numero} de {lista.length} · {e.titulo} ({e.zona}). Unos 3 minutos, con una guía en cada pantalla.
+        Escenario {numero} de {lista.length} · {e.titulo} ({e.zona}). Unos 5 minutos por las tres fases, con una guía en cada pantalla.
         {enCurso && <> <button type="button" className="text-link" onClick={() => guardarDemo(null)}>Empezar de nuevo</button></>}
       </small>
       {error && <p className="form-error" role="alert">{error}</p>}
