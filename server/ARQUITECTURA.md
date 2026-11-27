@@ -253,3 +253,33 @@ Cómo se lee la estructura:
 - **Primera prueba real** (relación de insumos escaneada, 5 páginas): el evaluador ve la lectura a los 70 ms y el OCR página por página, y el resultado llega a los 6 s.
 
 **Semáforo vacío.** Si ningún motor revisó ninguna sección, el semáforo global es `null`, no verde. Verde quiere decir "se revisó y está bien".
+
+## Selección: antecedentes de los postores (implementada)
+
+`GET /seleccion/procesos/{id}/revision?al_dia=` revisa el historial público de cada postor de un procedimiento de selección y le dice al comité dónde mirar más a fondo. La buena pro sigue las reglas de la ley; Axis no la decide.
+
+**Datos** (`herramientas/importar_seleccion.py`, datos abiertos):
+- **1 408 procesos de obra de La Libertad**, con 19 238 postores y sus ganadores. Fuente: OCDS del OECE.
+- **21 629 antecedentes de proveedores:** inhabilitaciones administrativas y judiciales, multas y penalidades del OECE. El corte del registro es el **08-03-2025**, y cada hallazgo lo dice.
+
+**Reglas.** Son hechos del registro, no un modelo. Se evalúan a la fecha de la convocatoria, o a la que se pida:
+
+| Hallazgo | Severidad | Cuándo |
+|---|---|---|
+| Inhabilitado para contratar | rojo | Inhabilitación vigente a esa fecha |
+| Antecedente de información inexacta o documentos falsos | ámbar | Sanción ya cumplida por ese motivo (el patrón de Huanchaco): verificar a fondo los documentos y el personal clave |
+| Sanciones anteriores del Tribunal | ámbar | Otra inhabilitación ya cumplida (por ejemplo, un contrato resuelto) |
+| Penalidades en contratos anteriores | ámbar | Cuántas, por cuánto y quién las aplicó |
+| Multas del Tribunal | ámbar | Cuántas y por cuánto |
+
+Lo que pasa después de la fecha de la convocatoria no cuenta para ese proceso. Cada hallazgo cita la resolución, el motivo, la vigencia y la fuente con su corte. Usa el mismo contrato `Hallazgo` que el expediente, con una clave propia por postor y regla.
+
+**Lo que no se revisa todavía:**
+- **Consorcios.** Un consorcio no tiene RUC propio en el OCDS, así que sale como «no revisado». Hay que leer sus integrantes de los contratos.
+- **Sanciones posteriores al corte.** No están en el registro cargado.
+
+**Primera corrida sobre los 1 408 procesos reales** (14 s, unos 10 ms por proceso):
+- En **11 procesos se presentó un postor que figuraba inhabilitado** a la fecha de la convocatoria. Ninguno ganó.
+- Un mismo proveedor, inhabilitado hasta el 15-03-2027 por información inexacta, se presentó a 7 procesos de setiembre y octubre de 2026.
+- En 9 procesos, el ganador tenía antecedentes de información inexacta o documentos falsos.
+- 21 ganadores tenían penalidades previas.
