@@ -67,6 +67,7 @@ from axis.seleccion.adaptadores.salida.postgres import (
     RegistroAntecedentesPostgres,
     RepositorioProcesosPostgres,
 )
+from axis.seleccion.aplicacion.casos_de_uso.buscar_procesos import BuscarProcesos
 from axis.seleccion.aplicacion.casos_de_uso.revisar_proceso import RevisarProceso
 
 log = structlog.get_logger()
@@ -215,7 +216,8 @@ def create_app(config: Config | None = None) -> FastAPI:
                 procesos=RepositorioProcesosPostgres(recursos().motor_bd),
                 antecedentes=RegistroAntecedentesPostgres(recursos().motor_bd),
                 reloj=reloj,
-            )
+            ),
+            lambda: BuscarProcesos(procesos=RepositorioProcesosPostgres(recursos().motor_bd)),
         )
     )
     _registrar_errores(app)

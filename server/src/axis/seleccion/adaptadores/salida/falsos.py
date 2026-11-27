@@ -12,6 +12,14 @@ class ProcesosFijos:
     async def obtener(self, id_proceso: str) -> Proceso | None:
         return self._procesos.get(id_proceso)
 
+    async def buscar(self, texto: str, limite: int) -> tuple[Proceso, ...]:
+        t = texto.strip().lower()
+        return tuple(
+            p
+            for p in self._procesos.values()
+            if t in (p.id + p.nomenclatura + p.entidad + p.descripcion).lower()
+        )[:limite]
+
 
 class AntecedentesFijos:
     def __init__(self, lista: Sequence[Antecedente], fuente: FuenteAntecedentes) -> None:

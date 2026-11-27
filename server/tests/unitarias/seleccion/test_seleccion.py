@@ -6,6 +6,7 @@ import pytest
 from axis.compartido.dominio.motores import Severidad
 from axis.documentos.adaptadores.salida.falsos import RelojFijo
 from axis.seleccion.adaptadores.salida.falsos import AntecedentesFijos, ProcesosFijos
+from axis.seleccion.aplicacion.casos_de_uso.buscar_procesos import BuscarProcesos
 from axis.seleccion.aplicacion.casos_de_uso.revisar_proceso import RevisarProceso
 from axis.seleccion.aplicacion.dto import OrdenRevisarProceso
 from axis.seleccion.dominio.errores import ProcesoNoEncontrado
@@ -164,3 +165,10 @@ async def test_cada_hallazgo_tiene_su_propia_clave():
 async def test_un_proceso_que_no_existe():
     with pytest.raises(ProcesoNoEncontrado):
         await caso().ejecutar(OrdenRevisarProceso("no-existe"))
+
+
+async def test_se_busca_por_nomenclatura_y_con_menos_de_3_letras_no_busca():
+    caso = BuscarProcesos(procesos=ProcesosFijos(proceso()))
+
+    assert [p.id for p in await caso.ejecutar("lp-1")] == ["1255290"]
+    assert await caso.ejecutar("lp") == ()

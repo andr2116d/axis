@@ -81,6 +81,27 @@ class RepositorioProcesosPostgres:
             ),
         )
 
+    async def buscar(self, texto: str, limite: int) -> tuple[Proceso, ...]:
+        patron = f"%{texto.strip()}%"
+        sentencia = (
+            sa.select(procesos.c.id)
+            .where(
+                sa.or_(
+                    procesos.c.id == texto.strip(),
+                    procesos.c.nomenclatura.ilike(patron),
+                    procesos.c.entidad.ilike(patron),
+                    procesos.c.descripcion.ilike(patron),
+                    procesos.c.cui == texto.strip(),
+                )
+            )
+            .order_by(procesos.c.convocatoria.desc().nulls_last())
+            .limit(limite)
+        )
+        async with self._motor.connect() as conexion:
+            ids = (await conexion.execute(sentencia)).scalars().all()
+        encontrados = [await self.obtener(str(i)) for i in ids]
+        return tuple(p for p in encontrados if p is not None)
+
     async def reemplazar_todos(self, lista: Sequence[Proceso]) -> None:
         """Carga inicial o actualización completa desde los datos abiertos."""
         async with self._motor.begin() as conexion:

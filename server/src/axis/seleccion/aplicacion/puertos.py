@@ -6,6 +6,9 @@ from axis.seleccion.dominio.valores import Antecedente, FuenteAntecedentes, Proc
 
 class RepositorioProcesos(Protocol):
     async def obtener(self, id_proceso: str) -> Proceso | None: ...
+    async def buscar(self, texto: str, limite: int) -> tuple[Proceso, ...]:
+        """Por número de proceso, nomenclatura, entidad u obra; los más recientes primero."""
+        ...
 
 
 class RegistroAntecedentes(Protocol):

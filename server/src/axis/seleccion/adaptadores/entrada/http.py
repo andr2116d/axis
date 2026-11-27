@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from axis.compartido.dominio.errores import ErrorAxis
 from axis.compartido.dominio.motores import Hallazgo, Severidad, semaforo_de
 from axis.compartido.dominio.valores import Semaforo
+from axis.seleccion.aplicacion.casos_de_uso.buscar_procesos import BuscarProcesos
 from axis.seleccion.aplicacion.casos_de_uso.revisar_proceso import RevisarProceso
 from axis.seleccion.aplicacion.dto import OrdenRevisarProceso, RevisionProceso
 from axis.seleccion.dominio.errores import ProcesoNoEncontrado
@@ -49,6 +50,10 @@ class ProcesoSalida(BaseModel):
     convocatoria: date | None
 
 
+class ProcesoResumen(ProcesoSalida):
+    postores: int
+
+
 class FuenteSalida(BaseModel):
     nombre: str
     corte: date | None
@@ -65,8 +70,30 @@ class RevisionSalida(BaseModel):
     duracion_ms: int
 
 
-def crear_router(revisar: Callable[[], RevisarProceso]) -> APIRouter:
+def crear_router(
+    revisar: Callable[[], RevisarProceso], buscar: Callable[[], BuscarProcesos]
+) -> APIRouter:
     router = APIRouter(prefix="/seleccion", tags=["seleccion"])
+
+    @router.get("/procesos")
+    async def buscar_procesos(
+        caso: Annotated[BuscarProcesos, Depends(buscar)],
+        buscar: Annotated[str, Query(min_length=3, max_length=200)],
+    ) -> list[ProcesoResumen]:
+        """Procesos por número, nomenclatura, entidad, obra o CUI."""
+        return [
+            ProcesoResumen(
+                id=p.id,
+                nomenclatura=p.nomenclatura,
+                entidad=p.entidad,
+                descripcion=p.descripcion,
+                monto_referencial=p.monto_referencial,
+                cui=p.cui,
+                convocatoria=p.convocatoria,
+                postores=len(p.postores),
+            )
+            for p in await caso.ejecutar(buscar)
+        ]
 
     @router.get("/procesos/{id_proceso}/revision")
     async def revisar_proceso(
