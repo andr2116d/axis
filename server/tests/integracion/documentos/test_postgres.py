@@ -3,6 +3,7 @@
 import os
 from dataclasses import replace
 from datetime import UTC, datetime
+from decimal import Decimal
 from uuid import uuid4
 
 import pytest
@@ -22,6 +23,7 @@ from axis.documentos.dominio.entidades import (
     Parte,
     SenalEdicion,
 )
+from axis.documentos.dominio.partidas import Partida
 from axis.documentos.dominio.valores import (
     Clasificacion,
     CodigoSenal,
@@ -78,6 +80,30 @@ def documento(hash_contenido: str, version: str = "v1") -> Documento:
         fase_subida=Fase.EXPEDIENTE,
         version_modelos=version,
         subido_en=momento,
+        partidas=(
+            Partida(
+                1,
+                "01",
+                "OBRAS PROVISIONALES",
+                None,
+                (Decimal("3083.63"),),
+                None,
+                None,
+                Decimal("3083.63"),
+                None,
+            ),
+            Partida(
+                2,
+                "01.01",
+                "CARTEL",
+                "und",
+                (Decimal("1.00"), Decimal("1883.63"), Decimal("1883.63")),
+                Decimal("1.00"),
+                Decimal("1883.63"),
+                Decimal("1883.63"),
+                True,
+            ),
+        ),
     )
 
 
@@ -107,6 +133,7 @@ async def test_guarda_y_recupera_el_documento_completo(repositorio):
     assert recuperado.huella == original.huella
     assert recuperado.edicion == original.edicion
     assert recuperado.tipo == original.tipo
+    assert recuperado.partidas == original.partidas
     assert await repositorio.buscar_por_hash(original.hash_contenido) == recuperado
 
 

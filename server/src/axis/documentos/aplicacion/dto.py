@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from axis.compartido.dominio.valores import Fase
 from axis.documentos.dominio.entidades import Correccion, Documento, Huella
+from axis.documentos.dominio.partidas import Palabra
 from axis.documentos.dominio.valores import Etiqueta, IdDocumento
 
 
@@ -14,6 +15,8 @@ class PaginaLeida:
     cobertura_imagen: float
     ancho_pt: float
     alto_pt: float
+    # Con su posición: es lo que permite rearmar las filas de una tabla.
+    palabras: tuple[Palabra, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,6 +29,7 @@ class LecturaArchivo:
 class TextoReconocido:
     texto: str
     confianza: float
+    palabras: tuple[Palabra, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

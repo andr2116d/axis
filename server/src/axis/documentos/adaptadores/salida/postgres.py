@@ -1,5 +1,6 @@
 from collections.abc import Mapping
 from datetime import datetime
+from decimal import Decimal
 from uuid import UUID
 
 import sqlalchemy as sa
@@ -16,6 +17,7 @@ from axis.documentos.dominio.entidades import (
     Parte,
     SenalEdicion,
 )
+from axis.documentos.dominio.partidas import Partida
 from axis.documentos.dominio.valores import (
     Clasificacion,
     CodigoSenal,
@@ -66,6 +68,27 @@ paginas = sa.Table(
     sa.Column("confianza", sa.Float),
     sa.Column("fuente", sa.Text, nullable=False, server_default="modelo"),
     sa.Column("confianza_ocr", sa.Float),
+)
+
+partidas = sa.Table(
+    "partidas",
+    metadatos,
+    sa.Column(
+        "documento_id",
+        sa.Uuid,
+        sa.ForeignKey("documentos.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    sa.Column("orden", sa.Integer, primary_key=True),
+    sa.Column("pagina", sa.Integer, nullable=False),
+    sa.Column("item", sa.Text, nullable=False),
+    sa.Column("descripcion", sa.Text, nullable=False),
+    sa.Column("unidad", sa.Text),
+    sa.Column("numeros", JSONB, nullable=False),
+    sa.Column("cantidad", sa.Numeric),
+    sa.Column("precio_unitario", sa.Numeric),
+    sa.Column("parcial", sa.Numeric),
+    sa.Column("cuadra", sa.Boolean),
 )
 
 correcciones = sa.Table(
@@ -124,6 +147,11 @@ class RepositorioDocumentosPostgres:
                 await conexion.execute(
                     sa.insert(partes),
                     [_fila_parte(documento.id, i, p) for i, p in enumerate(documento.partes)],
+                )
+            if documento.partidas:
+                await conexion.execute(
+                    sa.insert(partidas),
+                    [_fila_partida(documento.id, i, p) for i, p in enumerate(documento.partidas)],
                 )
 
     async def _buscar(self, condicion: sa.ColumnElement[bool]) -> Documento | None:
@@ -194,6 +222,13 @@ async def _armar(conexion: AsyncConnection, fila: Mapping[str, object]) -> Docum
             sa.select(partes).where(partes.c.documento_id == id_documento).order_by(partes.c.orden)
         )
     ).mappings()
+    filas_partidas = (
+        await conexion.execute(
+            sa.select(partidas)
+            .where(partidas.c.documento_id == id_documento)
+            .order_by(partidas.c.orden)
+        )
+    ).mappings()
     huella = _a_dict(fila["huella"])
     senales = fila["senales"]
     tipo_fase = fila["tipo_fase"]
@@ -227,6 +262,7 @@ async def _armar(conexion: AsyncConnection, fila: Mapping[str, object]) -> Docum
         fase_subida=Fase(str(fase_subida)) if fase_subida else None,
         version_modelos=str(fila["version_modelos"]),
         subido_en=_fecha(fila["subido_en"]),
+        partidas=tuple(_partida(dict(p)) for p in filas_partidas),
     )
 
 
@@ -277,6 +313,47 @@ def _fila_pagina(id_documento: IdDocumento, pagina: Pagina) -> dict[str, object]
         "fuente": c.fuente.value if c else FuenteClasificacion.MODELO.value,
         "confianza_ocr": pagina.confianza_ocr,
     }
+
+
+def _fila_partida(id_documento: IdDocumento, orden: int, partida: Partida) -> dict[str, object]:
+    return {
+        "documento_id": id_documento,
+        "orden": orden,
+        "pagina": partida.pagina,
+        "item": partida.item,
+        "descripcion": partida.descripcion.replace("\x00", ""),
+        "unidad": partida.unidad,
+        # En JSON como texto: así no se pierde ningún decimal.
+        "numeros": [str(n) for n in partida.numeros],
+        "cantidad": partida.cantidad,
+        "precio_unitario": partida.precio_unitario,
+        "parcial": partida.parcial,
+        "cuadra": partida.cuadra,
+    }
+
+
+def _partida(fila: Mapping[str, object]) -> Partida:
+    numeros = fila["numeros"]
+    unidad, cuadra = fila["unidad"], fila["cuadra"]
+    return Partida(
+        pagina=_int(fila["pagina"]),
+        item=str(fila["item"]),
+        descripcion=str(fila["descripcion"]),
+        unidad=str(unidad) if unidad is not None else None,
+        numeros=tuple(Decimal(str(n)) for n in numeros) if isinstance(numeros, list) else (),
+        cantidad=_decimal(fila["cantidad"]),
+        precio_unitario=_decimal(fila["precio_unitario"]),
+        parcial=_decimal(fila["parcial"]),
+        cuadra=bool(cuadra) if cuadra is not None else None,
+    )
+
+
+def _decimal(valor: object) -> Decimal | None:
+    if valor is None:
+        return None
+    if isinstance(valor, Decimal):
+        return valor
+    return Decimal(str(valor))
 
 
 def _fila_parte(id_documento: IdDocumento, orden: int, parte: Parte) -> dict[str, object]:

@@ -15,6 +15,7 @@ from axis.compartido.infraestructura.pdfium import CANDADO_PDFIUM
 from axis.documentos.aplicacion.dto import LecturaArchivo, PaginaLeida
 from axis.documentos.dominio.entidades import Huella
 from axis.documentos.dominio.errores import ArchivoIlegible
+from axis.documentos.dominio.partidas import Palabra
 from axis.documentos.dominio.valores import TipoArchivo
 
 _FIRMA_PDF = b"%PDF"
@@ -100,7 +101,8 @@ def _leer_pagina_pdf(pdf: pdfium.PdfDocument, indice: int) -> PaginaLeida:
     try:
         ancho, alto = pagina.get_size()
         pagina_texto = pagina.get_textpage()
-        texto = str(pagina_texto.get_text_bounded())
+        texto = str(pagina_texto.get_text_range())
+        palabras = _palabras_pdf(pagina_texto, texto, float(alto))
         pagina_texto.close()
         area_imagenes = 0.0
         for objeto in pagina.get_objects(filter=[pdfium_c.FPDF_PAGEOBJ_IMAGE], max_depth=3):
@@ -115,7 +117,46 @@ def _leer_pagina_pdf(pdf: pdfium.PdfDocument, indice: int) -> PaginaLeida:
         cobertura_imagen=min(1.0, area_imagenes / area),
         ancho_pt=float(ancho),
         alto_pt=float(alto),
+        palabras=palabras,
     )
+
+
+# Dos caracteres seguidos son de la misma palabra si el hueco es menor que esta fracción de su alto.
+_HUECO_ENTRE_LETRAS = 0.3
+_MISMA_LINEA = 0.5
+
+
+def _palabras_pdf(pagina_texto: object, texto: str, alto_pagina: float) -> tuple[Palabra, ...]:
+    """Arma palabras carácter por carácter.
+
+    Las cajas "holgadas" miden todos los caracteres con la altura de la fuente: con las cajas
+    exactas, un punto o una coma quedan más abajo que los dígitos y parten filas y números.
+    """
+    palabras: list[Palabra] = []
+    actual: list[str] = []
+    caja: list[float] = []
+    for i, caracter in enumerate(texto):
+        izquierda, abajo, derecha, arriba = pagina_texto.get_charbox(i, loose=True)  # type: ignore[attr-defined]  # pypdfium2 sin tipos
+        y0, y1 = alto_pagina - arriba, alto_pagina - abajo
+        sigue = (
+            caja
+            and not caracter.isspace()
+            and abs((y0 + y1) / 2 - (caja[1] + caja[3]) / 2) < (y1 - y0) * _MISMA_LINEA
+            and izquierda - caja[2] < (y1 - y0) * _HUECO_ENTRE_LETRAS
+        )
+        if sigue:
+            actual.append(caracter)
+            caja = [caja[0], min(caja[1], y0), derecha, max(caja[3], y1)]
+            continue
+        if actual:
+            palabras.append(Palabra("".join(actual), caja[0], caja[1], caja[2], caja[3]))
+        if caracter.isspace() or derecha <= izquierda:
+            actual, caja = [], []
+            continue
+        actual, caja = [caracter], [izquierda, y0, derecha, y1]
+    if actual:
+        palabras.append(Palabra("".join(actual), caja[0], caja[1], caja[2], caja[3]))
+    return tuple(palabras)
 
 
 def _contar_revisiones(contenido: bytes) -> int:
@@ -168,16 +209,7 @@ def _leer_hoja(contenido: bytes) -> LecturaArchivo:
         raise ArchivoIlegible("el Excel está dañado") from error
     try:
         # Cada hoja cuenta como una página: un Excel de metrados suele traer una hoja por partida.
-        paginas = tuple(
-            PaginaLeida(
-                numero=i + 1,
-                texto=_texto_hoja(hoja),
-                cobertura_imagen=0.0,
-                ancho_pt=0.0,
-                alto_pt=0.0,
-            )
-            for i, hoja in enumerate(libro.worksheets)
-        )
+        paginas = tuple(_pagina_hoja(i + 1, hoja) for i, hoja in enumerate(libro.worksheets))
         propiedades = libro.properties
         huella = Huella(
             tipo_archivo=TipoArchivo.HOJA_CALCULO,
@@ -196,19 +228,38 @@ def _leer_hoja(contenido: bytes) -> LecturaArchivo:
     return LecturaArchivo(huella, paginas)
 
 
-def _texto_hoja(hoja: object) -> str:
+# En una hoja no hay posiciones reales: cada celda se ubica por su columna y su fila.
+_ANCHO_CELDA = 100.0
+_ALTO_CELDA = 12.0
+
+
+def _pagina_hoja(numero: int, hoja: object) -> PaginaLeida:
     lineas: list[str] = []
+    palabras: list[Palabra] = []
     total = 0
-    for fila in hoja.iter_rows(values_only=True):  # type: ignore[attr-defined]  # openpyxl sin tipos
-        celdas = [str(c) for c in fila if c is not None and str(c).strip()]
+    for fila, valores in enumerate(hoja.iter_rows(values_only=True)):  # type: ignore[attr-defined]  # openpyxl sin tipos
+        celdas = [
+            (c, str(v).strip()) for c, v in enumerate(valores) if v is not None and str(v).strip()
+        ]
         if not celdas:
             continue
-        linea = "\t".join(celdas)
-        lineas.append(linea)
-        total += len(linea)
+        lineas.append("\t".join(t for _, t in celdas))
+        y0 = fila * _ALTO_CELDA
+        palabras.extend(
+            Palabra(texto, c * _ANCHO_CELDA, y0, c * _ANCHO_CELDA + _ANCHO_CELDA * 0.9, y0 + 10)
+            for c, texto in celdas
+        )
+        total += len(lineas[-1])
         if total > _MAX_CARACTERES_HOJA:
             break
-    return "\n".join(lineas)
+    return PaginaLeida(
+        numero=numero,
+        texto="\n".join(lineas),
+        cobertura_imagen=0.0,
+        ancho_pt=0.0,
+        alto_pt=0.0,
+        palabras=tuple(palabras),
+    )
 
 
 def _aplicacion_office(contenido: bytes) -> str | None:

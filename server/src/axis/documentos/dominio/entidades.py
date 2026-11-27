@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from axis.compartido.dominio.valores import Fase
+from axis.documentos.dominio.partidas import Partida
 from axis.documentos.dominio.valores import (
     Clasificacion,
     CodigoSenal,
@@ -121,6 +122,7 @@ class Documento:
     fase_subida: Fase | None
     version_modelos: str
     subido_en: datetime
+    partidas: tuple[Partida, ...] = ()
 
     def corresponde_a(self, fase: Fase | None) -> bool | None:
         """None cuando no se puede decir: sin fase, tipo sin fase o el modelo no está seguro."""

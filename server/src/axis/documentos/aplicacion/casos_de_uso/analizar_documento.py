@@ -29,8 +29,13 @@ from axis.documentos.dominio.errores import (
     ArchivoVacio,
     ModelosNoDisponibles,
 )
+from axis.documentos.dominio.partidas import Palabra, Partida, extraer_partidas
 from axis.documentos.dominio.servicios import clasificar_origen, detectar_senales, segmentar
 from axis.documentos.dominio.valores import IdDocumento, OrigenPagina, TipoArchivo
+
+# Cambia cuando cambia cómo se lee un archivo (por ejemplo, el extractor de partidas). Entra en
+# la clave de caché junto con la versión de los modelos: un lector nuevo obliga a releer.
+VERSION_LECTURA = "lectura-2"
 
 
 class AnalizarDocumento:
@@ -66,7 +71,8 @@ class AnalizarDocumento:
         hash_contenido = await asyncio.to_thread(_sha256, orden.contenido)
         # El mismo archivo ya analizado no se vuelve a procesar: es la respuesta más rápida posible.
         existente = await self._repositorio.buscar_por_hash(hash_contenido)
-        if existente is not None and existente.version_modelos == modelos.version:
+        version = _version(modelos)
+        if existente is not None and existente.version_modelos == version:
             return ResultadoAnalisis(existente, desde_cache=True, duracion_ms=_ms(inicio))
 
         documento = await self._analizar(orden, hash_contenido, modelos)
@@ -88,8 +94,12 @@ class AnalizarDocumento:
             self._lector.leer(orden.contenido, tipo_archivo),
             self._almacen.guardar(_clave(hash_contenido), orden.contenido, tipo_archivo),
         )
-        paginas = await self._leer_paginas(orden.contenido, tipo_archivo, lectura)
-        paginas = await self._clasificar_paginas(paginas, modelos)
+        paginas, palabras = await self._leer_paginas(orden.contenido, tipo_archivo, lectura)
+        # Clasificar y extraer partidas no dependen uno del otro: van en paralelo.
+        paginas, partidas = await asyncio.gather(
+            self._clasificar_paginas(paginas, modelos),
+            asyncio.to_thread(_extraer_todas, palabras),
+        )
         tipo, rareza = await asyncio.gather(
             modelos.documentos.clasificar(paginas),
             modelos.rareza.medir(lectura.huella, paginas),
@@ -104,13 +114,14 @@ class AnalizarDocumento:
             tipo=tipo,
             edicion=EvaluacionEdicion(detectar_senales(lectura.huella, paginas), rareza),
             fase_subida=orden.fase,
-            version_modelos=modelos.version,
+            version_modelos=_version(modelos),
             subido_en=self._reloj.ahora(),
+            partidas=partidas,
         )
 
     async def _leer_paginas(
         self, contenido: bytes, tipo_archivo: TipoArchivo, lectura: LecturaArchivo
-    ) -> tuple[Pagina, ...]:
+    ) -> tuple[tuple[Pagina, ...], dict[int, tuple[Palabra, ...]]]:
         origenes = [
             clasificar_origen(len(p.texto.strip()), p.cobertura_imagen) for p in lectura.paginas
         ]
@@ -123,10 +134,15 @@ class AnalizarDocumento:
         reconocidos: Mapping[int, TextoReconocido] = {}
         if escaneadas:
             reconocidos = await self._ocr.reconocer(contenido, tipo_archivo, escaneadas)
-        return tuple(
+        paginas = tuple(
             _a_pagina(p, origen, reconocidos.get(p.numero))
             for p, origen in zip(lectura.paginas, origenes, strict=True)
         )
+        palabras = {
+            p.numero: reconocidos[p.numero].palabras if p.numero in reconocidos else p.palabras
+            for p in lectura.paginas
+        }
+        return paginas, palabras
 
     async def _clasificar_paginas(
         self, paginas: Sequence[Pagina], modelos: ModelosDocumentos
@@ -148,6 +164,16 @@ def _a_pagina(
         alto_pt=leida.alto_pt,
         confianza_ocr=reconocido.confianza if reconocido else None,
     )
+
+
+def _extraer_todas(palabras: dict[int, tuple[Palabra, ...]]) -> tuple[Partida, ...]:
+    # Se extrae de todas las páginas, no solo de las clasificadas como presupuesto: es barato
+    # (milisegundos) y así una corrección del tipo de página no obliga a volver a leer el archivo.
+    return tuple(p for numero, ps in sorted(palabras.items()) for p in extraer_partidas(numero, ps))
+
+
+def _version(modelos: ModelosDocumentos) -> str:
+    return f"{modelos.version}+{VERSION_LECTURA}"
 
 
 def _sha256(contenido: bytes) -> str:

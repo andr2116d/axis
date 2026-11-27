@@ -124,7 +124,7 @@ async def test_las_correcciones_sobreviven_a_un_reanalisis_con_modelos_nuevos(si
 
     reanalizado = await subir(analizar)
 
-    assert reanalizado.version_modelos == "prueba-2"
+    assert reanalizado.version_modelos.startswith("prueba-2+")
     assert reanalizado.paginas[2].clasificacion.etiqueta == "cotizacion"
 
 

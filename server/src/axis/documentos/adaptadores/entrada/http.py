@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal
 from typing import Annotated
 from uuid import UUID
 
@@ -109,6 +110,29 @@ class FaseSalida(BaseModel):
     aviso: str | None
 
 
+class ResumenPartidas(BaseModel):
+    total: int
+    titulos: int
+    verificables: int = Field(description="Filas con cantidad, precio y parcial")
+    cuadran: int = Field(description="Filas donde cantidad × precio ≈ parcial")
+    paginas_dudosas: list[int] = Field(
+        description="Páginas con filas verificables donde menos de la mitad cuadra"
+    )
+
+
+class PartidaSalida(BaseModel):
+    pagina: int
+    tipo_pagina: str | None
+    item: str
+    descripcion: str
+    unidad: str | None
+    cantidad: Decimal | None
+    precio_unitario: Decimal | None
+    parcial: Decimal | None
+    cuadra: bool | None
+    numeros: list[Decimal]
+
+
 class DocumentoSalida(BaseModel):
     id: UUID
     nombre: str
@@ -119,6 +143,7 @@ class DocumentoSalida(BaseModel):
     edicion: EdicionSalida
     huella: HuellaSalida
     paginas_por_origen: dict[str, int]
+    partidas: ResumenPartidas
     paginas: list[PaginaResumen]
     version_modelos: str
     subido_en: datetime
@@ -231,6 +256,35 @@ def crear_router(casos: CasosDocumentos, limite_bytes: int) -> APIRouter:
         encontrada = await caso.ejecutar(OrdenObtenerPagina(IdDocumento(id_documento), numero))
         return PaginaSalida(**_pagina(encontrada).model_dump(), texto=encontrada.texto)
 
+    @router.get("/{id_documento}/partidas")
+    async def partidas(
+        id_documento: UUID,
+        caso: Annotated[ObtenerDocumento, Depends(obtener)],
+        pagina: int | None = None,
+        solo_partidas: bool = False,
+    ) -> list[PartidaSalida]:
+        documento = await caso.ejecutar(IdDocumento(id_documento))
+        tipos = {
+            p.numero: p.clasificacion.etiqueta if p.clasificacion else None
+            for p in documento.paginas
+        }
+        return [
+            PartidaSalida(
+                pagina=x.pagina,
+                tipo_pagina=tipos.get(x.pagina),
+                item=x.item,
+                descripcion=x.descripcion,
+                unidad=x.unidad,
+                cantidad=x.cantidad,
+                precio_unitario=x.precio_unitario,
+                parcial=x.parcial,
+                cuadra=x.cuadra,
+                numeros=list(x.numeros),
+            )
+            for x in documento.partidas
+            if (pagina is None or x.pagina == pagina) and not (solo_partidas and x.es_titulo)
+        ]
+
     @router.post("/{id_documento}/correcciones", status_code=status.HTTP_201_CREATED)
     async def corregir(
         id_documento: UUID,
@@ -316,9 +370,25 @@ def _documento(documento: Documento, fase: Fase | None) -> DocumentoSalida:
             firmas=documento.huella.firmas,
         ),
         paginas_por_origen={o.value: n for o, n in documento.contar_por_origen().items() if n},
+        partidas=_resumen_partidas(documento),
         paginas=[_pagina(p) for p in documento.paginas],
         version_modelos=documento.version_modelos,
         subido_en=documento.subido_en,
+    )
+
+
+def _resumen_partidas(documento: Documento) -> ResumenPartidas:
+    verificables = [p for p in documento.partidas if p.cuadra is not None]
+    por_pagina: dict[int, list[bool]] = {}
+    for p in verificables:
+        por_pagina.setdefault(p.pagina, []).append(bool(p.cuadra))
+    return ResumenPartidas(
+        total=len(documento.partidas),
+        titulos=sum(1 for p in documento.partidas if p.es_titulo),
+        verificables=len(verificables),
+        cuadran=sum(1 for p in verificables if p.cuadra),
+        # Candidatas a una segunda lectura con el LLM: hoy solo se cuentan.
+        paginas_dudosas=sorted(n for n, v in por_pagina.items() if sum(v) < len(v) / 2),
     )
 
 

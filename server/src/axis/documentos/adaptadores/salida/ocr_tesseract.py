@@ -11,6 +11,7 @@ from PIL import Image, ImageOps
 from axis.compartido.infraestructura.pdfium import CANDADO_PDFIUM
 from axis.documentos.aplicacion.dto import TextoReconocido
 from axis.documentos.dominio.errores import ArchivoIlegible
+from axis.documentos.dominio.partidas import Palabra
 from axis.documentos.dominio.valores import TipoArchivo
 
 _PUNTOS_POR_PULGADA = 72
@@ -55,12 +56,14 @@ class OcrTesseract:
         datos = pytesseract.image_to_data(
             imagen, lang=self._idioma, config="--psm 3", output_type=pytesseract.Output.DICT
         )
-        return _armar_texto(datos)
+        return _armar_texto(datos, _PUNTOS_POR_PULGADA / self._dpi)
 
 
-def _armar_texto(datos: Mapping[str, list[object]]) -> TextoReconocido:
+def _armar_texto(datos: Mapping[str, list[object]], escala: float) -> TextoReconocido:
+    """Texto por líneas para clasificar, y cada palabra con su caja (en puntos) para las tablas."""
     lineas: dict[tuple[int, int, int], list[str]] = {}
     confianzas: list[float] = []
+    palabras: list[Palabra] = []
     for i, palabra in enumerate(datos["text"]):
         texto = str(palabra).strip()
         confianza = float(str(datos["conf"][i]))
@@ -73,6 +76,14 @@ def _armar_texto(datos: Mapping[str, list[object]]) -> TextoReconocido:
         )
         lineas.setdefault(clave, []).append(texto)
         confianzas.append(confianza)
+        x, y = float(str(datos["left"][i])), float(str(datos["top"][i]))
+        ancho, alto = float(str(datos["width"][i])), float(str(datos["height"][i]))
+        linea = clave[0] * 1_000_000 + clave[1] * 1_000 + clave[2]
+        palabras.append(
+            Palabra(texto, x * escala, y * escala, (x + ancho) * escala, (y + alto) * escala, linea)
+        )
     texto = "\n".join(" ".join(palabras) for _, palabras in sorted(lineas.items()))
     promedio = sum(confianzas) / len(confianzas) / 100 if confianzas else 0.0
-    return TextoReconocido(texto=texto, confianza=round(min(1.0, promedio), 3))
+    return TextoReconocido(
+        texto=texto, confianza=round(min(1.0, promedio), 3), palabras=tuple(palabras)
+    )
