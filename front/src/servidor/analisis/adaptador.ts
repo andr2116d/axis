@@ -22,6 +22,22 @@ export const PARTE_A_TIPO: Partial<Record<Documento, TipoDocumento>> = {
 };
 
 /** Partes del expediente reconocidas en las páginas de un archivo. */
+/** Partes reconocidas con las páginas donde están (la página sin parte propia sigue a la anterior). */
+export function partesConPaginas(paginas: string[]): { tipo: TipoDocumento; paginas: number[] }[] {
+  const salida: { tipo: TipoDocumento; paginas: number[] }[] = [];
+  let actual: { tipo: TipoDocumento; paginas: number[] } | undefined;
+  paginas.forEach((t, i) => {
+    const parte = detectarPagina({ numero: i + 1, lineas: t.split('\n') });
+    const tipo = parte ? PARTE_A_TIPO[parte] : undefined;
+    if (tipo && tipo !== actual?.tipo) {
+      actual = salida.find((p) => p.tipo === tipo) ?? { tipo, paginas: [] };
+      if (!salida.includes(actual)) salida.push(actual);
+    }
+    actual?.paginas.push(i + 1);
+  });
+  return salida;
+}
+
 export function partesDeArchivo(paginas: string[]): TipoDocumento[] {
   const partes = new Set<TipoDocumento>();
   paginas.forEach((t, i) => {

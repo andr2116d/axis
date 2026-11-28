@@ -9,7 +9,7 @@ import { identidadDeDocumento, motorIdentidad, nombreDeObra } from './motores/id
 import { motorUbicacion } from './motores/ubicacion';
 import { motorCobertura } from './motores/cobertura';
 import type { ContextoExpediente, HallazgoNuevo } from './motores/tipos';
-import { correrVerificadores, partesDeArchivo, type AnalisisVerificadores } from './analisis/adaptador';
+import { correrVerificadores, partesConPaginas, partesDeArchivo, type AnalisisVerificadores } from './analisis/adaptador';
 import { evaluarPrueba, hallazgoDePrueba, type ObraEvaluada } from './aprendizaje/pruebas';
 import { frase, nombrePropio } from './texto';
 import { VERIFICADORES } from '@/datos/verificadores';
@@ -62,6 +62,7 @@ export async function recibirExpediente(archivos: ArchivoEntrante[], opciones: {
       id: docId, nombre: archivo.nombre, bytes: datos.byteLength,
       tipo: sugerencia.tipo, sugerencia,
       lectura: lectura.estado, paginas: lectura.paginas.length, paginasConTexto: lectura.paginasConTexto, unidad: lectura.unidad,
+      partes: partesConPaginas(lectura.paginas),
     });
   }
 

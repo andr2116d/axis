@@ -170,6 +170,10 @@ svg{flex:none;vertical-align:middle}
 .docs-table li>svg{color:var(--accent)}
 .docs-table li strong{display:block;overflow-wrap:anywhere}
 .docs-table li small{display:block;color:var(--muted)}
+.doc-partes{grid-column:2 / -1;list-style:none;margin:2px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.doc-partes li{display:flex;flex-direction:column;gap:2px;border:1px solid var(--line);border-radius:6px;padding:9px 11px;background:var(--surface)}
+.doc-partes .text-link{align-self:flex-start;padding:0;font-size:.8rem}
+.doc-ok{color:var(--muted)}
 .doc-status{font-size:.77rem;background:var(--pending-bg);color:var(--pending);border-radius:4px;padding:3px 7px}
 .supervision-list li{padding:5px 0}
 .supervision-list p{color:var(--muted);font-size:.88rem}

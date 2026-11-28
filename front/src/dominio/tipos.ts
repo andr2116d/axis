@@ -39,6 +39,8 @@ export interface Documento {
   /** Páginas con texto legible. */
   paginasConTexto: number;
   unidad: UnidadPagina;
+  /** Partes del expediente que Axis reconoció dentro del archivo, con sus páginas. */
+  partes?: { tipo: TipoDocumento; paginas: number[] }[];
 }
 
 export interface Fuente {

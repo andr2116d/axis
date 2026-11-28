@@ -179,7 +179,7 @@ export function Revision({ expediente, comparacion, anterior, subidaDirecta = fa
       {pestana === 'documentos' && (
         <section className="content-panel documents-panel">
           <h2>Documentos de esta revisión</h2>
-          <p>Tipo confirmado y resultado de la lectura de cada archivo.</p>
+          <p>Tipo confirmado, resultado de la lectura y las partes que Axis reconoció dentro de cada archivo, con las observaciones que salieron de cada una.</p>
           <ul className="docs-table">
             {e.documentos.map((d) => (
               <li key={d.id}>
@@ -187,6 +187,22 @@ export function Revision({ expediente, comparacion, anterior, subidaDirecta = fa
                 <span><strong>{d.nombre}</strong><small>{d.tipo}{d.tipo !== d.sugerencia.tipo ? ` · Axis sugirió ${d.sugerencia.tipo}` : ''}</small></span>
                 <span>{d.paginas} pág. · {tamano(d.bytes)}</span>
                 <span className="doc-status">{LECTURA[d.lectura]}</span>
+                {!!d.partes?.length && (
+                  <ol className="doc-partes">
+                    {d.partes.map((p) => {
+                      const enParte = todos.filter((h) => h.fuentes.some((f) => f.documento === d.nombre && p.paginas.includes(Number.parseInt(f.pagina, 10))));
+                      return (
+                        <li key={p.tipo}>
+                          <strong>{p.tipo}</strong>
+                          <small>{rangoPaginas(p.paginas)}</small>
+                          {enParte.length
+                            ? <button type="button" className="text-link" onClick={() => verHallazgo(enParte[0].id)}>{enParte.length === 1 ? '1 observación' : `${enParte.length} observaciones`}</button>
+                            : <small className="doc-ok">Sin observaciones</small>}
+                        </li>
+                      );
+                    })}
+                  </ol>
+                )}
               </li>
             ))}
           </ul>
@@ -339,4 +355,16 @@ function Evidencia({ h, incluido, alAlternar, alVerTerritorio, children }: { h: 
       </div>
     </aside>
   );
+}
+
+/** [3, 4, 5, 9] → «pág. 3–5, 9». */
+function rangoPaginas(paginas: number[]): string {
+  const tramos: string[] = [];
+  for (let i = 0; i < paginas.length; i += 1) {
+    let j = i;
+    while (j + 1 < paginas.length && paginas[j + 1] === paginas[j] + 1) j += 1;
+    tramos.push(i === j ? `${paginas[i]}` : `${paginas[i]}–${paginas[j]}`);
+    i = j;
+  }
+  return `pág. ${tramos.join(', ')}`;
 }
