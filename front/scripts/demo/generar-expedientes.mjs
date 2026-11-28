@@ -272,15 +272,28 @@ function generar(exp) {
   // 4. Resumen de metrados
   if (!exp.falta?.includes('metrados')) {
   doc.addPage();
-  y = cabecera(doc, 'RESUMEN DE METRADOS');
-  const COLS_M = [{ x: 40, w: 46 }, { x: 88, w: 330 }, { x: 420, w: 40 }, { x: 470, w: 85, a: 'right' }];
-  y = fila(doc, y + 4, ['Item', 'Descripción', 'Und.', 'Metrado'], COLS_M, { bold: true });
+  // Planilla como las reales: cada metrado sale de sus medidas (veces × largo × ancho × alto).
+  y = cabecera(doc, 'PLANILLA DE METRADOS');
+  const COLS_M = [{ x: 40, w: 34 }, { x: 76, w: 216 }, { x: 294, w: 20 }, { x: 316, w: 24, a: 'right' }, { x: 342, w: 38, a: 'right' }, { x: 382, w: 34, a: 'right' }, { x: 418, w: 28, a: 'right' }, { x: 448, w: 50, a: 'right' }, { x: 500, w: 55, a: 'right' }];
+  const filaM = (yy, celdas, op = {}) => fila(doc, yy, celdas, COLS_M, { size: 6.4, ...op });
+  const TRAMO = exp.longitud ?? 260;
+  const medidas = (und, met, desc) => {
+    const espesor = Number((/(?:E|H)\s*=\s*([\d.]+)\s*(CM|M)?/i.exec(desc) ?? [])[1] ?? 0);
+    const alto = espesor ? (/H\s*=\s*[\d.]+\s*CM/i.test(desc) ? espesor / 100 : espesor) : 0.2;
+    if (und === 'm3') return ['1.00', f2(TRAMO), f2(met / (TRAMO * alto)), f2(alto)];
+    if (und === 'm2') return ['1.00', f2(TRAMO), f2(met / TRAMO), ''];
+    if (und === 'm') return [f2(met / TRAMO), f2(TRAMO), '', ''];
+    return [f2(met), '', '', ''];
+  };
+  y = filaM(y + 4, ['Item', 'Descripción', 'Und.', 'Veces', 'Largo', 'Ancho', 'Alto', 'Parcial', 'Total'], { bold: true });
   for (const i of items) {
     if (e.E6 && i.codigo === '05.06') continue; // E6: partida presupuestada sin metrado
     let und = i.unidad, met = i.metrado;
     if (e.E5 && i.codigo === '01.03') und = 'm'; // E5: unidad distinta
     if (e.E4 && i.codigo === '03.01') met = r2(i.metrado * 0.96); // E4: metrado distinto (4%)
-    y = i.titulo ? fila(doc, y, [i.codigo, i.descripcion, '', ''], COLS_M, { bold: true }) : fila(doc, y, [i.codigo, i.descripcion, und, f2(met)], COLS_M);
+    if (y > 770) { doc.addPage(); y = cabecera(doc, 'PLANILLA DE METRADOS'); y = filaM(y + 4, ['Item', 'Descripción', 'Und.', 'Veces', 'Largo', 'Ancho', 'Alto', 'Parcial', 'Total'], { bold: true }); }
+    y = i.titulo ? filaM(y, [i.codigo, i.descripcion, '', '', '', '', '', '', ''], { bold: true })
+      : filaM(y, [i.codigo, i.descripcion, und, ...medidas(und, met, i.descripcion), f2(met), f2(met)]);
   }
   }
 
@@ -472,7 +485,8 @@ const EXPEDIENTES = [
 ];
 
 // Escenarios de la demo del servidor (src/datos/escenarios-demo.json): expediente original y cercano.
-const ESCENARIOS = JSON.parse(fs.readFileSync(new URL('../../src/datos/escenarios-demo.json', import.meta.url), 'utf8'));
+const rutaEscenarios = new URL('../../src/datos/escenarios-demo.json', import.meta.url);
+const ESCENARIOS = fs.existsSync(rutaEscenarios) ? JSON.parse(fs.readFileSync(rutaEscenarios, 'utf8')) : [];
 const articulo = (via) => (/^(Jirón|Pasaje)/.test(via) ? 'EL' : 'LA');
 const sinTildes = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
 for (const [n, esc] of ESCENARIOS.filter((x) => x.id !== 'E01').entries()) {
